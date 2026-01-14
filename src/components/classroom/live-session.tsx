@@ -818,7 +818,7 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
       {/* Background Effects Overlay */}
       {showBackgroundEffects && (
         <BackgroundEffects
-          videoTrack={localParticipant.videoTrackPublications.values().next().value?.track || null}
+          videoTrack={localParticipant.videoTrackPublications.values().next().value?.track?.mediaStreamTrack || null}
           onClose={() => setShowBackgroundEffects(false)}
         />
       )}

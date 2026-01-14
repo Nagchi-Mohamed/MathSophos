@@ -13,7 +13,7 @@ import {
   Undo,
   Redo,
   X,
-  Function,
+  Sigma,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -406,7 +406,7 @@ export function Whiteboard({ room, isTeacher, onClose }: WhiteboardProps) {
                 size="sm"
                 onClick={() => setTool("math")}
               >
-                <Function className="h-4 w-4" />
+                <Sigma className="h-4 w-4" />
               </Button>
             </div>
 
