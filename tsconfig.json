@@ -45,6 +45,7 @@
     "test_cleanup.ts",
     "test_array.ts",
     "test_array_complete.ts",
-    "test_exercise_latex.ts"
+    "test_exercise_latex.ts",
+    "prisma/seed.ts"
   ]
 }
