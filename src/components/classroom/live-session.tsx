@@ -901,7 +901,7 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
 
         {/* Sidebar */}
         {sidebarView !== 'none' && (
-          <div className="w-[350px] bg-[#1a1a1a] border-l border-[#333] flex flex-col h-full animate-in slide-in-from-right duration-200 z-40 shadow-2xl">
+          <div className="absolute inset-0 z-50 md:static md:z-auto w-full md:w-[350px] bg-[#1a1a1a] border-l border-[#333] flex flex-col h-full animate-in slide-in-from-right duration-200 shadow-2xl">
             <div className="h-12 border-b border-[#333] flex items-center justify-between px-4">
               <h3 className="font-semibold text-sm">
                 {sidebarView === 'participants' ? `Participants (${participants.length})` : 'Chat'}
@@ -1004,7 +1004,7 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
       </div>
 
       {/* Bottom Control Bar */}
-      <div className="h-[72px] bg-[#1a1a1a] flex items-center justify-between px-4 select-none shrink-0 z-50">
+      <div className="h-[72px] bg-[#1a1a1a] flex items-center justify-between px-4 select-none shrink-0 z-50 overflow-x-auto no-scrollbar">
 
         {/* Left: Audio/Video */}
         <div className="flex items-center gap-1 min-w-[180px]">
@@ -1044,7 +1044,7 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
         </div>
 
         {/* Center: Main Controls */}
-        <div className="flex items-center justify-center gap-2 flex-1">
+        <div className="flex items-center justify-center gap-2 flex-1 min-w-max px-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex flex-col items-center gap-1.5 min-w-[64px] py-2 rounded-lg transition-all duration-200 hover:bg-[#2a2a2a] group">

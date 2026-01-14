@@ -205,15 +205,36 @@ export function Whiteboard({ room, isTeacher, onClose }: WhiteboardProps) {
     };
   }, [room]);
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isTeacher) return; // Only teacher can draw
-
+  const getCoordinates = (e: React.MouseEvent | React.TouchEvent | any) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) return { x: 0, y: 0 };
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    let clientX, clientY;
+
+    if (e.changedTouches && e.changedTouches.length > 0) {
+      clientX = e.changedTouches[0].clientX;
+      clientY = e.changedTouches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    };
+  };
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.nativeEvent.type.startsWith('touch')) {
+      // Prevent scrolling while drawing
+      // e.preventDefault(); // Using CSS touch-action: none instead for better performance
+    }
+
+    if (!isTeacher) return;
+
+    const { x, y } = getCoordinates(e);
 
     if (tool === "math") {
       setLatexPosition({ x, y });
@@ -225,19 +246,16 @@ export function Whiteboard({ room, isTeacher, onClose }: WhiteboardProps) {
     currentPath.current = [x, y];
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!isDrawing || !isTeacher) return;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const { x, y } = getCoordinates(e);
 
     currentPath.current.push(x, y);
 
     // Draw preview
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
