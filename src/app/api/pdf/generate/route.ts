@@ -12,7 +12,8 @@ import { getPuppeteerOptions } from "@/lib/puppeteer-config"
 
 // Helper to get browser instance
 const getBrowser = async () => {
-  return puppeteer.launch(getPuppeteerOptions());
+  const options = await getPuppeteerOptions();
+  return puppeteer.launch(options);
 };
 
 export async function POST(req: NextRequest) {

@@ -26,7 +26,8 @@ export async function POST(req: NextRequest) {
 
     // Launch browser
     console.log("Launching Puppeteer...")
-    const browser = await puppeteer.launch(getPuppeteerOptions())
+    const options = await getPuppeteerOptions()
+    const browser = await puppeteer.launch(options)
     console.log("Browser launched")
 
     const page = await browser.newPage()

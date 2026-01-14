@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -16,16 +15,21 @@ const roboto = Roboto({
   fallback: ['system-ui', 'arial'],
 });
 
+import type { Metadata, Viewport } from "next";
+
+// ... existing code ...
+
+export const viewport: Viewport = {
+  width: 1280,
+  initialScale: 0.3,
+  maximumScale: 5,
+  userScalable: true,
+};
+
 export const metadata: Metadata = {
   title: {
     default: "MathSophos - Plateforme Éducative Marocaine",
     template: "%s | MathSophos",
-  },
-  viewport: {
-    width: 1280,
-    initialScale: 0.3, // Recommended for forced desktop view on mobile to ensure it fits
-    maximumScale: 5,
-    userScalable: true,
   },
   description: "La première plateforme éducative interactive au Maroc pour les mathématiques, du collège à l'université. Cours, exercices et assistance IA.",
   keywords: ["Mathématiques", "Maroc", "Baccalauréat", "Université", "Soutien scolaire", "IA", "Éducation"],

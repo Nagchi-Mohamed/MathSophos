@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { TutorialsFeed } from "@/components/tutorials/tutorials-feed";
 import { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Tutoriels | MathSophos",
   description: "Découvrez nos tutoriels vidéos courts et interactifs pour maîtriser les mathématiques.",

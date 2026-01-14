@@ -10,7 +10,7 @@ export async function getPuppeteerOptions() {
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+      headless: chromium.headless as any,
       ignoreHTTPSErrors: true,
     };
   } else {
