@@ -3,7 +3,7 @@
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
-import { UserRole, LessonStatus } from "@prisma/client"
+import { UserRole, LessonStatus } from "@/lib/enums"
 import { canManageUsers, canModifyUserRole, canManageContent, canDeleteContent } from "@/lib/roles"
 
 // Helper to check if current user has admin access
@@ -39,12 +39,12 @@ export async function updateUserRole(userId: string, role: UserRole) {
     }
 
     // Check if current user can modify target user's role
-    if (!canModifyUserRole(currentUser.role as UserRole, targetUser.role)) {
+    if (!canModifyUserRole(currentUser.role as any, targetUser.role as any)) {
       return { success: false, message: "You cannot modify this user's role" }
     }
 
     // Check if current user can assign the new role
-    if (!canModifyUserRole(currentUser.role as UserRole, role)) {
+    if (!canModifyUserRole(currentUser.role as any, role)) {
       return { success: false, message: "You cannot assign this role" }
     }
 
@@ -66,7 +66,7 @@ export async function deleteUser(userId: string) {
     const currentUser = await checkAdmin()
 
     // Only OWNER and ADMIN can delete users
-    if (!canDeleteContent(currentUser.role as UserRole)) {
+    if (!canDeleteContent(currentUser.role as any)) {
       return { success: false, message: "You don't have permission to delete users" }
     }
 
@@ -164,7 +164,7 @@ export async function deleteLesson(id: string) {
     const currentUser = await checkAdmin()
 
     // Only OWNER and ADMIN can delete content
-    if (!canDeleteContent(currentUser.role as UserRole)) {
+    if (!canDeleteContent(currentUser.role as any)) {
       return { success: false, message: "You don't have permission to delete content" }
     }
 
