@@ -1,0 +1,85 @@
+/* Math rendering styles */
+.math-display {
+  text-align: center;
+  margin: 1.5em 0;
+  padding: 0.5em;
+  background: hsl(var(--muted));
+  border-radius: 4px;
+  overflow-x: auto;
+  color: hsl(var(--foreground));
+}
+
+.math-inline {
+  font-style: italic;
+  background: hsl(var(--muted));
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  color: hsl(var(--foreground));
+}
+
+/* Error states */
+.latex-error {
+  background: hsl(48 100% 90%);
+  border: 1px solid hsl(48 100% 80%);
+  border-radius: 4px;
+  padding: 10px;
+  margin: 10px 0;
+  color: hsl(40 60% 30%);
+}
+
+.dark .latex-error {
+  background: hsl(48 60% 20%);
+  border: 1px solid hsl(48 60% 30%);
+  color: hsl(48 100% 85%);
+}
+
+.latex-error .raw-latex {
+  font-family: monospace;
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  padding: 5px;
+  border-radius: 3px;
+  display: block;
+  margin-top: 5px;
+}
+
+.latex-errors-panel {
+  background: hsl(0 100% 95%);
+  border: 1px solid hsl(0 100% 85%);
+  border-radius: 4px;
+  padding: 15px;
+  margin: 15px 0;
+  color: hsl(0 60% 30%);
+}
+
+.dark .latex-errors-panel {
+  background: hsl(0 60% 20%);
+  border: 1px solid hsl(0 60% 30%);
+  color: hsl(0 100% 85%);
+}
+
+/* MathJax specific */
+.MathJax {
+  outline: none;
+  color: hsl(var(--foreground));
+}
+
+.MathJax_Display {
+  margin: 1em 0 !important;
+}
+
+/* Loading state */
+.math-loading {
+  opacity: 0.5;
+  position: relative;
+}
+
+.math-loading::after {
+  content: 'Rendering math...';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.9em;
+  color: hsl(var(--muted-foreground));
+}

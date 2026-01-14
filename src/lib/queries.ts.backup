@@ -1,0 +1,471 @@
+import { prisma } from './prisma';
+import { Prisma, EducationalLevel, Stream, LessonStatus } from '@prisma/client';
+
+/**
+ * Optimized database queries for better performance
+ * These queries use proper indexing, selective field fetching, and pagination
+ */
+
+// ============================================
+// LESSON QUERIES
+// ============================================
+
+export interface LessonListOptions {
+  level?: EducationalLevel;
+  stream?: Stream;
+  semester?: number;
+  status?: LessonStatus;
+  moduleId?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Get optimized lesson list (for list pages)
+ * Only fetches necessary fields, not full content
+ */
+export async function getLessonsList(options: LessonListOptions = {}) {
+  const where: Prisma.LessonWhereInput = {};
+
+  if (options.level) where.level = options.level;
+  if (options.stream) where.stream = options.stream;
+  if (options.semester) where.semester = options.semester;
+  if (options.status) where.status = options.status;
+  if (options.moduleId) where.moduleId = options.moduleId;
+
+  return prisma.lesson.findMany({
+    where,
+    select: {
+      id: true,
+      titleFr: true,
+      titleEn: true,
+      slug: true,
+      level: true,
+      stream: true,
+      semester: true,
+      category: true,
+      status: true,
+      createdAt: true,
+      module: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: options.limit || 100,
+    skip: options.offset || 0,
+  });
+}
+
+/**
+ * Get lesson count for pagination
+ */
+export async function getLessonsCount(options: LessonListOptions = {}) {
+  const where: Prisma.LessonWhereInput = {};
+
+  if (options.level) where.level = options.level;
+  if (options.stream) where.stream = options.stream;
+  if (options.semester) where.semester = options.semester;
+  if (options.status) where.status = options.status;
+  if (options.moduleId) where.moduleId = options.moduleId;
+
+  return prisma.lesson.count({ where });
+}
+
+// ============================================
+// SERIES QUERIES
+// ============================================
+
+export interface SeriesListOptions {
+  lessonId?: string;
+  level?: EducationalLevel;
+  stream?: Stream;
+  semester?: number;
+  publicOnly?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Get optimized series list
+ */
+export async function getSeriesList(options: SeriesListOptions = {}) {
+  const where: Prisma.SeriesWhereInput = {};
+
+  if (options.lessonId) where.lessonId = options.lessonId;
+  if (options.level) where.level = options.level;
+  if (options.stream) where.stream = options.stream;
+  if (options.semester) where.semester = options.semester;
+  if (options.publicOnly) where.public = true;
+
+  return prisma.series.findMany({
+    where,
+    select: {
+      id: true,
+      title: true,
+      titleEn: true,
+      description: true,
+      descriptionEn: true,
+      slug: true,
+      cycle: true,
+      level: true,
+      stream: true,
+      semester: true,
+      public: true,
+      createdAt: true,
+      _count: {
+        select: {
+          exercises: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: options.limit || 50,
+    skip: options.offset || 0,
+  });
+}
+
+/**
+ * Get series with exercises (for detail page)
+ */
+export async function getSeriesWithExercises(seriesId: string) {
+  return prisma.series.findUnique({
+    where: { id: seriesId },
+    include: {
+      exercises: {
+        orderBy: { order: 'asc' },
+        select: {
+          id: true,
+          slug: true,
+          problemTextFr: true,
+          problemTextEn: true,
+          order: true,
+          exerciseType: true,
+        },
+      },
+      lesson: {
+        select: {
+          id: true,
+          titleFr: true,
+          titleEn: true,
+          slug: true,
+        },
+      },
+    },
+  });
+}
+
+// ============================================
+// FORUM QUERIES
+// ============================================
+
+export interface ForumPostsOptions {
+  page?: number;
+  pageSize?: number;
+  userId?: string;
+  searchQuery?: string;
+}
+
+/**
+ * Get paginated forum posts with counts
+ */
+export async function getForumPostsPaginated(options: ForumPostsOptions = {}) {
+  const page = options.page || 1;
+  const pageSize = options.pageSize || 20;
+  const skip = (page - 1) * pageSize;
+
+  const where: Prisma.ForumPostWhereInput = {};
+
+  if (options.userId) where.userId = options.userId;
+  if (options.searchQuery) {
+    where.OR = [
+      { title: { contains: options.searchQuery, mode: 'insensitive' } },
+      { content: { contains: options.searchQuery, mode: 'insensitive' } },
+    ];
+  }
+
+  const [posts, total] = await Promise.all([
+    prisma.forumPost.findMany({
+      where,
+      skip,
+      take: pageSize,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        createdAt: true,
+        isAiAnswered: true,
+        imageUrl: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
+        _count: {
+          select: {
+            replies: true,
+            reactions: true,
+          },
+        },
+      },
+    }),
+    prisma.forumPost.count({ where }),
+  ]);
+
+  return {
+    posts,
+    total,
+    pages: Math.ceil(total / pageSize),
+    currentPage: page,
+    pageSize,
+  };
+}
+
+/**
+ * Get forum post with replies
+ */
+export async function getForumPostWithReplies(postId: string) {
+  return prisma.forumPost.findUnique({
+    where: { id: postId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          role: true,
+        },
+      },
+      replies: {
+        orderBy: { createdAt: 'asc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+              role: true,
+            },
+          },
+          reactions: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      reactions: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+// ============================================
+// CHAPTER QUERIES
+// ============================================
+
+/**
+ * Get chapters for a lesson (optimized)
+ */
+export async function getChaptersByLesson(lessonId: string, includeContent = false) {
+  return prisma.chapter.findMany({
+    where: {
+      lessonId,
+      status: 'PUBLISHED',
+    },
+    select: {
+      id: true,
+      titleFr: true,
+      titleEn: true,
+      slug: true,
+      chapterNumber: true,
+      order: true,
+      status: true,
+      createdAt: true,
+      ...(includeContent && {
+        contentFr: true,
+        contentEn: true,
+      }),
+    },
+    orderBy: { order: 'asc' },
+  });
+}
+
+// ============================================
+// REPORT QUERIES
+// ============================================
+
+export interface ReportListOptions {
+  isResolved?: boolean;
+  type?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Get optimized reports list for admin
+ */
+export async function getReportsList(options: ReportListOptions = {}) {
+  const where: Prisma.ReportWhereInput = {};
+
+  if (options.isResolved !== undefined) where.isResolved = options.isResolved;
+  if (options.type) where.type = options.type as any;
+
+  return prisma.report.findMany({
+    where,
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      description: true,
+      email: true,
+      isResolved: true,
+      createdAt: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      _count: {
+        select: {
+          replies: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: options.limit || 50,
+    skip: options.offset || 0,
+  });
+}
+
+/**
+ * Get unresolved reports count (for badge)
+ */
+export async function getUnresolvedReportsCount() {
+  return prisma.report.count({
+    where: { isResolved: false },
+  });
+}
+
+// ============================================
+// IMAGE & VIDEO QUERIES
+// ============================================
+
+/**
+ * Get images for an entity
+ */
+export async function getEntityImages(entityType: string, entityId: string) {
+  return prisma.platformImage.findMany({
+    where: {
+      entityType,
+      entityId,
+    },
+    select: {
+      id: true,
+      filename: true,
+      originalFilename: true,
+      mimeType: true,
+      fileSize: true,
+      base64Data: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+/**
+ * Get videos for an entity
+ */
+export async function getEntityVideos(entityType: string, entityId: string, publicOnly = false) {
+  return prisma.platformVideo.findMany({
+    where: {
+      entityType,
+      entityId,
+      ...(publicOnly && { isPublic: true }),
+    },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      filename: true,
+      url: true,
+      thumbnailUrl: true,
+      duration: true,
+      isPublic: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+// ============================================
+// EXAM QUERIES
+// ============================================
+
+export interface ExamListOptions {
+  level?: EducationalLevel;
+  stream?: Stream;
+  semester?: number;
+  type?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Get optimized exams list
+ */
+export async function getExamsList(options: ExamListOptions = {}) {
+  const where: Prisma.ExamWhereInput = {};
+
+  if (options.level) where.level = options.level;
+  if (options.stream) where.stream = options.stream;
+  if (options.semester) where.semester = options.semester;
+  if (options.type) where.type = options.type;
+
+  return prisma.exam.findMany({
+    where,
+    select: {
+      id: true,
+      title: true,
+      subtitle: true,
+      cycle: true,
+      level: true,
+      stream: true,
+      semester: true,
+      type: true,
+      examType: true,
+      controlNumber: true,
+      createdAt: true,
+      createdBy: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: options.limit || 50,
+    skip: options.offset || 0,
+  });
+}

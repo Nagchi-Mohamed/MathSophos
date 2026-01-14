@@ -1,0 +1,63 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Grid Pattern Background -->
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" stroke-width="0.5" opacity="0.3"/>
+    </pattern>
+  </defs>
+  
+  <rect width="800" height="600" fill="url(#grid)"/>
+  
+  <!-- Mathematical Formulas -->
+  <!-- Quadratic Formula -->
+  <text x="100" y="100" font-family="Georgia, serif" font-size="24" fill="white" opacity="0.7">
+    x = -b ± √(b² - 4ac) / 2a
+  </text>
+  
+  <!-- Pythagorean Theorem -->
+  <text x="450" y="150" font-family="Georgia, serif" font-size="22" fill="white" opacity="0.6">
+    a² + b² = c²
+  </text>
+  
+  <!-- Pi Symbol -->
+  <text x="200" y="300" font-family="Georgia, serif" font-size="48" fill="white" opacity="0.8">
+    π
+  </text>
+  
+  <!-- Integral Symbol -->
+  <text x="550" y="350" font-family="Georgia, serif" font-size="72" fill="white" opacity="0.7">
+    ∫
+  </text>
+  
+  <!-- Sum Symbol -->
+  <text x="350" y="450" font-family="Georgia, serif" font-size="48" fill="white" opacity="0.6">
+    ∑
+  </text>
+  
+  <!-- Geometric Shapes -->
+  <!-- Triangle -->
+  <polygon points="100,500 150,400 50,400" fill="none" stroke="white" stroke-width="2" opacity="0.5"/>
+  
+  <!-- Circle -->
+  <circle cx="650" cy="120" r="50" fill="none" stroke="white" stroke-width="2" opacity="0.6"/>
+  
+  <!-- Square -->
+  <rect x="600" y="450" width="100" height="100" fill="none" stroke="white" stroke-width="2" opacity="0.5"/>
+  
+  <!-- Decorative Lines -->
+  <line x1="50" y1="250" x2="250" y2="250" stroke="white" stroke-width="1.5" opacity="0.4"/>
+  <line x1="500" y1="500" x2="700" y2="500" stroke="white" stroke-width="1.5" opacity="0.4"/>
+  
+  <!-- Additional Mathematical Symbols -->
+  <text x="300" y="200" font-family="Georgia, serif" font-size="28" fill="white" opacity="0.5">
+    ∞
+  </text>
+  
+  <text x="150" y="550" font-family="Georgia, serif" font-size="20" fill="white" opacity="0.6">
+    f(x) = x² + 2x + 1
+  </text>
+  
+  <text x="450" y="280" font-family="Georgia, serif" font-size="26" fill="white" opacity="0.7">
+    ∂y/∂x
+  </text>
+</svg>

@@ -1,0 +1,566 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+
+@theme {
+  --font-sans: var(--font-roboto), 'Helvetica', 'Arial', sans-serif;
+  --font-mono: 'Source Code Pro', 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
+
+/* Material Design 3 Tokens */
+:root {
+  --radius: 0.75rem;
+
+  /* Light Mode - Enhanced for better visibility */
+  --background: oklch(0.98 0 0);
+  /* Slightly off-white for reduced eye strain */
+  --foreground: oklch(0.15 0 0);
+  /* Much darker text for better readability */
+
+  --card: oklch(1 0 0);
+  /* Pure white cards */
+  --card-foreground: oklch(0.12 0 0);
+  /* Very dark text on cards */
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.12 0 0);
+
+  --primary: oklch(0.45 0.2 260);
+  /* Robust blue */
+  --primary-foreground: oklch(0.98 0 0);
+
+  --secondary: oklch(0.92 0.03 260);
+  /* Lighter secondary background */
+  --secondary-foreground: oklch(0.12 0.05 260);
+  /* Much darker secondary text */
+
+  --muted: oklch(0.94 0.01 260);
+  /* Lighter muted background */
+  --muted-foreground: oklch(0.35 0.03 260);
+  /* Much darker muted text for better readability */
+
+  --accent: oklch(0.92 0.03 260);
+  --accent-foreground: oklch(0.12 0.05 260);
+  /* Much darker accent text */
+
+  --destructive: oklch(0.55 0.22 20);
+  /* Slightly darker red for better visibility */
+  --destructive-foreground: oklch(0.98 0 0);
+
+  --border: oklch(0.80 0.02 260);
+  /* Much darker border for better definition */
+  --input: oklch(0.80 0.02 260);
+  /* Darker input borders */
+  --ring: oklch(0.45 0.2 260);
+}
+
+.dark {
+  /* Dark Mode */
+  --background: oklch(0.15 0.02 260);
+  --foreground: oklch(0.98 0 0);
+
+  --card: oklch(0.2 0.03 260);
+  --card-foreground: oklch(0.98 0 0);
+
+  --popover: oklch(0.2 0.03 260);
+  --popover-foreground: oklch(0.98 0 0);
+
+  --primary: oklch(0.7 0.15 260);
+  /* Lighter Blue for Dark Mode */
+  --primary-foreground: oklch(0.15 0.02 260);
+
+  --secondary: oklch(0.25 0.05 260);
+  --secondary-foreground: oklch(0.98 0 0);
+
+  --muted: oklch(0.25 0.02 260);
+  --muted-foreground: oklch(0.7 0.05 260);
+
+  --accent: oklch(0.25 0.05 260);
+  --accent-foreground: oklch(0.98 0 0);
+
+  --destructive: oklch(0.6 0.2 20);
+  --destructive-foreground: oklch(0.98 0 0);
+
+  --border: oklch(0.3 0.03 260);
+  --input: oklch(0.3 0.03 260);
+  --ring: oklch(0.7 0.15 260);
+}
+
+/* Utilities */
+@layer utilities {
+  .gradient-text {
+    background: linear-gradient(to right, oklch(0.55 0.25 260), oklch(0.5 0.2 200));
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .dark .gradient-text {
+    background: linear-gradient(to right, oklch(0.7 0.15 260), oklch(0.6 0.15 200));
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+}
+
+/* Global Styles */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    background-color: var(--background);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}
+
+/* Professional Admin Styling */
+@layer components {
+  .admin-typography {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+  }
+
+  .math-content {
+    font-family: 'Cambria Math', 'Times New Roman', serif;
+  }
+
+  .professional-card {
+    @apply bg-card text-card-foreground rounded-xl border shadow-sm p-6 mb-6;
+  }
+
+  .section-header {
+    @apply border-b-2 border-secondary pb-2 mb-5 text-primary font-semibold;
+  }
+
+  .math-expression {
+    @apply bg-muted p-3 rounded-md font-serif my-3 overflow-hidden;
+  }
+
+  .example-box {
+    @apply border-l-4 border-secondary bg-secondary/10 p-4 my-4 rounded-r-md;
+  }
+
+  .exercise-box {
+    @apply border rounded-md p-4 bg-card;
+  }
+
+  /* Difficulty Badges */
+  .badge-beginner {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300;
+  }
+
+  .badge-intermediate {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300;
+  }
+
+  .badge-advanced {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300;
+  }
+}
+
+/* MathJax Variation Table Styling */
+/* Target MathJax-rendered array tables (variation tables) */
+table.variation-table,
+table[data-variation-table="true"],
+.MathJax table.variation-table,
+.MathJax table[data-variation-table="true"],
+mjx-container table.variation-table,
+mjx-container table[data-variation-table="true"] {
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+  margin: 1.5rem auto !important;
+  display: table !important;
+  border: 2px solid hsl(var(--border)) !important;
+  border-radius: 0.25rem !important;
+  background-color: hsl(var(--card)) !important;
+}
+
+/* Style for variation table cells */
+table.variation-table td,
+table.variation-table th,
+table[data-variation-table="true"] td,
+table[data-variation-table="true"] th,
+.MathJax table.variation-table td,
+.MathJax table.variation-table th,
+.MathJax table[data-variation-table="true"] td,
+.MathJax table[data-variation-table="true"] th,
+mjx-container table.variation-table td,
+mjx-container table.variation-table th,
+mjx-container table[data-variation-table="true"] td,
+mjx-container table[data-variation-table="true"] th {
+  border: 1px solid hsl(var(--border)) !important;
+  padding: 0.75rem 1rem !important;
+  text-align: center !important;
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+  min-width: 2.5rem !important;
+  vertical-align: middle !important;
+  font-size: 0.95rem !important;
+}
+
+/* First and last columns get thicker borders */
+table.variation-table td:first-child,
+table.variation-table th:first-child,
+table[data-variation-table="true"] td:first-child,
+table[data-variation-table="true"] th:first-child {
+  border-left: 2px solid hsl(var(--border)) !important;
+}
+
+table.variation-table td:last-child,
+table.variation-table th:last-child,
+table[data-variation-table="true"] td:last-child,
+table[data-variation-table="true"] th:last-child {
+  border-right: 2px solid hsl(var(--border)) !important;
+}
+
+/* First and last rows get thicker borders */
+table.variation-table tr:first-child th,
+table.variation-table tr:first-child td,
+table[data-variation-table="true"] tr:first-child th,
+table[data-variation-table="true"] tr:first-child td {
+  border-top: 2px solid hsl(var(--border)) !important;
+}
+
+table.variation-table tr:last-child td,
+table[data-variation-table="true"] tr:last-child td {
+  border-bottom: 2px solid hsl(var(--border)) !important;
+}
+
+/* Empty cells styling (for intervals) - ensure they have proper spacing */
+table.variation-table td:empty:before,
+table[data-variation-table="true"] td:empty:before {
+  content: '\00A0' !important;
+  /* Non-breaking space */
+}
+
+table.variation-table td:has(> span:empty),
+table[data-variation-table="true"] td:has(> span:empty) {
+  min-width: 2.5rem !important;
+  min-height: 2.5rem !important;
+}
+
+/* Arrow styling in variation tables - make them more visible */
+table.variation-table .searrow,
+table.variation-table .nearrow,
+table[data-variation-table="true"] .searrow,
+table[data-variation-table="true"] .nearrow,
+table.variation-table [data-arrow="searrow"],
+table.variation-table [data-arrow="nearrow"] {
+  font-size: 1.3em !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  line-height: 1 !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Ensure MathJax content is visible */
+.MathJax,
+mjx-container {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* MathJax display math containers */
+.MathJax_Display,
+mjx-container[jdisplay="true"] {
+  margin: 1.5rem 0 !important;
+  text-align: center !important;
+}
+
+/* Ensure proper spacing around variation tables in display math */
+.MathJax_Display:has(table.variation-table),
+.MathJax_Display:has(table[data-variation-table="true"]),
+mjx-container[jdisplay="true"]:has(table.variation-table),
+mjx-container[jdisplay="true"]:has(table[data-variation-table="true"]) {
+  padding: 0.5rem !important;
+  margin: 1.5rem auto !important;
+  display: block !important;
+}
+
+/* Fix for MathJax array rendering - ensure proper cell alignment */
+.MathJax table .arraycolsep,
+mjx-container table .arraycolsep {
+  width: 0.5rem !important;
+}
+
+/* Style for hline (horizontal lines in LaTeX arrays) */
+.MathJax table .hline,
+mjx-container table .hline {
+  border-top: 1px solid hsl(var(--border)) !important;
+  width: 100% !important;
+  display: block !important;
+  margin: 0 !important;
+}
+
+/* Ensure variation tables are centered and have proper spacing */
+div:has(table.variation-table),
+div:has(table[data-variation-table="true"]) {
+  display: flex !important;
+  justify-content: center !important;
+  margin: 1.5rem 0 !important;
+  overflow-x: hidden !important;
+}
+
+/* ============================================
+   MathJax Array Tables (mjx-mtable) Styling
+   For \begin{array} variation tables
+   ============================================ */
+
+/* Style MathJax containers that contain variation tables */
+mjx-container.variation-table-mjx,
+mjx-container[data-variation-table="true"] {
+  display: inline-block !important;
+  margin: 1.5rem auto !important;
+  padding: 0.5rem !important;
+  border: 2px solid hsl(var(--border)) !important;
+  border-radius: 0.25rem !important;
+  background-color: hsl(var(--card)) !important;
+  text-align: center !important;
+}
+
+/* Style the mtable element itself */
+mjx-container.variation-table-mjx mjx-mtable,
+mjx-container[data-variation-table="true"] mjx-mtable {
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+  display: inline-table !important;
+  margin: 0 auto !important;
+}
+
+/* Style all cells (mjx-mtd) in variation tables */
+mjx-container.variation-table-mjx mjx-mtd,
+mjx-container[data-variation-table="true"] mjx-mtd {
+  border: 1px solid hsl(var(--border)) !important;
+  padding: 0.75rem 1rem !important;
+  text-align: center !important;
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+  min-width: 2.5rem !important;
+  min-height: 2.5rem !important;
+  vertical-align: middle !important;
+  font-size: 0.95rem !important;
+  position: relative !important;
+}
+
+/* First and last columns get thicker side borders */
+mjx-container.variation-table-mjx mjx-mtr mjx-mtd:first-child,
+mjx-container[data-variation-table="true"] mjx-mtr mjx-mtd:first-child {
+  border-left: 2px solid hsl(var(--border)) !important;
+}
+
+mjx-container.variation-table-mjx mjx-mtr mjx-mtd:last-child,
+mjx-container[data-variation-table="true"] mjx-mtr mjx-mtd:last-child {
+  border-right: 2px solid hsl(var(--border)) !important;
+}
+
+/* First and last rows get thicker top/bottom borders */
+mjx-container.variation-table-mjx mjx-mtr:first-child mjx-mtd,
+mjx-container[data-variation-table="true"] mjx-mtr:first-child mjx-mtd {
+  border-top: 2px solid hsl(var(--border)) !important;
+}
+
+mjx-container.variation-table-mjx mjx-mtr:last-child mjx-mtd,
+mjx-container[data-variation-table="true"] mjx-mtr:last-child mjx-mtd {
+  border-bottom: 2px solid hsl(var(--border)) !important;
+}
+
+/* Google Translate Styling */
+.google-translate-wrapper {
+  display: flex !important;
+  align-items: center !important;
+  position: relative !important;
+}
+
+#google_translate_element {
+  line-height: normal !important;
+}
+
+/* Hide the "Powered by Google" text and standard layout */
+.goog-te-gadget-simple {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  font-family: inherit !important;
+  font-size: 0.875rem !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Style the text inside the gadget */
+.goog-te-gadget-simple .goog-te-menu-value {
+  color: hsl(var(--foreground)) !important;
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+}
+
+.goog-te-gadget-simple .goog-te-menu-value span {
+  display: none !important;
+  /* HIDE ALL SPANS by default to remove clutter */
+}
+
+/* 
+   Hack: Only show the dropdown arrow if possible. 
+   Google usually puts the arrow in an image or a span.
+/* 
+   --------------------------------------------------------------------------
+   STEALTH MODE GOOGLE TRANSLATE CSS
+   --------------------------------------------------------------------------
+   Aggressively hides all Google UI artifacts ("Translate this page", tooltips, 
+   popups, hover effects) to ensure a clean, native experience.
+*/
+
+/* 1. Hide the top banner frame (both iframe and div versions) */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner-frame,
+iframe.goog-te-banner-frame {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  width: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 2. Hide the hover tooltip popup ("Original text") */
+#goog-gt-tt,
+.goog-te-balloon-frame,
+.goog-tooltip,
+.goog-tooltip:hover {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 3. Remove the blue hover background highlight on translated text */
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* 4. Hide the "Powered by Google" icon in the footer/widget if it leaks */
+.goog-te-gadget-icon {
+  display: none !important;
+}
+
+/* 5. Force Body to not shift down */
+body {
+  top: 0px !important;
+  position: static !important;
+  margin-top: 0px !important;
+}
+
+/* 6. Hide the printed text tooltip if user prints context */
+@media print {
+  #goog-gt-tt {
+    display: none !important;
+  }
+}
+
+/* 7. Hide the Google "Suggest an edit" popup */
+.goog-te-spinner-pos {
+  display: none !important;
+}
+
+/* 8. Additional aggressive hiding for any iframe variations */
+iframe[class*="goog-te-banner"],
+.goog-te-ftab-frame {
+  display: none !important;
+  visibility: hidden !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+}
+
+/* 9. Prevent HTML element shift (Google sometimes targets html instead of body) */
+html {
+  top: 0px !important;
+  position: static !important;
+}
+
+/* 10. Hide the translate element container itself */
+#google_translate_element {
+  visibility: hidden !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  z-index: -9999 !important;
+}
+
+/* 11. Ensure translated body classes don't cause shifts */
+body.translated-ltr,
+body.translated-rtl {
+  top: 0px !important;
+  position: static !important;
+  margin-top: 0px !important;
+}
+
+/* 12. NUCLEAR OPTION - Hide the persistent top bar */
+body>.skiptranslate,
+body>iframe.skiptranslate,
+body>.goog-te-banner-frame,
+#goog-gt-tt,
+.goog-te-banner-frame.skiptranslate {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+  top: -10000px !important;
+  left: -10000px !important;
+  z-index: -999999 !important;
+}
+
+/* 13. Target any top-level frame that Google injects - but NOT our dropdown */
+body>iframe[style*="position: fixed"].skiptranslate,
+body>iframe[style*="position: absolute"].skiptranslate,
+body>div[style*="position: fixed"].skiptranslate,
+body>div[style*="position: absolute"].skiptranslate {
+  display: none !important;
+}
+
+/* Ensure Radix UI dropdowns are visible */
+[data-radix-popper-content-wrapper],
+[data-radix-dropdown-menu-content],
+[role="menu"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
