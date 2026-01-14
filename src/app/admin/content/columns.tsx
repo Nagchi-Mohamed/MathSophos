@@ -15,8 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { deleteLesson } from "@/actions/admin"
 import Link from "next/link"
-
-import { LessonStatus } from "@prisma/client"
+import { LessonStatus } from "@/lib/enums"
 
 export type Lesson = {
   id: string

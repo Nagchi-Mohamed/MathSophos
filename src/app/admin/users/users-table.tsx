@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { UserActions } from "./user-actions"
 import { ROLE_LABELS, getRoleBadgeColor } from "@/lib/roles"
-import { UserRole } from "@prisma/client"
+import { UserRole } from "@/lib/enums"
 
 interface User {
   id: string

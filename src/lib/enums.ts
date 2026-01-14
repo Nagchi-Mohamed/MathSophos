@@ -27,3 +27,11 @@ export enum LessonStatus {
   AI_GENERATED = 'AI_GENERATED',
   PUBLISHED = 'PUBLISHED'
 }
+
+export enum UserRole {
+  STUDENT = 'STUDENT',
+  TEACHER = 'TEACHER',
+  ADMIN = 'ADMIN',
+  EDITOR = 'EDITOR',
+  CONTENT_MODERATOR = 'CONTENT_MODERATOR'
+}

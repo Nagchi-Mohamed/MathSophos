@@ -18,7 +18,7 @@ import { deleteUser, updateUserRole } from "@/actions/admin"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { UserRole } from "@prisma/client"
+import { UserRole } from "@/lib/enums"
 import { getAssignableRoles, ROLE_LABELS, canModifyUserRole } from "@/lib/roles"
 
 interface UserActionsProps {
