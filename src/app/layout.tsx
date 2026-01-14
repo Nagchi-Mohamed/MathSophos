@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "@/components/providers";
+import { Header } from "@/components/header";
 // import { MathJaxRegistry } from "@/components/mathjax-registry"; // Removed MathJax
 import "katex/dist/katex.min.css"; // Added KaTeX styles
 
@@ -63,6 +64,7 @@ export default function RootLayout({
         <Providers>
 
           <ThemeProvider>
+            <Header />
             {children}
             <Toaster />
           </ThemeProvider>

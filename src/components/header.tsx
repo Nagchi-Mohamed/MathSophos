@@ -24,7 +24,7 @@ export function Header() {
   const canAccessFiches = session?.user?.role && ['TEACHER', 'EDITOR', 'ADMIN'].includes(session.user.role);
 
   return (
-    <header className="border-b sticky top-0 z-50 backdrop-blur-xl bg-opacity-100" style={{
+    <header className="border-b sticky top-0 z-50 backdrop-blur-xl bg-opacity-100 print:hidden" style={{
       background: 'var(--background)',
       backdropFilter: 'blur(12px) saturate(180%)',
       WebkitBackdropFilter: 'blur(12px) saturate(180%)',
