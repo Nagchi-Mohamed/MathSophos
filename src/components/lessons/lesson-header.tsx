@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { GraduationCap, BookOpen, PlayCircle, Loader2 } from "lucide-react";
 import { formatLevel } from "@/utils/formatters";
 import { useLanguage } from "@/contexts/language-context";
-import type { EducationalLevel, Stream } from "@prisma/client";
+import type { EducationalLevel, Stream } from "@/lib/enums";
 import { Button } from "@/components/ui/button";
 import { VideoPlayer } from "@/components/ui/video-player";
 import { toast } from "sonner";

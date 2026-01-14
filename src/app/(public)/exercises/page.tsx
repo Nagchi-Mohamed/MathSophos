@@ -3,7 +3,7 @@ import { getPaginatedSeries, SeriesFilters } from "@/actions/series";
 import { SeriesCard } from "@/components/ui/series-card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { EducationalLevel, Stream } from "@prisma/client";
+import { EducationalLevel, Stream } from "@/lib/enums";
 import { EDUCATION_SYSTEM, Cycle, SEMESTERS } from "@/lib/education-system";
 import { BookOpen, GraduationCap, School, Calculator, Folder } from "lucide-react";
 import { ExerciseSearchFilters } from "@/components/exercises/exercise-search-filters";

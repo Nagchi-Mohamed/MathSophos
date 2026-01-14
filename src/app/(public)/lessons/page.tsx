@@ -4,7 +4,7 @@ import { LessonCard } from "@/components/ui/lesson-card";
 import { ChapterCard } from "@/components/ui/chapter-card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { EducationalLevel, Stream } from "@prisma/client";
+import { EducationalLevel, Stream } from "@/lib/enums";
 import { EDUCATION_SYSTEM, Cycle, SEMESTERS } from "@/lib/education-system";
 import { ArrowLeft, ArrowRight, BookOpen, GraduationCap, School, Calculator, Search, Filter, Folder } from "lucide-react";
 import { Input } from "@/components/ui/input";

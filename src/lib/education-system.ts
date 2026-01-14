@@ -1,5 +1,5 @@
 
-import { EducationalLevel, Stream } from "@prisma/client";
+import { EducationalLevel, Stream } from "@/lib/enums";
 
 export type Cycle = "COLLEGE" | "LYCEE" | "SUPERIEUR";
 
