@@ -51,7 +51,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               },
             })
             console.log("Default admin user created")
-            return user
+            return user as any
           }
 
           console.log("User found:", user ? user.email : "null")
@@ -87,7 +87,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             throw new Error("INVALID_PASSWORD")
           }
 
-          return user
+          return user as any
         } catch (error) {
           console.error("Authorize error:", error)
           throw error

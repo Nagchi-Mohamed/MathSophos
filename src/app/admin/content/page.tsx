@@ -38,7 +38,7 @@ export default async function ContentPage() {
         </Link>
       </div>
 
-      <DataTable columns={columns} data={lessons} searchKey="titleFr" />
+      <DataTable columns={columns} data={lessons as any} searchKey="titleFr" />
     </div>
   )
 }

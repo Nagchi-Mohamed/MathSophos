@@ -9,7 +9,7 @@ export default async function AdminUsersPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <UsersTable users={users} total={data?.total || 0} />
+      <UsersTable users={users as any} total={data?.total || 0} />
     </div>
   )
 }

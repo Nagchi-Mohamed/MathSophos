@@ -54,8 +54,8 @@ export function LessonForm({ lesson }: LessonFormProps) {
     setLoading(true)
 
     const result = lesson
-      ? await updateLesson(lesson.id, formData)
-      : await createLesson(formData)
+      ? await updateLesson(lesson.id, formData as any)
+      : await createLesson(formData as any)
 
     if (result.success) {
       toast.success(result.message)
