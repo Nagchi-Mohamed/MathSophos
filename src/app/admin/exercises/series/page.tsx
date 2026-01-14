@@ -9,7 +9,7 @@ import { getPaginatedSeries, getLessonsForParams } from "@/actions/series"
 import { SeriesCreationForm } from "@/components/exercises/series-creation-form"
 import { getChaptersByLesson } from "@/actions/chapters"
 import { getLessonById } from "@/actions/content"
-import { EducationalLevel } from "@prisma/client"
+import { EducationalLevel } from "@/lib/enums"
 import { SeriesCard } from "@/components/ui/series-card"
 
 export default async function SeriesPage({ searchParams }: { searchParams: Promise<{ cycle?: string; level?: string; stream?: string; semester?: string; streamId?: string; moduleId?: string; lessonId?: string }> }) {

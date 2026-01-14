@@ -2,7 +2,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { Plus, Dumbbell, BookOpen, School, Calculator, GraduationCap, Folder } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { EducationalLevel, Stream } from "@prisma/client"
+import { EducationalLevel, Stream } from "@/lib/enums"
 import { EDUCATION_SYSTEM, Cycle, SEMESTERS } from "@/lib/education-system"
 import { getStreamsByLevel, getStreamById } from "@/actions/streams"
 

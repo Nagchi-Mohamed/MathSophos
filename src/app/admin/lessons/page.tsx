@@ -3,7 +3,7 @@ import { Plus, BookOpen, School, Calculator, GraduationCap, Folder, Edit } from 
 import { Button } from "@/components/ui/button"
 import { getPaginatedLessons, LessonFilters, getLessonById } from "@/actions/content"
 import { AdminLessonCard } from "@/components/admin/admin-lesson-card"
-import { EducationalLevel, Stream } from "@prisma/client"
+import { EducationalLevel, Stream } from "@/lib/enums"
 import { EDUCATION_SYSTEM, Cycle } from "@/lib/education-system"
 import { getStreamsByLevel, getStreamById } from "@/actions/streams"
 import { AddStreamDialog } from "@/components/admin/add-stream-dialog"

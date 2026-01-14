@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Cycle } from "@/lib/education-system"
-import { EducationalLevel, Stream } from "@prisma/client"
+import { EducationalLevel, Stream } from "@/lib/enums"
 
 export const dynamic = 'force-dynamic'
 
@@ -22,13 +22,13 @@ interface PageProps {
 export default async function AdminCreateExamPage({ searchParams }: PageProps) {
   const resolvedParams = await searchParams
   const { cycle, lessonId, moduleId, streamId } = resolvedParams
-  
+
   // For Supérieur, redirect to lesson-specific exam generator
   if (cycle === "SUPERIEUR" && lessonId) {
     const { redirect } = await import("next/navigation")
     redirect(`/admin/exams/create/superieur?streamId=${streamId}&moduleId=${moduleId}&lessonId=${lessonId}`)
   }
-  
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8 flex items-center gap-4">
@@ -45,8 +45,8 @@ export default async function AdminCreateExamPage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      <ExamGenerator 
-        isAdmin={true} 
+      <ExamGenerator
+        isAdmin={true}
         initialParams={{
           cycle: resolvedParams.cycle,
           level: resolvedParams.level,
