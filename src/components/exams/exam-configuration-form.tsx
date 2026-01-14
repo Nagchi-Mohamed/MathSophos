@@ -20,7 +20,7 @@ import { Loader2, Plus, Trash2, GraduationCap, BookOpen, FileText, Settings2, Sp
 import { EDUCATION_SYSTEM, Cycle } from "@/lib/education-system"
 import { getPaginatedLessons } from "@/actions/content"
 import { getPaginatedSeries } from "@/actions/series"
-import { EducationalLevel, Stream } from "@prisma/client"
+import { EducationalLevel, Stream } from "@/lib/enums"
 
 interface ExamConfigurationFormProps {
   onGenerate: (params: GenerateExamParams, method: "AI" | "MANUAL", preGeneratedExam?: GeneratedExam) => void

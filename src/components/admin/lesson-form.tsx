@@ -21,7 +21,7 @@ import Link from "next/link"
 import { LESSON_EXAMPLE } from "@/lib/content-examples"
 import { VideoUploadManager } from "@/components/admin/video-upload-manager"
 
-import { LessonStatus } from "@prisma/client"
+import { LessonStatus } from "@/lib/enums"
 
 type LessonFormProps = {
   lesson?: {

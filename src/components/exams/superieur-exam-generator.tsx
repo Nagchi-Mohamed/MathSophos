@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ExamPreview } from "./exam-preview"
 import { ManualExamEditor } from "./manual-exam-editor"
 import { GenerateExamParams, GeneratedExam, generateExamWithAI, saveExam } from "@/actions/exams"
-import { EducationalLevel } from "@prisma/client"
+import { EducationalLevel } from "@/lib/enums"
 import { Loader2, Plus, Trash2, Sparkles, PenTool, Bot, BookOpen } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -83,7 +83,7 @@ export function SuperieurExamGenerator({
   }
 
   const handleUpdatePoints = (id: string, points: number) => {
-    setSelectedChapters(selectedChapters.map(c => 
+    setSelectedChapters(selectedChapters.map(c =>
       c.id === id ? { ...c, points } : c
     ))
   }
@@ -289,7 +289,7 @@ export function SuperieurExamGenerator({
                     </span>
                     {totalPoints !== 20 && (
                       <span className="text-sm text-destructive">
-                        {totalPoints < 20 
+                        {totalPoints < 20
                           ? `Il manque ${20 - totalPoints} point(s)`
                           : `Il y a ${totalPoints - 20} point(s) en trop`}
                       </span>

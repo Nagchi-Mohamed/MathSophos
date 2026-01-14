@@ -12,7 +12,8 @@ import { FicheJsonEditor } from "./fiche-json-editor"
 import { toast } from "sonner"
 import { ArrowLeft, Save, FileText, List, Eye, FileJson } from "lucide-react"
 import Link from "next/link"
-import { EducationalLevel, PedagogicalSheet } from "@prisma/client"
+import type { PedagogicalSheet } from "@prisma/client"
+import { EducationalLevel } from "@/lib/enums"
 
 // Default example content for new fiches
 const DEFAULT_EXAMPLE_CONTENT: FicheContentStep[] = [

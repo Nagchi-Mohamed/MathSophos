@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { PlatformVideo } from "@prisma/client";
+import type { PlatformVideo } from "@prisma/client";
 import { VideoPlayer } from "@/components/ui/video-player"; // We might reuse parts or just use standard video tag for feed
 import { Heart, MessageCircle, Share2, MoreVertical, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";

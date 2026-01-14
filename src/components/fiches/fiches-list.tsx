@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { PedagogicalSheet } from "@prisma/client"
+import type { PedagogicalSheet } from "@prisma/client"
 import { EducationalLevel, Stream, LessonStatus } from "@/lib/enums"
 import { deleteFiche, updateFiche, toggleFichePublish, duplicateFiche } from "@/actions/fiches"
 import { Button } from "@/components/ui/button"

@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label"
 import { createLesson } from "@/actions/content"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { EducationalLevel } from "@prisma/client"
+import { EducationalLevel } from "@/lib/enums"
 
 interface AddLessonDialogProps {
   moduleId: string
