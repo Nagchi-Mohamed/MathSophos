@@ -13,6 +13,7 @@ import {
   Settings,
   Volume2,
   VolumeX,
+  MoreVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,95 +67,169 @@ export function EnhancedControls({
 
   return (
     <div className="flex items-center gap-2">
-      {/* Raise Hand Button */}
-      <Button
-        variant={isHandRaised ? "default" : "outline"}
-        size="sm"
-        onClick={onToggleRaiseHand}
-        className={cn(
-          "gap-2",
-          isHandRaised && "bg-yellow-600 hover:bg-yellow-700 animate-pulse"
-        )}
-      >
-        <Hand className="h-4 w-4" />
-        {isHandRaised ? "Lower Hand" : "Raise Hand"}
-      </Button>
+      {/* Desktop View */}
+      <div className="hidden md:flex items-center gap-2">
+        {/* Raise Hand Button */}
+        <Button
+          variant={isHandRaised ? "default" : "outline"}
+          size="sm"
+          onClick={onToggleRaiseHand}
+          className={cn(
+            "gap-2",
+            isHandRaised && "bg-yellow-600 hover:bg-yellow-700 animate-pulse"
+          )}
+        >
+          <Hand className="h-4 w-4" />
+          {isHandRaised ? "Lower Hand" : "Raise Hand"}
+        </Button>
 
-      {/* Teacher-only Controls */}
-      {isTeacher && (
-        <>
-          {/* Host Actions Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Settings className="h-4 w-4" />
-                Host Controls
+        {/* Teacher-only Controls */}
+        {isTeacher && (
+          <>
+            {/* Host Actions Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Settings className="h-4 w-4" />
+                  Host Controls
+                  {raisedHands.size > 0 && (
+                    <Badge variant="destructive" className="ml-1">
+                      {raisedHands.size}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-[#1a1a1a] text-zinc-300 border-[#333]">
+                <DropdownMenuLabel>Host Actions</DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-[#333]" />
+
+                <DropdownMenuItem onClick={onMuteAll} className="gap-2 hover:bg-[#333] focus:bg-[#333] cursor-pointer">
+                  <MicOffIcon className="h-4 w-4" />
+                  Mute All Participants
+                </DropdownMenuItem>
+
                 {raisedHands.size > 0 && (
-                  <Badge variant="destructive" className="ml-1">
-                    {raisedHands.size}
-                  </Badge>
+                  <>
+                    <DropdownMenuSeparator className="bg-[#333]" />
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">
+                      Raised Hands ({raisedHands.size})
+                    </DropdownMenuLabel>
+                    {Array.from(raisedHands).map((identity) => {
+                      const participant = participants.find(p => p.identity === identity);
+                      if (!participant) return null;
+                      return (
+                        <DropdownMenuItem
+                          key={identity}
+                          className="gap-2 text-yellow-600 hover:bg-[#333] focus:bg-[#333] cursor-pointer"
+                          onClick={() => {
+                            onSpotlightParticipant(identity);
+                            toast.success(`Spotlighted ${participant.name || identity}`);
+                          }}
+                        >
+                          <Hand className="h-4 w-4" />
+                          {participant.name || identity}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </>
                 )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Host Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-              <DropdownMenuItem onClick={onMuteAll} className="gap-2">
-                <MicOffIcon className="h-4 w-4" />
-                Mute All Participants
-              </DropdownMenuItem>
+            {/* Collaboration Tools */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenWhiteboard}
+              className="gap-2"
+            >
+              <Presentation className="h-4 w-4" />
+              Whiteboard
+            </Button>
 
-              {raisedHands.size > 0 && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">
-                    Raised Hands ({raisedHands.size})
-                  </DropdownMenuLabel>
-                  {Array.from(raisedHands).map((identity) => {
-                    const participant = participants.find(p => p.identity === identity);
-                    if (!participant) return null;
-                    return (
-                      <DropdownMenuItem
-                        key={identity}
-                        className="gap-2 text-yellow-600"
-                        onClick={() => {
-                          onSpotlightParticipant(identity);
-                          toast.success(`Spotlighted ${participant.name || identity}`);
-                        }}
-                      >
-                        <Hand className="h-4 w-4" />
-                        {participant.name || identity}
-                      </DropdownMenuItem>
-                    );
-                  })}
-                </>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenPolls}
+              className="gap-2"
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+              Poll
+            </Button>
+          </>
+        )}
+      </div>
+
+      {/* Mobile View - Styled Selector/Menu */}
+      <div className="md:hidden">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="relative">
+              <MoreVertical className="h-5 w-5 text-zinc-400" />
+              {(isHandRaised || raisedHands.size > 0) && (
+                <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500" />
               )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 bg-[#1a1a1a] text-zinc-300 border-[#333]">
+            <DropdownMenuLabel className="text-zinc-500 uppercase text-xs font-bold tracking-wider">Session Controls</DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-[#333]" />
 
-          {/* Collaboration Tools */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onOpenWhiteboard}
-            className="gap-2"
-          >
-            <Presentation className="h-4 w-4" />
-            Whiteboard
-          </Button>
+            <DropdownMenuItem
+              onClick={onToggleRaiseHand}
+              className={cn("gap-2 cursor-pointer focus:bg-[#333]", isHandRaised && "text-yellow-500")}
+            >
+              <Hand className="h-4 w-4" />
+              {isHandRaised ? "Lower Hand" : "Raise Hand"}
+            </DropdownMenuItem>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onOpenPolls}
-            className="gap-2"
-          >
-            <MessageSquarePlus className="h-4 w-4" />
-            Poll
-          </Button>
-        </>
-      )}
+            {isTeacher && (
+              <>
+                <DropdownMenuItem onClick={onOpenWhiteboard} className="gap-2 cursor-pointer focus:bg-[#333]">
+                  <Presentation className="h-4 w-4" />
+                  Open Whiteboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onOpenPolls} className="gap-2 cursor-pointer focus:bg-[#333]">
+                  <MessageSquarePlus className="h-4 w-4" />
+                  Open Polls
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator className="bg-[#333]" />
+                <DropdownMenuLabel className="text-zinc-500 uppercase text-xs font-bold tracking-wider">Host Actions</DropdownMenuLabel>
+
+                <DropdownMenuItem onClick={onMuteAll} className="gap-2 cursor-pointer focus:bg-[#333] text-red-400">
+                  <MicOffIcon className="h-4 w-4" />
+                  Mute All
+                </DropdownMenuItem>
+
+                {raisedHands.size > 0 && (
+                  <>
+                    <DropdownMenuSeparator className="bg-[#333]" />
+                    <DropdownMenuLabel className="text-zinc-500 text-xs">Raised Hands</DropdownMenuLabel>
+                    {Array.from(raisedHands).map((identity) => {
+                      const participant = participants.find(p => p.identity === identity);
+                      if (!participant) return null;
+                      return (
+                        <DropdownMenuItem
+                          key={identity}
+                          className="gap-2 text-yellow-600 cursor-pointer focus:bg-[#333]"
+                          onClick={() => {
+                            onSpotlightParticipant(identity);
+                            toast.success(`Spotlighted ${participant.name || identity}`);
+                          }}
+                        >
+                          <Hand className="h-4 w-4" />
+                          {participant.name || identity}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </>
+                )}
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 }
