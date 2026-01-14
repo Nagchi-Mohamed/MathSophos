@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { CreateFicheInput } from "@/actions/fiches"
-import { EducationalLevel, Stream } from "@prisma/client"
+import { EducationalLevel, Stream } from "@/lib/enums"
 
 interface MetadataFormProps {
   data: Omit<CreateFicheInput, "content">

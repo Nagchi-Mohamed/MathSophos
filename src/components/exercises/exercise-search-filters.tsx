@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EDUCATION_SYSTEM, Cycle, SEMESTERS } from "@/lib/education-system";
-import { EducationalLevel, Stream } from "@prisma/client";
+import { EducationalLevel, Stream } from "@/lib/enums";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 

@@ -16,17 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createStream } from "@/actions/streams"
 import { toast } from "sonner"
-
-// Avoid importing from @prisma/client in "use client" components
-enum EducationalLevel {
-  COLLEGE_1AC = 'COLLEGE_1AC',
-  COLLEGE_2AC = 'COLLEGE_2AC',
-  COLLEGE_3AC = 'COLLEGE_3AC',
-  LYCEE_TC = 'LYCEE_TC',
-  LYCEE_1BAC = 'LYCEE_1BAC',
-  LYCEE_2BAC = 'LYCEE_2BAC',
-  UNIVERSITY = 'UNIVERSITY'
-}
+import { EducationalLevel } from "@/lib/enums"
 
 export function AddStreamDialog({ level }: { level: string }) {
   const [open, setOpen] = useState(false)
