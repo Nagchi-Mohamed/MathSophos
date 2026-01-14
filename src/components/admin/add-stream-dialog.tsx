@@ -16,9 +16,19 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createStream } from "@/actions/streams"
 import { toast } from "sonner"
-import { EducationalLevel } from "@prisma/client"
 
-export function AddStreamDialog({ level }: { level: EducationalLevel }) {
+// Avoid importing from @prisma/client in "use client" components
+enum EducationalLevel {
+  COLLEGE_1AC = 'COLLEGE_1AC',
+  COLLEGE_2AC = 'COLLEGE_2AC',
+  COLLEGE_3AC = 'COLLEGE_3AC',
+  LYCEE_TC = 'LYCEE_TC',
+  LYCEE_1BAC = 'LYCEE_1BAC',
+  LYCEE_2BAC = 'LYCEE_2BAC',
+  UNIVERSITY = 'UNIVERSITY'
+}
+
+export function AddStreamDialog({ level }: { level: string }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [name, setName] = useState("")
@@ -45,7 +55,7 @@ export function AddStreamDialog({ level }: { level: EducationalLevel }) {
     try {
       const result = await createStream({
         name,
-        level,
+        level: level as any, // Cast to any to satisfy server action type
         semesterCount: level === EducationalLevel.UNIVERSITY ? 0 : Number(semesterCount),
       })
 
@@ -91,18 +101,18 @@ export function AddStreamDialog({ level }: { level: EducationalLevel }) {
             />
           </div>
           {level !== EducationalLevel.UNIVERSITY && (
-          <div className="space-y-2">
-            <Label htmlFor="semesters">Nombre de semestres</Label>
-            <Input
-              id="semesters"
-              type="number"
-              min={1}
-              max={12}
-              value={semesterCount}
-              onChange={(e) => setSemesterCount(Number(e.target.value))}
-              required
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="semesters">Nombre de semestres</Label>
+              <Input
+                id="semesters"
+                type="number"
+                min={1}
+                max={12}
+                value={semesterCount}
+                onChange={(e) => setSemesterCount(Number(e.target.value))}
+                required
+              />
+            </div>
           )}
           <DialogFooter>
             <Button type="submit" disabled={loading}>
