@@ -73,6 +73,12 @@ import {
   DropdownMenuCheckboxItem
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { EnhancedControls } from "@/components/classroom/enhanced-controls";
+import { Whiteboard } from "@/components/classroom/whiteboard";
+import { Polls } from "@/components/classroom/polls";
+import { WaitingRoom, WaitingRoomScreen } from "@/components/classroom/waiting-room";
+import { BackgroundEffects } from "@/components/classroom/background-effects";
+import { FileShare, FileAttachmentCard, FilePreviewModal } from "@/components/classroom/file-share";
 
 interface LiveSessionProps {
   roomName: string;
@@ -568,6 +574,17 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
     allowUnmute: true,
   });
 
+  // Enhanced Features State
+  const [raisedHands, setRaisedHands] = useState<Set<string>>(new Set());
+  const [pinnedParticipants, setPinnedParticipants] = useState<Set<string>>(new Set());
+  const [spotlightedParticipant, setSpotlightedParticipant] = useState<string | null>(null);
+  const [showWhiteboard, setShowWhiteboard] = useState(false);
+  const [showPolls, setShowPolls] = useState(false);
+  const [showBackgroundEffects, setShowBackgroundEffects] = useState(false);
+  const [waitingParticipants, setWaitingParticipants] = useState<Array<{ identity: string, name: string, joinedAt: number }>>([]);
+  const [fileAttachments, setFileAttachments] = useState<any[]>([]);
+  const [previewFile, setPreviewFile] = useState<any | null>(null);
+
   const sendChat = useCallback((message: string) => {
     if (room && localParticipant) {
       const chatPacket = JSON.stringify({ type: 'chat', message, timestamp: Date.now() });
@@ -580,6 +597,102 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
       setChatInput("");
     }
   }, [room, localParticipant]);
+
+  // Enhanced Control Actions
+  const toggleRaiseHand = useCallback(() => {
+    const isRaised = raisedHands.has(localParticipant.identity);
+    const encoder = new TextEncoder();
+    const data = encoder.encode(JSON.stringify({
+      type: 'raise-hand',
+      identity: localParticipant.identity,
+      raised: !isRaised
+    }));
+    room.localParticipant.publishData(data, { reliable: true });
+
+    setRaisedHands(prev => {
+      const next = new Set(prev);
+      if (isRaised) {
+        next.delete(localParticipant.identity);
+      } else {
+        next.add(localParticipant.identity);
+      }
+      return next;
+    });
+  }, [room, localParticipant, raisedHands]);
+
+  const muteParticipant = useCallback((identity: string) => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(JSON.stringify({
+      type: 'mute-request',
+      targetIdentity: identity
+    }));
+    room.localParticipant.publishData(data, { reliable: true });
+    toast.success("Mute request sent");
+  }, [room]);
+
+  const removeParticipant = useCallback((identity: string) => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(JSON.stringify({
+      type: 'remove-request',
+      targetIdentity: identity
+    }));
+    room.localParticipant.publishData(data, { reliable: true });
+    toast.success("Participant removed");
+  }, [room]);
+
+  const spotlightParticipant = useCallback((identity: string | null) => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(JSON.stringify({
+      type: 'spotlight',
+      identity
+    }));
+    room.localParticipant.publishData(data, { reliable: true });
+    setSpotlightedParticipant(identity);
+  }, [room]);
+
+  const muteAll = useCallback(() => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(JSON.stringify({
+      type: 'mute-all'
+    }));
+    room.localParticipant.publishData(data, { reliable: true });
+    toast.success("Muted all participants");
+  }, [room]);
+
+  const pinParticipant = useCallback((identity: string) => {
+    setPinnedParticipants(prev => {
+      const next = new Set(prev);
+      if (next.has(identity)) {
+        next.delete(identity);
+      } else {
+        next.add(identity);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleFileSelect = useCallback((file: any) => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(JSON.stringify({
+      type: 'file-share',
+      file
+    }));
+    room.localParticipant.publishData(data, { reliable: true });
+    setFileAttachments(prev => [...prev, file]);
+  }, [room]);
+
+  const admitParticipant = useCallback((identity: string) => {
+    // In production, this would send a server request
+    setWaitingParticipants(prev => prev.filter(p => p.identity !== identity));
+  }, []);
+
+  const denyParticipant = useCallback((identity: string) => {
+    setWaitingParticipants(prev => prev.filter(p => p.identity !== identity));
+  }, []);
+
+  const admitAll = useCallback(() => {
+    setWaitingParticipants([]);
+  }, []);
 
   useEffect(() => {
     if (!room) return;
@@ -594,9 +707,60 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
       const message = decoder.decode(payload);
       try {
         const parsed = JSON.parse(message);
+
+        // Handle chat messages
         if (parsed.type === 'chat') {
           setChatMessages((prev) => [...prev, { timestamp: parsed.timestamp, sender: participant, message: parsed.message }]);
         }
+
+        // Handle raise hand
+        if (parsed.type === 'raise-hand') {
+          setRaisedHands(prev => {
+            const next = new Set(prev);
+            if (parsed.raised) {
+              next.add(parsed.identity);
+              if (isTeacher) {
+                toast.info(`${parsed.identity} raised their hand`, { duration: 3000 });
+              }
+            } else {
+              next.delete(parsed.identity);
+            }
+            return next;
+          });
+        }
+
+        // Handle mute request (from teacher)
+        if (parsed.type === 'mute-request' && parsed.targetIdentity === localParticipant.identity) {
+          localParticipant.setMicrophoneEnabled(false);
+          toast.info("You have been muted by the host");
+        }
+
+        // Handle mute all
+        if (parsed.type === 'mute-all' && !isTeacher) {
+          localParticipant.setMicrophoneEnabled(false);
+          toast.info("Host muted all participants");
+        }
+
+        // Handle remove request
+        if (parsed.type === 'remove-request' && parsed.targetIdentity === localParticipant.identity) {
+          toast.error("You have been removed from the meeting");
+          setTimeout(() => room.disconnect(), 1000);
+        }
+
+        // Handle spotlight
+        if (parsed.type === 'spotlight') {
+          setSpotlightedParticipant(parsed.identity);
+          if (parsed.identity) {
+            toast.info(`${parsed.identity} is now spotlighted`);
+          }
+        }
+
+        // Handle file share
+        if (parsed.type === 'file-share') {
+          setFileAttachments(prev => [...prev, parsed.file]);
+          toast.success(`${participant?.name || 'Someone'} shared a file`);
+        }
+
       } catch (e) {
         console.error("Failed to parse data message:", e);
       }
@@ -607,7 +771,7 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
     return () => {
       room.off(RoomEvent.DataReceived, onDataReceived);
     };
-  }, [room]);
+  }, [room, localParticipant, isTeacher]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -632,7 +796,51 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
   return (
     <div className="flex flex-col h-full w-full bg-black text-white relative overflow-hidden font-sans">
 
+      {/* Whiteboard Overlay */}
+      {showWhiteboard && (
+        <Whiteboard
+          room={room}
+          isTeacher={isTeacher}
+          onClose={() => setShowWhiteboard(false)}
+        />
+      )}
 
+      {/* Polls Overlay */}
+      {showPolls && (
+        <Polls
+          room={room}
+          isTeacher={isTeacher}
+          participants={participants}
+          onClose={() => setShowPolls(false)}
+        />
+      )}
+
+      {/* Background Effects Overlay */}
+      {showBackgroundEffects && (
+        <BackgroundEffects
+          videoTrack={localParticipant.videoTrackPublications.values().next().value?.track || null}
+          onClose={() => setShowBackgroundEffects(false)}
+        />
+      )}
+
+      {/* File Preview Modal */}
+      {previewFile && (
+        <FilePreviewModal
+          attachment={previewFile}
+          onClose={() => setPreviewFile(null)}
+        />
+      )}
+
+      {/* Waiting Room (for teachers) */}
+      {isTeacher && waitingParticipants.length > 0 && (
+        <WaitingRoom
+          room={room}
+          waitingParticipants={waitingParticipants}
+          onAdmit={admitParticipant}
+          onDeny={denyParticipant}
+          onAdmitAll={admitAll}
+        />
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
@@ -655,6 +863,22 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
               )}
             </div>
             <div className="flex items-center gap-2">
+              <EnhancedControls
+                room={room}
+                isTeacher={isTeacher}
+                participants={participants}
+                raisedHands={raisedHands}
+                pinnedParticipants={pinnedParticipants}
+                spotlightedParticipant={spotlightedParticipant}
+                onToggleRaiseHand={toggleRaiseHand}
+                onMuteParticipant={muteParticipant}
+                onRemoveParticipant={removeParticipant}
+                onPinParticipant={pinParticipant}
+                onSpotlightParticipant={spotlightParticipant}
+                onMuteAll={muteAll}
+                onOpenWhiteboard={() => setShowWhiteboard(true)}
+                onOpenPolls={() => setShowPolls(true)}
+              />
               <Button
                 variant="ghost"
                 size="sm"
@@ -689,12 +913,34 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
 
             <div className="flex-1 overflow-y-auto">
               {sidebarView === 'participants' ? (
-                <ParticipantsList isTeacher={isTeacher} />
+                <ParticipantsList isTeacher={isTeacher} raisedHands={raisedHands} />
               ) : (
                 <>
+
+
                   {/* Chat Messages */}
                   <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {chatMessages.length === 0 ? (
+                    {/* File Attachments */}
+                    {fileAttachments.length > 0 && (
+                      <div className="mb-4 space-y-2">
+                        <div className="text-xs text-zinc-500 font-medium px-2">Shared Files</div>
+                        {fileAttachments.map((file, index) => (
+                          <FileAttachmentCard
+                            key={index}
+                            attachment={file}
+                            onDownload={() => {
+                              const a = document.createElement("a");
+                              a.href = file.url;
+                              a.download = file.name;
+                              a.click();
+                            }}
+                            onPreview={() => setPreviewFile(file)}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {chatMessages.length === 0 && fileAttachments.length === 0 ? (
                       <div className="text-zinc-500 text-center text-sm mt-10">
                         No messages yet
                       </div>
@@ -738,6 +984,7 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
                       }}
                       className="flex gap-2"
                     >
+                      <FileShare onFileSelect={handleFileSelect} />
                       <Input
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
@@ -987,13 +1234,13 @@ function ControlButton({ icon: Icon, label, onClick, badge, active, variant = 'd
   )
 }
 
-function ParticipantsList({ isTeacher }: { isTeacher: boolean }) {
+function ParticipantsList({ isTeacher, raisedHands }: { isTeacher: boolean, raisedHands?: Set<string> }) {
   const participants = useParticipants();
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {participants.map((p) => (
-          <ParticipantItem key={p.identity} participant={p} />
+          <ParticipantItem key={p.identity} participant={p} isHandRaised={raisedHands?.has(p.identity)} />
         ))}
       </div>
       <div className="p-3 border-t border-[#333] grid grid-cols-2 gap-2 bg-[#1a1a1a]">
@@ -1010,7 +1257,7 @@ function ParticipantsList({ isTeacher }: { isTeacher: boolean }) {
   )
 }
 
-function ParticipantItem({ participant }: { participant: Participant }) {
+function ParticipantItem({ participant, isHandRaised }: { participant: Participant, isHandRaised?: boolean }) {
   const { isMicrophoneEnabled, isCameraEnabled } = useParticipantStatus(participant);
   // Check if it's me
   const { localParticipant } = useLocalParticipant();
@@ -1028,6 +1275,7 @@ function ParticipantItem({ participant }: { participant: Participant }) {
           <span className="text-sm font-medium text-white flex items-center gap-2">
             {participant.name || participant.identity}
             {isLocal && <span className="text-zinc-500 text-xs ml-1">(Me)</span>}
+            {isHandRaised && <Hand className="h-4 w-4 text-yellow-500 fill-yellow-500 animate-pulse ml-2" />}
           </span>
         </div>
       </div>
