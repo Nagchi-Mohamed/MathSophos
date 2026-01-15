@@ -1355,7 +1355,13 @@ function CustomParticipantTileRenderer(props: any) {
   return (
     <ParticipantTile {...props} className="relative group border border-[#333] rounded overflow-hidden data-[speaking=true]:border-green-500 transition-colors bg-[#222]">
       {props.trackRef ? (
-        <VideoTrack trackRef={props.trackRef} className="w-full h-full object-cover absolute inset-0 z-0" />
+        <VideoTrack
+          trackRef={props.trackRef}
+          className={cn(
+            "w-full h-full object-cover absolute inset-0 z-0",
+            participant.isLocal && "transform -scale-x-100"
+          )}
+        />
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-[#1a1a1a]">
           <div className="flex flex-col items-center gap-2">
