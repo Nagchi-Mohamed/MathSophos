@@ -39,7 +39,7 @@ export function JoinClassroomDialog() {
           Rejoindre une classe
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Rejoindre une classe</DialogTitle>
           <DialogDescription>
@@ -48,15 +48,15 @@ export function JoinClassroomDialog() {
         </DialogHeader>
         <form action={onSubmit}>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="code" className="text-right whitespace-nowrap">
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="code" className="text-left text-base font-medium">
                 Code de la classe
               </Label>
               <Input
                 id="code"
                 name="code"
                 required
-                className="col-span-3"
+                className="col-span-3 h-11 text-lg tracking-wide"
                 placeholder="ex: 7g5h9k3"
               />
             </div>

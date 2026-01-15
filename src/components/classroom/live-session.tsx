@@ -118,40 +118,13 @@ export function LiveSession({ roomName, userName, userEmail, isTeacher }: LiveSe
   }, [roomName, userName]);
 
   useEffect(() => {
-    // Debug logging
     const url = process.env.NEXT_PUBLIC_LIVEKIT_URL;
-    console.log("LiveSession Environment Check:", {
-      urlPresent: !!url,
-      urlLength: url?.length,
-      urlStart: url?.substring(0, 6)
-    });
-
     if (!url) {
-      setError("System Configuration Error: The LiveKit Server URL (NEXT_PUBLIC_LIVEKIT_URL) is missing from the environment configuration. Please check your .env file.");
+      setError("System Configuration Error: The LiveKit Server URL (NEXT_PUBLIC_LIVEKIT_URL) is missing from the environment configuration.");
     } else if (!url.startsWith("wss://")) {
-      console.warn("LiveKit URL does not start with wss://. This may cause connection issues on secure pages.");
+      console.warn("LiveKit URL does not start with wss://. This may cause connection issues.");
     }
   }, []);
-
-  // Network diagnostic
-  useEffect(() => {
-    if (error) {
-      const checkConnection = async () => {
-        try {
-          // Try fetching the HTTP endpoint of the LiveKit server to check reachability
-          const httpUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL?.replace('wss://', 'https://');
-          if (httpUrl) {
-            const res = await fetch(httpUrl, { mode: 'no-cors' }); // no-cors just to check if it reaches the server
-            console.log("Network check result:", res);
-          }
-        } catch (netErr) {
-          console.error("Network check failed:", netErr);
-          setError(prev => `${prev} \n\nDiagnosis: Unable to reach LiveKit server. Please check your firewall or internet connection.`);
-        }
-      };
-      checkConnection();
-    }
-  }, [error]);
 
   if (error) {
     return (
@@ -161,66 +134,10 @@ export function LiveSession({ roomName, userName, userEmail, isTeacher }: LiveSe
           <h3 className="text-2xl font-bold text-white mb-4">Connection Issue</h3>
           <div className="bg-zinc-900/50 p-4 rounded-lg border border-red-500/20 mb-6 text-left overflow-hidden">
             <p className="text-zinc-300 font-mono text-xs whitespace-pre-wrap break-all">{error}</p>
-            {process.env.NEXT_PUBLIC_LIVEKIT_URL && (
-              <div className="mt-4 pt-4 border-t border-zinc-800 text-xs text-zinc-500">
-                <span className="uppercase font-bold tracking-wider text-zinc-600 mb-1 block">Debug Info</span>
-                <p>Server URL: {process.env.NEXT_PUBLIC_LIVEKIT_URL}</p>
-                <p>Token Present: {token ? "Yes" : "No"}</p>
-              </div>
-            )}
           </div>
-          <div className="space-y-2 text-sm text-zinc-400 mb-8">
-            <p>1. Check if you are behind a corporate firewall or VPN.</p>
-            <p>2. Verify your internet connection is stable.</p>
-            <p>3. If you are the developer, ensure <code>NEXT_PUBLIC_LIVEKIT_URL</code> is correct in your <code>.env</code> file.</p>
-          </div>
-          <div className="flex justify-center gap-4 flex-col items-center">
-            <div className="flex gap-4">
-              <Button
-                variant="outline"
-                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                onClick={() => window.location.href = '/classrooms'}
-              >
-                Back to Classroom
-              </Button>
-              <Button
-                variant="default"
-                className="bg-indigo-600 hover:bg-indigo-500"
-                onClick={() => window.location.reload()}
-              >
-                Retry Connection
-              </Button>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-zinc-500 hover:text-zinc-300 mt-2 text-xs"
-              onClick={async () => {
-                setNetworkStatus("Testing...");
-                try {
-                  const url = process.env.NEXT_PUBLIC_LIVEKIT_URL?.replace('wss://', 'https://');
-                  if (!url) throw new Error("No URL");
-                  const start = Date.now();
-
-                  // Client Check
-                  await fetch(url, { mode: 'no-cors' });
-                  const clientPing = Date.now() - start;
-
-                  // Server Check
-                  const serverCheck = await checkLiveKitConnection();
-
-                  let statusMsg = `Client Ping: ${clientPing}ms. `;
-                  statusMsg += serverCheck.success ? "Server API: Connected." : `Server API Failed: ${serverCheck.error}`;
-
-                  setNetworkStatus(statusMsg);
-                } catch (e: any) {
-                  setNetworkStatus(`Failed: ${e.message}`);
-                }
-              }}
-            >
-              Run Network Test
-            </Button>
-            {networkStatus && <div className="text-xs text-zinc-400 font-mono">{networkStatus}</div>}
+          <div className="flex justify-center gap-4 mt-8">
+            <Button variant="outline" onClick={() => window.location.href = '/classrooms'}>Back</Button>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
           </div>
         </div>
       </div>
@@ -230,16 +147,11 @@ export function LiveSession({ roomName, userName, userEmail, isTeacher }: LiveSe
   if (!isMounted) return null;
 
   return (
-    <div className="h-[calc(100vh-6rem)] w-full rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl bg-zinc-950 relative group">
+    <div className="h-[calc(100dvh-6rem)] md:h-[calc(100vh-6rem)] w-full rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl bg-zinc-950 relative group select-none">
       {token === "" ? (
         <div className="flex h-full w-full items-center justify-center bg-zinc-950">
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative">
-              <div className="absolute inset-0 bg-indigo-500 blur-xl opacity-20 rounded-full" />
-              <Loader2 className="h-10 w-10 animate-spin text-indigo-500 relative z-10" />
-            </div>
-            <p className="text-zinc-400 font-medium">Securing connection to classroom...</p>
-          </div>
+          <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
+          <p className="text-zinc-400 font-medium ml-4">Connecting to Classroom...</p>
         </div>
       ) : (
         <LiveKitRoom
@@ -248,77 +160,21 @@ export function LiveSession({ roomName, userName, userEmail, isTeacher }: LiveSe
           token={token}
           serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
           connect={!!preJoinChoices}
-          options={{
-            adaptiveStream: true,
-            dynacast: true,
-            publishDefaults: {
-              simulcast: true,
-            }
-          }}
+          options={{ adaptiveStream: true, dynacast: true, publishDefaults: { simulcast: true } }}
           data-lk-theme="default"
           style={{ height: '100%' }}
-          onConnected={() => console.log("LiveKit Room Connected")}
           onDisconnected={(reason) => {
-            console.log("Disconnected:", reason);
             if (reason === DisconnectReason.CLIENT_INITIATED) {
-              setToken("");
               window.location.href = `/classrooms`;
             } else {
-              setError(`Disconnected: ${reason || 'Unknown reason'}`);
+              setError(`Disconnected: ${reason}`);
               setPreJoinChoices(null);
             }
           }}
-          onError={async (err) => {
-            console.error("LiveKit Room Error:", err);
-            // Detect specific connection failures
-            if (err.message.includes("serverUnreachable") || err.message.includes("websocket")) {
-              setError("Connection Failed. Running diagnostics...");
-
-              // Auto-run diagnostics
-              try {
-                const url = process.env.NEXT_PUBLIC_LIVEKIT_URL?.replace('wss://', 'https://');
-                if (!url) throw new Error("No URL");
-                const start = Date.now();
-
-                // Client Check
-                await fetch(url, { mode: 'no-cors' });
-                const clientPing = Date.now() - start;
-
-                // Server Check
-                const serverCheck = await checkLiveKitConnection();
-
-                const clientTime = Date.now();
-                const serverTime = serverCheck.timestamp || clientTime;
-                const drift = Math.abs(clientTime - serverTime);
-
-                console.log("DIAGNOSTIC REPORT:", {
-                  clientPing,
-                  serverCheck,
-                  clockDrift: drift
-                });
-
-                let statusMsg = `Diagnostic Result: Client Ping ${clientPing}ms. `;
-                statusMsg += serverCheck.success ? "Server API Connected. " : `Server API Failed: ${serverCheck.error}. `;
-                if (drift > 5000) statusMsg += `WARNING: Large Clock Drift detected (${drift}ms). Please check your system time.`;
-
-                setNetworkStatus(statusMsg);
-                setError(`Connection Failed. ${statusMsg}`);
-              } catch (e: any) {
-                setNetworkStatus(`Diagnostic Failed: ${e.message}`);
-                setError(`Connection Failed. Diagnostic Failed: ${e.message}`);
-              }
-
-            } else {
-              setError(`Room Error: ${err.message}`);
-            }
-          }}
+          onError={(err) => setError(`Room Error: ${err.message}`)}
         >
           {!preJoinChoices ? (
-            <CustomLobby
-              userName={userName}
-              isTeacher={isTeacher}
-              onJoin={(values) => setPreJoinChoices(values)}
-            />
+            <CustomLobby userName={userName} isTeacher={isTeacher} onJoin={setPreJoinChoices} />
           ) : (
             <ZoomLikeConference isTeacher={isTeacher} />
           )}
@@ -585,6 +441,45 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
   const [fileAttachments, setFileAttachments] = useState<any[]>([]);
   const [previewFile, setPreviewFile] = useState<any | null>(null);
 
+  // Immersive Mobile Controls
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showControls = useCallback(() => {
+    setControlsVisible(true);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    controlsTimeoutRef.current = setTimeout(() => {
+      // Only auto-hide if no modal/sidebar is open
+      if (sidebarView === 'none' && !showWhiteboard && !showPolls) {
+        setControlsVisible(false);
+      }
+    }, 4000);
+  }, [sidebarView, showWhiteboard, showPolls]);
+
+  useEffect(() => {
+    showControls();
+    if (window.innerWidth < 768) {
+      setViewMode('speaker');
+    }
+    const handleActivity = () => showControls();
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('touchstart', handleActivity);
+    window.addEventListener('click', handleActivity);
+    return () => {
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('touchstart', handleActivity);
+      window.removeEventListener('click', handleActivity);
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    };
+  }, [showControls]);
+
+  const handleVideoTap = (e: React.MouseEvent | React.TouchEvent) => {
+    // Don't toggle if clicking a button or interactive element
+    if ((e.target as HTMLElement).closest('button, input, .interactive')) return;
+    setControlsVisible(prev => !prev);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+  };
+
   const sendChat = useCallback((message: string) => {
     if (room && localParticipant) {
       const chatPacket = JSON.stringify({ type: 'chat', message, timestamp: Date.now() });
@@ -843,11 +738,16 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden relative" onClick={handleVideoTap}>
         {/* Video Grid Area */}
-        <div className="flex-1 relative bg-black flex items-center justify-center p-1">
+        <div className="flex-1 relative bg-black flex items-center justify-center p-1" onTouchEnd={(e) => {
+          if (e.target === e.currentTarget) handleVideoTap(e);
+        }}>
           {/* Top Bar (Auto-hides or subtle) */}
-          <div className="absolute top-0 left-0 right-0 h-10 z-50 flex items-center justify-between px-4 opacity-0 hover:opacity-100 transition-opacity bg-gradient-to-b from-black/80 to-transparent">
+          <div className={cn(
+            "absolute top-0 left-0 right-0 h-16 z-50 flex items-center justify-between px-4 transition-all duration-300 ease-in-out bg-gradient-to-b from-black/90 via-black/50 to-transparent pointer-events-auto",
+            controlsVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
+          )}>
             <div className="flex items-center gap-4 text-xs text-zinc-300">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-green-500" />
@@ -1004,7 +904,14 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
       </div>
 
       {/* Bottom Control Bar */}
-      <div className="h-[72px] bg-[#1a1a1a] flex items-center justify-between px-4 select-none shrink-0 z-50 overflow-x-auto no-scrollbar">
+      <div
+        className={cn(
+          "h-[80px] bg-[#1a1a1a]/90 backdrop-blur-md border-t border-white/10 flex items-center justify-between px-4 select-none shrink-0 z-50 overflow-x-auto no-scrollbar transition-all duration-300 ease-in-out absolute bottom-0 left-0 right-0 md:relative md:translate-y-0",
+          !controlsVisible && "translate-y-full md:translate-y-0 opacity-0 md:opacity-100 pointer-events-none md:pointer-events-auto",
+          "pb-safe"
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
 
         {/* Left: Audio/Video */}
         <div className="flex items-center gap-1 min-w-[180px]">
