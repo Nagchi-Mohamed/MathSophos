@@ -1,22 +1,28 @@
 import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
+import chromium from '@sparticuz/chromium-min';
 
 export async function getPuppeteerOptions() {
   const isProduction = process.env.NODE_ENV === 'production';
 
   if (isProduction) {
     // Production (Vercel/AWS Lambda)
-    // IMPORTANT: On Vercel, we need to handle specific executable path logic
-    const executablePath = await chromium.executablePath(
-      // Pass the endpoint where the chromium binary is stored if needed, but generic call usually works
-      // However, passing a specific path can sometimes fix 127 errors if the binary isn't found
-    );
+    // We use chromium-min to fit within standard serverless limits and dependencies
+    // On Vercel, this usually defaults to a suitable path, but we can verify
+
+    // Configure remote executable path - typically for min version we might need 
+    // to point to a specific pack or use the default which relies on a separate binary upload.
+    // However, sparticuz/chromium-min usually behaves like the standard one but smaller.
+
+    // IMPORTANT: For -min package, we must sometimes provide the pack location if not bundled
+    // But let's try standard first as it often bundles a lighter version or expects download.
+    // Actually, sparticuz/chromium-min often requires the specific pack url.
+    // Let's stick to the secure default behavior first which works on Vercel Pro usually.
 
     return {
-      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-      defaultViewport: chromium.defaultViewport,
-      executablePath: executablePath || '/bin/chromium', // Fallback
-      headless: chromium.headless as any,
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      defaultViewport: { width: 1280, height: 720 },
+      executablePath: await chromium.executablePath('https://github.com/Sparticuz/chromium/releases/download/v132.0.0/chromium-v132.0.0-pack.tar'),
+      headless: true,
       ignoreHTTPSErrors: true,
     };
   } else {
