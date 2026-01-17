@@ -6,10 +6,16 @@ export async function getPuppeteerOptions() {
 
   if (isProduction) {
     // Production (Vercel/AWS Lambda)
+    // IMPORTANT: On Vercel, we need to handle specific executable path logic
+    const executablePath = await chromium.executablePath(
+      // Pass the endpoint where the chromium binary is stored if needed, but generic call usually works
+      // However, passing a specific path can sometimes fix 127 errors if the binary isn't found
+    );
+
     return {
-      args: chromium.args,
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
+      executablePath: executablePath || '/bin/chromium', // Fallback
       headless: chromium.headless as any,
       ignoreHTTPSErrors: true,
     };
