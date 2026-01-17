@@ -1,10 +1,10 @@
 {
   "functions": {
-    "api/admin/videos/upload": {
+    "src/app/api/admin/videos/upload/route.ts": {
       "maxDuration": 60,
       "memory": 1024
     },
-    "api/admin/images/upload": {
+    "src/app/api/admin/images/upload/route.ts": {
       "maxDuration": 30,
       "memory": 512
     }
