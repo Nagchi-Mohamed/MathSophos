@@ -20,7 +20,13 @@ export async function GET(
       },
     });
 
-    return NextResponse.json({ videos });
+    // Map videos to include constructed URLs for base64-stored videos
+    const videosWithUrls = videos.map(video => ({
+      ...video,
+      url: video.url || `/api/videos/${video.id}`,
+    }));
+
+    return NextResponse.json({ videos: videosWithUrls });
   } catch (error: any) {
     console.error("Fetch videos error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { uploadFile } from "@/lib/storage";
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,15 +23,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Entity type is required" }, { status: 400 });
     }
 
-    // Upload using storage utility (supports S3 and Local)
-    const { filepath, filename } = await uploadFile(file, "videos");
+    // Convert video to base64 for database storage
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64Data = buffer.toString('base64');
+
+    console.log(`[Video Upload] Storing ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB) as base64`);
 
     const video = await prisma.platformVideo.create({
       data: {
-        filename: filename,
+        filename: `${crypto.randomUUID()}.${file.name.split('.').pop()}`,
         originalFilename: file.name,
-        filepath: filepath, // Stores S3 URL (if S3) or relative path (if local)
-        url: filepath,      // Use same path for URL
+        filepath: base64Data, // Store base64 in filepath field (we'll serve it via API)
+        url: null, // Will be constructed as /api/videos/[id]
         mimeType: file.type,
         fileSize: file.size,
         entityType: entityType,
@@ -41,7 +44,13 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, video });
+    // Return video with constructed URL
+    const videoWithUrl = {
+      ...video,
+      url: `/api/videos/${video.id}`,
+    };
+
+    return NextResponse.json({ success: true, video: videoWithUrl });
   } catch (error: any) {
     console.error("Upload error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -96,30 +96,23 @@ export async function POST(request: Request) {
       );
     }
 
-    // Upload using storage utility (supports S3 and Local)
-    // Import dynamically to avoid circular issues if any, or just top level import
-    const { uploadFile } = await import("@/lib/storage");
-    const { filepath, filename } = await uploadFile(file, folderType);
+    // Convert file to base64 for database storage
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64Data = buffer.toString('base64');
 
-    // Save to database
+    console.log(`[Image Upload] Storing ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB) as base64`);
+
+    // Save to database with base64 data
     try {
-      console.log("[Upload] Saving to database:", {
-        entityType,
-        entityId,
-        filename,
-        filepath,
-        uploaderId: userId,
-        fileSize: file.size
-      });
-
       const image = await prisma.platformImage.create({
         data: {
           entityType: entityType,
           entityId: entityId,
-          filename: filename,
+          filename: `${crypto.randomUUID()}.${file.name.split('.').pop()}`,
           originalFilename: file.name,
-          filepath: filepath, // Stores S3 URL (if S3) or relative path (if local)
-          base64Data: null,   // No longer storing base64
+          filepath: null, // Not using filepath for base64 storage
+          base64Data: base64Data, // Store base64 directly
           mimeType: file.type,
           fileSize: file.size,
           uploaderId: userId,
