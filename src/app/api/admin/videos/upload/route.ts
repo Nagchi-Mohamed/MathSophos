@@ -1,10 +1,7 @@
-
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth"; // Verify this path
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import { v4 as uuidv4 } from "uuid";
+import { uploadFile } from "@/lib/storage";
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,31 +24,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Entity type is required" }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const originalFilename = file.name;
-    const fileExtension = path.extname(originalFilename);
-    const filename = `${uuidv4()}${fileExtension}`;
-
-    // Ensure directory exists
-    const uploadDir = path.join(process.cwd(), "public/uploads/videos");
-    try {
-      await mkdir(uploadDir, { recursive: true });
-    } catch (e) {
-      // Ignore if exists
-    }
-
-    const filepath = path.join(uploadDir, filename);
-
-    await writeFile(filepath, buffer);
-
-    const videoUrl = `/uploads/videos/${filename}`;
+    // Upload using storage utility (supports S3 and Local)
+    const { filepath, filename } = await uploadFile(file, "videos");
 
     const video = await prisma.platformVideo.create({
       data: {
         filename: filename,
-        originalFilename: originalFilename,
-        filepath: filepath,
-        url: videoUrl,
+        originalFilename: file.name,
+        filepath: filepath, // Stores S3 URL (if S3) or relative path (if local)
+        url: filepath,      // Use same path for URL
         mimeType: file.type,
         fileSize: file.size,
         entityType: entityType,

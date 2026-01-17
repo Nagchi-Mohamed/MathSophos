@@ -3,12 +3,17 @@ import { promises as fs } from "fs";
 import path from "path";
 
 // Configuration from environment variables
-const STORAGE_PROVIDER = process.env.STORAGE_PROVIDER || "local"; // 'local' or 's3'
 const S3_BUCKET = process.env.S3_BUCKET_NAME || "";
 const S3_REGION = process.env.S3_REGION || "auto"; // 'auto' is common for generic S3, 'us-east-1' for AWS
 const S3_ACCESS_KEY = process.env.S3_ACCESS_KEY_ID || "";
 const S3_SECRET_KEY = process.env.S3_SECRET_ACCESS_KEY || "";
 const S3_ENDPOINT = process.env.S3_ENDPOINT; // e.g. https://storage.googleapis.com
+
+// Determine provider: 's3' if keys are present, otherwise fallback to 'local' (or explicit env var)
+const HAS_S3_CONFIG = !!(S3_BUCKET && S3_ACCESS_KEY && S3_SECRET_KEY);
+const STORAGE_PROVIDER = process.env.STORAGE_PROVIDER || (HAS_S3_CONFIG ? "s3" : "local");
+
+console.log(`[Storage] Initializing storage with provider: ${STORAGE_PROVIDER}`);
 
 // S3 Client initialization
 const s3Client = new S3Client({
@@ -100,12 +105,17 @@ export async function deleteFile(filepath: string): Promise<void> {
 
       let key = "";
       if (filepath.startsWith("http")) {
-        const url = new URL(filepath);
-        key = url.pathname.substring(1); // remove leading /
+        try {
+          const url = new URL(filepath);
+          key = url.pathname.substring(1); // remove leading /
 
-        // Remove bucket name if it's in the path (Path Style)
-        if (key.startsWith(`${S3_BUCKET}/`)) {
-          key = key.replace(`${S3_BUCKET}/`, "");
+          // Remove bucket name if it's in the path (Path Style)
+          // ONLY if it matches strict /BUCKET/key pattern
+          if (key.startsWith(`${S3_BUCKET}/`)) {
+            key = key.replace(`${S3_BUCKET}/`, "");
+          }
+        } catch (e) {
+          console.error("Invalid URL format for deletion:", filepath);
         }
       } else {
         // Fallback if we stored just the key (unlikely based on upload implementation)

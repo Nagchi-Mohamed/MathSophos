@@ -13,24 +13,40 @@ export async function GET(
       select: {
         base64Data: true,
         mimeType: true,
-        filename: true
+        filename: true,
+        filepath: true
       }
     });
 
-    if (!image || !image.base64Data) {
+    if (!image) {
       return new NextResponse("Image not found", { status: 404 });
     }
 
-    // Convert base64 to buffer
-    const buffer = Buffer.from(image.base64Data, 'base64');
+    // 1. If filepath is an external URL (S3), redirect
+    if (image.filepath && image.filepath.startsWith("http")) {
+      return NextResponse.redirect(image.filepath);
+    }
 
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": image.mimeType,
-        "Cache-Control": "public, max-age=31536000, immutable",
-        "Content-Disposition": `inline; filename="${image.filename}"`
-      },
-    });
+    // 2. If filepath is local (but managed via storage.ts fallback), try serving it (or redirect)
+    // Note: Local uploads return a relative path like /uploads/..., which is handled by next/image or public folder.
+    // If we are here, it means we manually requested /api/images/[id]
+    if (image.filepath && image.filepath.startsWith("/")) {
+      return NextResponse.redirect(new URL(image.filepath, request.url));
+    }
+
+    // 3. Fallback: Serve base64 data (legacy)
+    if (image.base64Data) {
+      const buffer = Buffer.from(image.base64Data, 'base64');
+      return new NextResponse(buffer, {
+        headers: {
+          "Content-Type": image.mimeType,
+          "Cache-Control": "public, max-age=31536000, immutable",
+          "Content-Disposition": `inline; filename="${image.filename}"`
+        },
+      });
+    }
+
+    return new NextResponse("Image content missing", { status: 404 });
   } catch (error) {
     console.error("[Image API] Error serving image:", error);
     return new NextResponse("Internal Server Error", { status: 500 });

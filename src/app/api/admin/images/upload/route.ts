@@ -96,21 +96,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Convert file to base64
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const base64Data = buffer.toString('base64');
+    // Upload using storage utility (supports S3 and Local)
+    // Import dynamically to avoid circular issues if any, or just top level import
+    const { uploadFile } = await import("@/lib/storage");
+    const { filepath, filename } = await uploadFile(file, folderType);
 
-    // Generate unique filename
-    const ext = path.extname(file.name);
-    const filename = `${crypto.randomUUID()}${ext}`;
-
-    // Save to database with base64 data
+    // Save to database
     try {
-      console.log("[Upload] Saving to database with base64 data:", {
+      console.log("[Upload] Saving to database:", {
         entityType,
         entityId,
         filename,
+        filepath,
         uploaderId: userId,
         fileSize: file.size
       });
@@ -121,8 +118,8 @@ export async function POST(request: Request) {
           entityId: entityId,
           filename: filename,
           originalFilename: file.name,
-          filepath: null, // Not using filepath anymore
-          base64Data: base64Data, // Store base64 directly
+          filepath: filepath, // Stores S3 URL (if S3) or relative path (if local)
+          base64Data: null,   // No longer storing base64
           mimeType: file.type,
           fileSize: file.size,
           uploaderId: userId,
