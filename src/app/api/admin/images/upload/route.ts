@@ -4,15 +4,6 @@ import { canManageContent } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import path from "path";
 
-// Increase body size limit for image uploads
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
-};
-
 export const maxDuration = 30;
 
 export async function POST(request: Request) {

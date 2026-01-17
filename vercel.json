@@ -1,0 +1,12 @@
+{
+  "functions": {
+    "api/admin/videos/upload": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "api/admin/images/upload": {
+      "maxDuration": 30,
+      "memory": 512
+    }
+  }
+}
