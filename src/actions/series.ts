@@ -292,18 +292,23 @@ export async function generateSeriesWithAI(params: {
       - Si le nombre d'exercices est élevé, sois plus concis dans chaque exercice pour ne pas dépasser la limite de longueur.
       - Ne t'arrête jamais avant d'avoir atteint ${count} exercices.
 
+      RÈGLES DE STRUCTURE (CRITIQUE) :
+      - CHAQUE exercice DOIT contenir AU MOINS 5 questions ou sous-questions distinctes. (1., 2., 3., 4., 5. ou 1.a, 1.b, 2.a, ...).
+      - Il est INTERDIT de générer des exercices à question unique.
+
       RÈGLES DE PROGRESSION :
-      La série doit suivre une progression :
-      1.  **DÉBUT (Premiers 30%)** : Exercices d'application directe (2 à 3 questions).
-      2.  **MILIEU (40%)** : Problèmes types examens (3 à 5 questions).
-      3.  **FIN (Derniers 30%)** : Problèmes de synthèse (Type Bac/Concours). Plus complexes mais reste concis pour garantir que tous les ${count} exercices soient générés.
+      La série doit suivre une progression stricte en difficulté :
+      1.  **Applications Directes** (Premiers 25%) : Exercices simples pour fixer les bases (~5 questions).
+      2.  **Problèmes Classiques** (25% suivants) : Exercices de niveau moyen, type contrôle continu (~5-7 questions).
+      3.  **Problèmes Complexes** (25% suivants) : Exercices nécessitant plus de réflexion, synthèse (~7-10 questions).
+      4.  **Défis & Olympiades** (Derniers 25%) : Exercices très difficiles, abstraits ou problèmes ouverts typés Olympiades/Concours d'excellence.
 
       FORMAT DU CONTENU :
       -   **LaTeX** : Utilise LaTeX pour TOUTES les expressions mathématiques.
           -   Inline : $...$ (ex: $f(x) = x^2$)
           -   Display : $$...$$ (ex: $$\\int_0^1 f(x) dx$$)
           -   IMPORTANT : Échappe correctement les backslashes dans le JSON (ex: "\\frac" pour \frac).
-      -   **Structure des questions** : Dans "problemTextFr", numérote clairement les questions (1., 2., a), b)...).
+      -   **Structure des questions** : Dans "problemTextFr", numérote clairement les questions (1., 2., a), b)...) et assure-toi qu'il y en a au moins 5.
       -   **Contexte** : Adapte le contenu au programme marocain (${params.level}).
       
       📊 RÈGLES CRITIQUES POUR LES TABLEAUX DE VARIATIONS (OBLIGATOIRE) :
@@ -344,7 +349,7 @@ export async function generateSeriesWithAI(params: {
       NE PAS inclure de texte avant ou après le JSON.
       Structure de chaque objet :
       {
-        "problemTextFr": "Énoncé complet avec questions numérotées. Markdown et LaTeX autorisés.",
+        "problemTextFr": "Énoncé complet avec AU MOINS 5 questions numérotées. Markdown et LaTeX autorisés.",
         "solutionFr": "Solution détaillée question par question.",
         "hints": ["Indice 1", "Indice 2"],
         "difficulty": "EASY" | "MEDIUM" | "HARD"
@@ -376,8 +381,8 @@ export async function generateSeriesWithAI(params: {
         console.log(`🤖 Calling Gemini API (Key Index: ${attempt % totalKeys}) for series generation...`)
         const genAI = getRotatedAdminClient(attempt);
 
-        // Adjust token limit based on exercise count
-        const estimatedTokensPerExercise = 400; // Conservative estimate
+        // Adjust token limit based on exercise count (increased for large exercises)
+        const estimatedTokensPerExercise = 1000; // Increased to account for 5+ questions
         const baseTokens = 2000; // For prompt overhead
         const requestedTokens = Math.min(65536, baseTokens + (count * estimatedTokensPerExercise));
 
