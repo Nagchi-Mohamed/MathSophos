@@ -14,7 +14,8 @@ export async function GET(
         filepath: true,
         mimeType: true,
         filename: true,
-        url: true
+        url: true,
+        originalFilename: true
       }
     });
 
@@ -30,21 +31,30 @@ export async function GET(
     // 2. If filepath contains base64 data, serve it
     if (video.filepath && !video.filepath.startsWith("http") && !video.filepath.startsWith("/")) {
       // This is base64 data
-      const buffer = Buffer.from(video.filepath, 'base64');
+      try {
+        const buffer = Buffer.from(video.filepath, 'base64');
 
-      return new NextResponse(buffer, {
-        headers: {
-          "Content-Type": video.mimeType,
-          "Cache-Control": "public, max-age=31536000, immutable",
-          "Content-Disposition": `inline; filename="${video.filename}"`,
-          "Accept-Ranges": "bytes",
-        },
-      });
+        return new NextResponse(buffer, {
+          headers: {
+            "Content-Type": video.mimeType,
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "Content-Disposition": `inline; filename="${video.filename}"`,
+            "Accept-Ranges": "bytes",
+          },
+        });
+      } catch (error) {
+        console.error(`[Video API] Failed to decode base64 for video ${id}:`, error);
+        return new NextResponse("Video data corrupted", { status: 500 });
+      }
     }
 
-    // 3. If filepath is a local path (legacy), redirect to it
+    // 3. If filepath is a local path (legacy from Cloud Run), it's lost on Vercel
     if (video.filepath && video.filepath.startsWith("/")) {
-      return NextResponse.redirect(new URL(video.filepath, request.url));
+      console.warn(`[Video API] Video ${id} (${video.originalFilename}) has legacy filesystem path but no data`);
+      return new NextResponse(
+        "Video unavailable - This video was uploaded before migration to database storage and is no longer available. Please re-upload.",
+        { status: 410 } // 410 Gone - resource permanently deleted
+      );
     }
 
     return new NextResponse("Video content missing", { status: 404 });
