@@ -3,6 +3,8 @@ import puppeteer from "puppeteer-core"
 import { getPuppeteerOptions } from "@/lib/puppeteer-config"
 import { getExamById } from "@/actions/exams"
 
+export const maxDuration = 60; // Set max execution time to 60s for Vercel
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

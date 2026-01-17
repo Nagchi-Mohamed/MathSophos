@@ -1,6 +1,8 @@
 
 import { NextRequest, NextResponse } from "next/server"
-import puppeteer from "puppeteer"
+import puppeteer from "puppeteer-core"
+
+export const maxDuration = 60; // Set max execution time to 60s for Vercel
 import { auth } from "@/auth"
 import { canAccessAdmin } from "@/lib/roles"
 import { generatePdfHtml } from "@/lib/pdf/templates"

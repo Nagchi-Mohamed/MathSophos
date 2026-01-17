@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import puppeteer from "puppeteer"
+import puppeteer from "puppeteer-core"
+import { getPuppeteerOptions } from "@/lib/puppeteer-config"
 import { auth } from "@/auth"
+
+export const maxDuration = 60; // Set max execution time to 60s for Vercel
 
 // Define a type for the response to avoid implicit any errors if needed, 
 // though NextResponse covers it.
@@ -28,10 +31,8 @@ export async function GET(req: NextRequest) {
   let browser
 
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    })
+    const options = await getPuppeteerOptions();
+    browser = await puppeteer.launch(options)
 
     const page = await browser.newPage()
 
