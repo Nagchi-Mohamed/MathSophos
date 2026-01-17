@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
+// Increase body size limit for video uploads (Vercel default is 4.5MB)
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb',
+    },
+  },
+};
+
+// Set max duration for video processing
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
@@ -21,6 +33,15 @@ export async function POST(req: NextRequest) {
 
     if (!entityType) {
       return NextResponse.json({ error: "Entity type is required" }, { status: 400 });
+    }
+
+    // Check file size (max 30MB for base64 storage - becomes ~40MB after encoding)
+    const maxSizeBytes = 30 * 1024 * 1024; // 30MB
+    if (file.size > maxSizeBytes) {
+      const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+      return NextResponse.json({
+        error: `File too large: ${sizeMB}MB. Maximum size is 30MB. Consider compressing the video or using a video hosting service like YouTube.`
+      }, { status: 413 });
     }
 
     // Convert video to base64 for database storage

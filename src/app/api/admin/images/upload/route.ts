@@ -4,6 +4,17 @@ import { canManageContent } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import path from "path";
 
+// Increase body size limit for image uploads
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
+
+export const maxDuration = 30;
+
 export async function POST(request: Request) {
   try {
     const session = await auth();
@@ -62,6 +73,16 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "File must be an image" },
         { status: 400 }
+      );
+    }
+
+    // Check file size (max 5MB for images)
+    const maxSizeBytes = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSizeBytes) {
+      const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+      return NextResponse.json(
+        { error: `Image too large: ${sizeMB}MB. Maximum size is 5MB. Please compress the image.` },
+        { status: 413 }
       );
     }
 
