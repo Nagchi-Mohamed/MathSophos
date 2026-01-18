@@ -29,7 +29,8 @@ export default async function CreateSeriesPage({ searchParams }: PageProps) {
     select: {
       id: true,
       titleFr: true,
-      slug: true
+      slug: true,
+      contentFr: true
     }
   })
 

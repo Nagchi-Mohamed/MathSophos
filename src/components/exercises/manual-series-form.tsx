@@ -15,6 +15,7 @@ import { createSeriesWithExercises } from "@/actions/series"
 import { toast } from "sonner"
 import { SERIES_EXAMPLE_JSON, SUPERIEUR_SERIES_EXAMPLE_JSON } from "@/lib/content-examples"
 import { SeriesJsonPreview } from "@/components/exercises/series-json-preview"
+import { AIPromptGenerator } from "@/components/exercises/ai-prompt-generator"
 
 interface ManualSeriesFormProps {
   context: {
@@ -413,6 +414,9 @@ export function ManualSeriesForm({ context, lesson }: ManualSeriesFormProps) {
           </TabsList>
         </Tabs>
       </div>
+
+      {/* AI Prompt Generator */}
+      <AIPromptGenerator lesson={lesson} context={context} />
 
       {mode === 'form' ? (
         // --- FORM MODE UI ---
