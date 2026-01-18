@@ -15,7 +15,12 @@ import { createSeriesWithExercises } from "@/actions/series"
 import { toast } from "sonner"
 import { SERIES_EXAMPLE_JSON, SUPERIEUR_SERIES_EXAMPLE_JSON } from "@/lib/content-examples"
 import { SeriesJsonPreview } from "@/components/exercises/series-json-preview"
-import { AIPromptGenerator } from "@/components/exercises/ai-prompt-generator"
+import dynamic from "next/dynamic"
+
+const AIPromptGenerator = dynamic(
+  () => import("@/components/exercises/ai-prompt-generator").then(mod => ({ default: mod.AIPromptGenerator })),
+  { ssr: false }
+)
 
 interface ManualSeriesFormProps {
   context: {
