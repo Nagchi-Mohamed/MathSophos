@@ -28,39 +28,33 @@ export async function getPaginatedSeries(
   offset: number = 0
 ) {
   try {
-    // Build WHERE conditions
-    const conditions: string[] = []
-    const params: any[] = []
-    let paramIndex = 1
+    console.log('📊 getPaginatedSeries called with filters:', filters, 'limit:', limit, 'offset:', offset)
+    const startTime = Date.now()
 
-    // 1. Filter by cycle (PRIMARY removed)
+    // Cap limit to prevent excessive data fetching
+    const safeLimit = Math.min(limit, 100)
+
+    // Build Prisma where clause
+    const where: any = {}
+
     if (filters.cycle) {
-      conditions.push(`"cycle" = $${paramIndex}`)
-      params.push(filters.cycle)
-      paramIndex++
+      where.cycle = filters.cycle
     }
 
-    // 2. Filter by level (PRIMARY removed)
     if (filters.level) {
       const validLevels = [
         'COLLEGE_1AC', 'COLLEGE_2AC', 'COLLEGE_3AC',
         'LYCEE_TC', 'LYCEE_1BAC', 'LYCEE_2BAC', 'UNIVERSITY'
       ]
       if (validLevels.includes(filters.level)) {
-        conditions.push(`"level"::text = $${paramIndex}`)
-        params.push(filters.level)
-        paramIndex++
+        where.level = filters.level as EducationalLevel
       }
     }
 
-    // 3. Filter by semester
     if (filters.semester) {
-      conditions.push(`"semester" = $${paramIndex}`)
-      params.push(Number(filters.semester))
-      paramIndex++
+      where.semester = Number(filters.semester)
     }
 
-    // 4. Filter by stream
     if (filters.stream) {
       const validStreams = [
         'TC_LETTRES', 'TC_SCIENCES', 'TC_TECHNOLOGIE', 'SC_MATH_A', 'SC_MATH_B',
@@ -68,105 +62,98 @@ export async function getPaginatedSeries(
         'LETTRES_HUMAINES', 'NONE'
       ]
       if (validStreams.includes(filters.stream)) {
-        conditions.push(`"stream"::text = $${paramIndex}`)
-        params.push(filters.stream)
-        paramIndex++
+        where.stream = filters.stream as Stream
       }
     }
 
-    // 5. Filter by educationalStreamId
     if (filters.educationalStreamId) {
-      conditions.push(`"educationalStreamId" = $${paramIndex}`)
-      params.push(filters.educationalStreamId)
-      paramIndex++
+      where.educationalStreamId = filters.educationalStreamId
     }
 
-    // 6. Filter by lessonId
     if (filters.lessonId) {
-      conditions.push(`"lessonId" = $${paramIndex}`)
-      params.push(filters.lessonId)
-      paramIndex++
+      where.lessonId = filters.lessonId
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+    if (filters.moduleId) {
+      where.moduleId = filters.moduleId
+    }
 
-    // Use raw SQL to handle TEXT columns until migration is applied
-    const [seriesRows, countRows] = await Promise.all([
-      prisma.$queryRawUnsafe<any[]>(
-        `SELECT * FROM "Series" ${whereClause} ORDER BY "createdAt" DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-        ...params, limit, offset
-      ),
-      prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
-        `SELECT COUNT(*) as count FROM "Series" ${whereClause}`,
-        ...params
-      )
+    console.log('📊 Prisma where clause:', JSON.stringify(where))
+
+    // Use Promise.race to implement timeout
+    const queryTimeout = 10000 // 10 seconds timeout
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Query timeout after 10 seconds')), queryTimeout)
+    })
+
+    // Fetch series with exercises in a single query
+    const dataPromise = Promise.all([
+      prisma.series.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: offset,
+        take: safeLimit,
+        include: {
+          exercises: {
+            orderBy: { order: 'asc' },
+            select: {
+              id: true,
+              problemTextFr: true,
+              solutionFr: true,
+              order: true,
+              seriesId: true,
+            }
+          }
+        },
+      }),
+      prisma.series.count({ where }),
     ])
 
-    // Fetch exercises for each series
-    const seriesIds = seriesRows.map((s: any) => s.id)
-    const exercises = seriesIds.length > 0
-      ? await prisma.exercise.findMany({
-        where: { seriesId: { in: seriesIds } },
-        orderBy: { order: 'asc' }
-      })
-      : []
+    const [series, total] = await Promise.race([
+      dataPromise,
+      timeoutPromise
+    ]) as [any[], number]
 
-    // Group exercises by seriesId
-    const exercisesBySeries = exercises.reduce((acc: any, ex: any) => {
-      if (!acc[ex.seriesId]) acc[ex.seriesId] = []
-      acc[ex.seriesId].push(ex)
-      return acc
-    }, {})
-
-    // Combine series with exercises
-    const series = seriesRows.map((s: any) => ({
-      ...s,
-      exercises: exercisesBySeries[s.id] || []
-    }))
-
-    const total = Number(countRows[0]?.count || 0)
+    const elapsed = Date.now() - startTime
+    console.log(`✅ getPaginatedSeries completed in ${elapsed}ms, found ${series.length} series`)
 
     return { success: true, data: { series, total } }
   } catch (error: any) {
-    console.error("Error fetching series:", error)
+    const elapsed = Date.now() - Date.now()
+    console.error(`❌ Error fetching series (after ${elapsed}ms):`, error)
 
-    // Don't fallback if it's a connection/timeout error
+    // Handle timeout errors
     if (error?.message?.includes('timeout') ||
-      error?.message?.includes('connection') ||
-      error?.code === 'ETIMEDOUT' ||
-      error?.code === 'ECONNREFUSED') {
-      console.error("Database connection error - cannot fallback to Prisma query")
+      error?.message?.includes('Query timeout')) {
+      console.error("⏱️ Database query timeout")
       return {
         success: false,
-        error: "Database connection timeout. Please check your database connection.",
+        error: "La requête a pris trop de temps. Veuillez affiner vos filtres.",
         data: { series: [], total: 0 }
       }
     }
 
-    // If raw SQL fails due to schema issues, try Prisma query as fallback
-    try {
-      const where: any = {}
-      if (filters.cycle) where.cycle = filters.cycle
-      if (filters.semester) where.semester = Number(filters.semester)
-      if (filters.educationalStreamId) where.educationalStreamId = filters.educationalStreamId
-      if (filters.lessonId) where.lessonId = filters.lessonId
+    // Handle connection errors
+    if (error?.message?.includes('connection') ||
+      error?.code === 'ETIMEDOUT' ||
+      error?.code === 'ECONNREFUSED') {
+      console.error("🔌 Database connection error")
+      return {
+        success: false,
+        error: "Erreur de connexion à la base de données. Veuillez réessayer.",
+        data: { series: [], total: 0 }
+      }
+    }
 
-      const [series, total] = await Promise.all([
-        prisma.series.findMany({
-          where,
-          orderBy: { createdAt: "desc" },
-          skip: offset,
-          take: limit,
-          include: { exercises: true },
-        }),
-        prisma.series.count({ where }),
-      ])
-      return { success: true, data: { series, total } }
-    } catch (fallbackError: any) {
-      return { success: false, error: fallbackError.message }
+    // Generic error
+    return {
+      success: false,
+      error: error.message || "Erreur lors du chargement des séries",
+      data: { series: [], total: 0 }
     }
   }
 }
+
 
 /**
  * Fetch lessons that match the given parameters.
