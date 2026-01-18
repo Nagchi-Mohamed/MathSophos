@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Copy, Check, Sparkles, ExternalLink } from "lucide-react"
+import { Copy, Check, Sparkles, ExternalLink, BookOpen, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { searchReferences } from "@/actions/references"
 
 export type ContentType = 'series' | 'lesson' | 'chapter' | 'exam' | 'fiche'
 
@@ -30,6 +31,28 @@ export function AIPromptGenerator({ lesson, context, contentType = 'series' }: A
   const [exerciseCount, setExerciseCount] = useState(10)
   const [additionalInstructions, setAdditionalInstructions] = useState("")
   const [copied, setCopied] = useState(false)
+
+  // References State
+  const [references, setReferences] = useState<any[]>([])
+  const [loadingRefs, setLoadingRefs] = useState(false)
+
+  useEffect(() => {
+    const fetchReferences = async () => {
+      if (lesson?.titleFr && context?.level && context.level !== "UNKNOWN") {
+        setLoadingRefs(true)
+        try {
+          const res = await searchReferences(lesson.titleFr, context.level)
+          if (res.success && res.data) {
+            setReferences(res.data)
+          }
+        } catch (e) {
+          console.error(e)
+        }
+        setLoadingRefs(false)
+      }
+    }
+    fetchReferences()
+  }, [lesson?.titleFr, context?.level])
 
   const getPromptTemplate = () => {
     switch (contentType) {
@@ -115,6 +138,17 @@ Tu DOIS répondre UNIQUEMENT avec un tableau JSON valide. **AUCUN texte avant ou
       promptContext += `- **Nombre d'exercices demandés**: ${exerciseCount}\n`
     }
 
+    // Add Reference Context
+    let referenceSection = ""
+    if (references.length > 0) {
+      referenceSection = `
+## RÉFÉRENCES OFFICIELLES (SYSTEME MAROCAIN)
+Les extraits suivants proviennent des documents officiels (Orientations Pédagogiques / Manuels) et DOIVENT être respectés:
+
+${references.map(ref => `### DOCUMENT: ${ref.title}\n${ref.snippet}`).join("\n\n")}
+`
+    }
+
     return `# PROMPT POUR GÉNÉRATION DE ${contentType.toUpperCase()}
 
 ${promptContext}
@@ -124,6 +158,8 @@ ${lesson ? `## EXTRAIT DU CONTENU DE LA LEÇON
 ${lessonPreview}
 \`\`\`
 ` : ''}
+
+${referenceSection}
 
 ${additionalInstructions ? `## INSTRUCTIONS SUPPLÉMENTAIRES\n${additionalInstructions}\n` : ''}
 
@@ -226,6 +262,29 @@ Dans le JSON, tu DOIS échapper les backslashes:
             </div>
           )}
         </div>
+
+        {/* References Display */}
+        {loadingRefs ? (
+          <div className="bg-muted/50 p-2 rounded text-xs flex items-center gap-2">
+            <Loader2 className="w-3 h-3 animate-spin" /> Recherche de références officielles...
+          </div>
+        ) : references.length > 0 && (
+          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpen className="w-4 h-4 text-blue-600" />
+              <span className="text-xs font-semibold text-blue-900 dark:text-blue-100">
+                {references.length} documents de référence intégrés au prompt :
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {references.map(ref => (
+                <span key={ref.id} className="text-[10px] bg-white dark:bg-blue-900 px-2 py-0.5 rounded border border-blue-100 dark:border-blue-800">
+                  {ref.title}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="additionalInstructions">Instructions supplémentaires (optionnel)</Label>
