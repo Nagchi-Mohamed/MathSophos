@@ -421,8 +421,8 @@ export function ManualSeriesForm({ context, lesson }: ManualSeriesFormProps) {
         </Tabs>
       </div>
 
-      {/* AI Prompt Generator */}
-      <AIPromptGenerator lesson={lesson} context={context} />
+      {/* AI Prompt Generator - Temporarily disabled */}
+      {/* <AIPromptGenerator lesson={lesson} context={context} /> */}
 
       {mode === 'form' ? (
         // --- FORM MODE UI ---
