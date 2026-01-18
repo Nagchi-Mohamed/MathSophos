@@ -62,10 +62,25 @@ export async function generateLessonContent(
         }
       }
 
+      // Fetch references
+      let referenceSection = ""
+      try {
+        const { searchReferences } = await import("@/actions/references")
+        const referenceResult = await searchReferences(topic, level)
+        if (referenceResult.success && referenceResult.data && referenceResult.data.length > 0) {
+          referenceSection = `
+SOURCES OFFICIELLES (DOIVENT ÊTRE RESPECTÉES):
+${referenceResult.data.map((ref: any) => `### DOCUMENT: ${ref.title}\n${ref.snippet}`).join("\n\n")}
+`
+        }
+      } catch (err) { console.warn(err) }
+
       // Build the prompt with strict LaTeX formatting instructions
       const prompt = `${LATEX_FORMATTING_SYSTEM_PROMPT}
 
 ${systemPrompt}
+
+${referenceSection}
 
 Génère une leçon complète sur le sujet: "${topic}"
 

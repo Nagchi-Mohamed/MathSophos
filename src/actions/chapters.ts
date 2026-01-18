@@ -482,7 +482,23 @@ Le contenu doit être cohérent avec les chapitres précédents de la leçon "${
       ? `\n\n📝 INSTRUCTIONS SPÉCIFIQUES DE L'UTILISATEUR:\n${params.additionalInstructions}\n\nIMPORTANT: Ces instructions doivent être suivies précisément tout en respectant le contexte pédagogique défini ci-dessus.`
       : ""
 
-    const fullInstructions = contextInstructions + userInstructions
+    // Fetch relevant references matching the lesson name
+    let referenceSection = ""
+    try {
+      const { searchReferences } = await import("@/actions/references")
+      const referenceResult = await searchReferences(lessonName, level)
+      if (referenceResult.success && referenceResult.data && referenceResult.data.length > 0) {
+        referenceSection = `
+## RÉFÉRENCES OFFICIELLES (SYSTEME MAROCAIN)
+Les extraits suivants sont tirés des documents officiels et DOIVENT être respectés:
+${referenceResult.data.map((ref: any) => `### DOCUMENT: ${ref.title}\n${ref.snippet}`).join("\n\n")}
+`
+      }
+    } catch (err) {
+      console.warn("Failed to fetch references for AI generation", err)
+    }
+
+    const fullInstructions = contextInstructions + referenceSection + userInstructions
 
     const modelConfig: ModelConfig = params.modelConfig || {
       provider: 'google',
