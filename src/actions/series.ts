@@ -94,15 +94,8 @@ export async function getPaginatedSeries(
         skip: offset,
         take: safeLimit,
         include: {
-          exercises: {
-            orderBy: { order: 'asc' },
-            select: {
-              id: true,
-              problemTextFr: true,
-              solutionFr: true,
-              order: true,
-              seriesId: true,
-            }
+          _count: {
+            select: { exercises: true }
           }
         },
       }),

@@ -557,7 +557,7 @@ export function ExamConfigurationForm({
                         ) : availableSeries.length > 0 ? (
                           availableSeries.map(s => (
                             <SelectItem key={s.id} value={s.id}>
-                              {s.title} ({s.exercises?.length || 0} exercices)
+                              {s.title} ({s._count?.exercises || s.exercises?.length || 0} exercices)
                             </SelectItem>
                           ))
                         ) : (
