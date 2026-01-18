@@ -15,6 +15,12 @@ import { toast } from "sonner"
 import { ImageUploadManager } from "@/components/admin/image-upload-manager"
 import { VideoUploadManager } from "@/components/admin/video-upload-manager"
 import { ExamJsonMode } from "@/components/exams/exam-json-mode"
+import dynamic from "next/dynamic"
+
+const AIPromptGenerator = dynamic(
+  () => import("@/components/exercises/ai-prompt-generator").then(mod => ({ default: mod.AIPromptGenerator })),
+  { ssr: false }
+)
 
 interface ManualExamEditorProps {
   initialData?: Partial<GeneratedExam>
@@ -184,6 +190,20 @@ export function ManualExamEditor({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Sidebar - Exam Structure */}
           <div className="lg:col-span-4 space-y-6">
+            <AIPromptGenerator
+              contentType="exam"
+              context={{
+                cycle: cycle || "LYCEE",
+                level: "UNKNOWN", // We don't distinctly have level here, maybe infer or leave generic
+                stream: null,
+                semester: "UNKNOWN"
+              }}
+              lesson={{
+                id: examId || "exam",
+                titleFr: exam.title || "Nouvel Examen",
+                contentFr: exam.instructions
+              }}
+            />
             <Card>
               <CardHeader>
                 <CardTitle>Informations Générales</CardTitle>

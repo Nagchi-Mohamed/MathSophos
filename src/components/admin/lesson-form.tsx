@@ -20,6 +20,12 @@ import { ArrowLeft, Save, FileText } from "lucide-react"
 import Link from "next/link"
 import { LESSON_EXAMPLE } from "@/lib/content-examples"
 import { VideoUploadManager } from "@/components/admin/video-upload-manager"
+import dynamic from "next/dynamic"
+
+const AIPromptGenerator = dynamic(
+  () => import("@/components/exercises/ai-prompt-generator").then(mod => ({ default: mod.AIPromptGenerator })),
+  { ssr: false }
+)
 
 import { LessonStatus } from "@/lib/enums"
 
@@ -172,6 +178,22 @@ export function LessonForm({ lesson }: LessonFormProps) {
             </div>
           </CardContent>
         </Card>
+
+        {/* AI Prompt Generator */}
+        <AIPromptGenerator
+          contentType="lesson"
+          context={{
+            cycle: "LYCEE", // Default or derived from level
+            level: formData.level,
+            stream: null,
+            semester: formData.semester.toString()
+          }}
+          lesson={{
+            id: lesson?.id || "new",
+            titleFr: formData.title,
+            contentFr: formData.content
+          }}
+        />
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">

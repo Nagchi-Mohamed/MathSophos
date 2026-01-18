@@ -43,6 +43,12 @@ const DEFAULT_EXAMPLE_CONTENT: FicheContentStep[] = [
 import { VideoPlayerTrigger } from "@/components/content/video-player-trigger"
 import { VideoUploadManager } from "@/components/admin/video-upload-manager"
 import { Video } from "lucide-react"
+import dynamic from "next/dynamic"
+
+const AIPromptGenerator = dynamic(
+  () => import("@/components/exercises/ai-prompt-generator").then(mod => ({ default: mod.AIPromptGenerator })),
+  { ssr: false }
+)
 
 interface FicheBuilderProps {
   initialData?: PedagogicalSheet
@@ -214,6 +220,23 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
         </TabsContent>
 
         <TabsContent value="content" className="mt-6">
+          <div className="mb-6">
+            <AIPromptGenerator
+              contentType="fiche"
+              context={{
+                cycle: "LYCEE",
+                level: metadata.gradeLevel,
+                stream: metadata.stream,
+                semester: metadata.semester.toString()
+              }}
+              lesson={{
+                id: "fiche",
+                titleFr: metadata.lessonTitle || "Nouvelle Fiche",
+                contentFr: metadata.pedagogicalGuidelines
+              }}
+            />
+          </div>
+
           <ContentEntryForm
             steps={steps}
             setSteps={handleStepsChange}

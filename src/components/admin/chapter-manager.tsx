@@ -39,6 +39,12 @@ import Link from "next/link"
 import { ImageUploadManager } from "@/components/admin/image-upload-manager"
 import { VideoUploadManager } from "@/components/admin/video-upload-manager"
 import { insertAtCursor } from "@/lib/textarea-utils"
+import dynamic from "next/dynamic"
+
+const AIPromptGenerator = dynamic(
+  () => import("@/components/exercises/ai-prompt-generator").then(mod => ({ default: mod.AIPromptGenerator })),
+  { ssr: false }
+)
 
 interface ChapterManagerProps {
   lessonId: string
@@ -319,6 +325,22 @@ export function ChapterManager({ lessonId, lessonTitle, showOnlyButton = false }
             {/* Mode Manuel : Contenu avec Insert Image en haut */}
             {mode === "manual" && (
               <div className="space-y-2">
+                <div className="mb-4">
+                  <AIPromptGenerator
+                    contentType="chapter"
+                    context={{
+                      cycle: "LYCEE",
+                      level: "UNKNOWN",
+                      stream: null,
+                      semester: "UNKNOWN"
+                    }}
+                    lesson={{
+                      id: lessonId,
+                      titleFr: lessonTitle,
+                      contentFr: formData.content // Use current content as context if any
+                    }}
+                  />
+                </div>
                 <div className="flex items-center justify-between mb-2">
                   <Label htmlFor="content">Contenu du chapitre</Label>
                   <div className="flex gap-2">
