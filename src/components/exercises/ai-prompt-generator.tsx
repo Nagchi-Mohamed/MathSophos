@@ -13,7 +13,7 @@ interface AIPromptGeneratorProps {
   lesson: {
     id: string
     titleFr: string
-    contentFr?: string
+    contentFr?: string | null
   }
   context: {
     cycle: string
