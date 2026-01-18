@@ -30,6 +30,7 @@ interface ManualSeriesFormProps {
     id: string
     titleFr: string
     slug: string
+    contentFr?: string
   }
 }
 
