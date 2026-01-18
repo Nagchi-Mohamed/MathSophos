@@ -17,7 +17,10 @@ export interface SeriesCardProps {
     level: string;
     stream?: string | null;
     semester: number;
-    exercises: { id: string }[];
+    exercises?: { id: string }[];
+    _count?: {
+      exercises: number;
+    };
     lesson?: {
       titleFr: string;
       slug: string;
@@ -55,7 +58,7 @@ export function SeriesCard({ series, showAdminActions = false }: SeriesCardProps
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <div className="flex items-center">
             <Layers className="w-4 h-4 mr-2" />
-            <span>{series.exercises.length} exercices</span>
+            <span>{series._count?.exercises || series.exercises?.length || 0} exercices</span>
           </div>
         </div>
 
