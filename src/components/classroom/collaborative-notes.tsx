@@ -46,7 +46,7 @@ export function CollaborativeNotes({ room, participants, onClose }: Collaborativ
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const syncTimeoutRef = useRef<NodeJS.Timeout>();
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sync content with other participants
   const syncContent = useCallback((newContent: string) => {
