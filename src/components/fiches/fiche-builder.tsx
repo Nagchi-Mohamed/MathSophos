@@ -227,7 +227,7 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
                 cycle: "LYCEE",
                 level: metadata.gradeLevel,
                 stream: metadata.stream,
-                semester: metadata.semester.toString()
+                semester: metadata.semester?.toString() ?? "1"
               }}
               lesson={{
                 id: "fiche",
