@@ -865,7 +865,7 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
       {/* Analytics Dashboard Overlay */}
       {showAnalytics && (
         <AnalyticsDashboard
-          classroomId={roomName}
+          classroomId={room.name}
           onClose={() => setShowAnalytics(false)}
         />
       )}
@@ -898,7 +898,7 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
       {/* Phase 3 - Session Replay Overlay */}
       {showSessionReplay && (
         <SessionReplay
-          sessionId={roomName}
+          sessionId={room.name}
           duration={sessionDuration}
           events={[]}
           highlights={[]}
