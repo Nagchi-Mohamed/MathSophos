@@ -530,7 +530,9 @@ model Classroom {
   members       ClassroomMember[]
   announcements ClassroomAnnouncement[]
   assignments   ClassroomAssignment[]
+  sessions      ClassroomSession[]
 }
+
 
 model ClassroomMember {
   id          String   @id @default(cuid())
@@ -616,3 +618,210 @@ model PedagogicalReference {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// Enhanced Classroom Models for Enterprise Features
+
+model ClassroomSession {
+  id              String   @id @default(cuid())
+  classroomId     String
+  roomName        String   // LiveKit room name
+  hostId          String
+  title           String?
+  description     String?  @db.Text
+  scheduledStart  DateTime?
+  scheduledEnd    DateTime?
+  actualStart     DateTime?
+  actualEnd       DateTime?
+  status          String   @default("SCHEDULED") // SCHEDULED, LIVE, ENDED, CANCELLED
+  recordingUrl    String?
+  recordingSize   Int?     // in bytes
+  transcriptUrl   String?
+  duration        Int?     // in seconds
+  maxParticipants Int      @default(100)
+  settings        Json?    // Session-specific settings
+  metadata        Json?    // Analytics, etc.
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  attendances     ClassroomAttendance[]
+  chatMessages    ClassroomChatMessage[]
+  breakoutRooms   ClassroomBreakoutRoom[]
+  polls           ClassroomPoll[]
+  recordings      ClassroomRecording[]
+
+  @@index([classroomId])
+  @@index([status])
+  @@index([scheduledStart])
+}
+
+model ClassroomAttendance {
+  id          String   @id @default(cuid())
+  sessionId   String
+  userId      String
+  joinedAt    DateTime @default(now())
+  leftAt      DateTime?
+  duration    Int?     // in seconds
+  isPresent   Boolean  @default(true)
+  deviceInfo  Json?    // Browser, OS, etc.
+  ipAddress   String?
+  metadata    Json?    // Participation metrics
+  createdAt   DateTime @default(now())
+
+  session     ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([userId])
+  @@index([joinedAt])
+}
+
+model ClassroomRecording {
+  id              String   @id @default(cuid())
+  sessionId       String
+  title           String
+  description     String?  @db.Text
+  fileUrl         String
+  thumbnailUrl    String?
+  duration        Int      // in seconds
+  fileSize        Int      // in bytes
+  format          String   @default("webm") // webm, mp4, etc.
+  quality         String   @default("HD")   // SD, HD, FHD, 4K
+  hasTranscript   Boolean  @default(false)
+  transcriptUrl   String?
+  hasSubtitles    Boolean  @default(false)
+  subtitlesUrl    String?
+  viewCount       Int      @default(0)
+  downloadCount   Int      @default(0)
+  isPublic        Boolean  @default(false)
+  metadata        Json?    // Chapters, highlights, etc.
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  session         ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([createdAt])
+}
+
+model ClassroomBreakoutRoom {
+  id          String   @id @default(cuid())
+  sessionId   String
+  name        String
+  roomNumber  Int
+  capacity    Int      @default(10)
+  duration    Int?     // in seconds
+  startedAt   DateTime?
+  endedAt     DateTime?
+  status      String   @default("PENDING") // PENDING, ACTIVE, ENDED
+  assignments Json?    // Array of user IDs assigned to this room
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  session     ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([status])
+}
+
+model ClassroomChatMessage {
+  id          String   @id @default(cuid())
+  sessionId   String
+  senderId    String
+  senderName  String
+  message     String   @db.Text
+  messageType String   @default("TEXT") // TEXT, FILE, POLL, ANNOUNCEMENT
+  attachments Json?    // File metadata
+  replyToId   String?
+  isPrivate   Boolean  @default(false)
+  recipientId String?  // For private messages
+  reactions   Json?    // Array of reactions
+  isDeleted   Boolean  @default(false)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  session     ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+model ClassroomPoll {
+  id          String   @id @default(cuid())
+  sessionId   String
+  creatorId   String
+  question    String   @db.Text
+  options     Json     // Array of poll options
+  pollType    String   @default("MULTIPLE_CHOICE") // MULTIPLE_CHOICE, RATING, WORD_CLOUD
+  allowMultiple Boolean @default(false)
+  isAnonymous Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  results     Json?    // Aggregated results
+  responses   Json?    // Individual responses
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  session     ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([isActive])
+}
+
+model ClassroomQuiz {
+  id          String   @id @default(cuid())
+  classroomId String
+  title       String
+  description String?  @db.Text
+  questions   Json     // Array of questions with answers
+  duration    Int?     // in seconds
+  passingScore Int     @default(70)
+  isActive    Boolean  @default(true)
+  settings    Json?    // Shuffle, show answers, etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  responses   ClassroomQuizResponse[]
+
+  @@index([classroomId])
+}
+
+model ClassroomQuizResponse {
+  id          String   @id @default(cuid())
+  quizId      String
+  studentId   String
+  answers     Json     // Array of student answers
+  score       Int?
+  totalPoints Int?
+  isPassed    Boolean  @default(false)
+  startedAt   DateTime @default(now())
+  submittedAt DateTime?
+  duration    Int?     // in seconds
+  metadata    Json?
+
+  quiz        ClassroomQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId])
+  @@index([studentId])
+}
+
+model ClassroomAnalytics {
+  id              String   @id @default(cuid())
+  classroomId     String
+  sessionId       String?
+  userId          String?
+  eventType       String   // JOIN, LEAVE, CHAT, POLL_VOTE, HAND_RAISE, etc.
+  eventData       Json?
+  timestamp       DateTime @default(now())
+  metadata        Json?
+
+  @@index([classroomId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([eventType])
+  @@index([timestamp])
+}
+

@@ -44,7 +44,11 @@ interface EnhancedControlsProps {
   onMuteAll: () => void;
   onOpenWhiteboard: () => void;
   onOpenPolls: () => void;
+  onOpenBreakoutRooms?: () => void;
+  onOpenAttendance?: () => void;
+  onOpenQuiz?: () => void;
 }
+
 
 export function EnhancedControls({
   room,
@@ -61,6 +65,9 @@ export function EnhancedControls({
   onMuteAll,
   onOpenWhiteboard,
   onOpenPolls,
+  onOpenBreakoutRooms,
+  onOpenAttendance,
+  onOpenQuiz,
 }: EnhancedControlsProps) {
   const localParticipant = room.localParticipant;
   const isHandRaised = raisedHands.has(localParticipant.identity);
@@ -156,6 +163,42 @@ export function EnhancedControls({
               <MessageSquarePlus className="h-4 w-4" />
               Poll
             </Button>
+
+            {onOpenBreakoutRooms && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onOpenBreakoutRooms}
+                className="gap-2"
+              >
+                <Users2 className="h-4 w-4" />
+                Breakout Rooms
+              </Button>
+            )}
+
+            {onOpenAttendance && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onOpenAttendance}
+                className="gap-2"
+              >
+                <Users2 className="h-4 w-4" />
+                Attendance
+              </Button>
+            )}
+
+            {onOpenQuiz && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onOpenQuiz}
+                className="gap-2"
+              >
+                <MessageSquarePlus className="h-4 w-4" />
+                Quiz
+              </Button>
+            )}
           </>
         )}
       </div>

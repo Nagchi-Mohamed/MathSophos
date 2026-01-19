@@ -79,6 +79,22 @@ import { Polls } from "@/components/classroom/polls";
 import { WaitingRoom, WaitingRoomScreen } from "@/components/classroom/waiting-room";
 import { BackgroundEffects } from "@/components/classroom/background-effects";
 import { FileShare, FileAttachmentCard, FilePreviewModal } from "@/components/classroom/file-share";
+import { BreakoutRooms } from "@/components/classroom/breakout-rooms";
+import { AttendanceTracker } from "@/components/classroom/attendance-tracker";
+import { LiveQuiz } from "@/components/classroom/live-quiz";
+import { LiveTranscription } from "@/components/classroom/live-transcription";
+import { RecordingManager } from "@/components/classroom/recording-manager";
+import { CollaborativeNotes } from "@/components/classroom/collaborative-notes";
+import { AnalyticsDashboard } from "@/components/classroom/analytics-dashboard";
+import { KeyboardShortcuts, useKeyboardShortcuts } from "@/components/classroom/keyboard-shortcuts";
+import { AIAssistant } from "@/components/classroom/ai-assistant";
+import { ReactionsBar } from "@/components/classroom/reactions-bar";
+import { PictureInPictureMode } from "@/components/classroom/picture-in-picture";
+import { FocusMode } from "@/components/classroom/focus-mode";
+import { SessionReplay } from "@/components/classroom/session-replay";
+import { SmartSpotlight } from "@/components/classroom/smart-spotlight";
+import { WordCloudPoll } from "@/components/classroom/word-cloud-poll";
+
 
 interface LiveSessionProps {
   roomName: string;
@@ -441,6 +457,28 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
   const [fileAttachments, setFileAttachments] = useState<any[]>([]);
   const [previewFile, setPreviewFile] = useState<any | null>(null);
 
+  // New enterprise features
+  const [showBreakoutRooms, setShowBreakoutRooms] = useState(false);
+  const [showAttendance, setShowAttendance] = useState(false);
+  const [showLiveQuiz, setShowLiveQuiz] = useState(false);
+  const [showTranscription, setShowTranscription] = useState(false);
+  const [showRecordings, setShowRecordings] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+
+  // Phase 3 features
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [showReactions, setShowReactions] = useState(false);
+  const [showPiP, setShowPiP] = useState(false);
+  const [focusModeActive, setFocusModeActive] = useState(false);
+  const [showSessionReplay, setShowSessionReplay] = useState(false);
+  const [showSmartSpotlight, setShowSmartSpotlight] = useState(false);
+  const [showWordCloud, setShowWordCloud] = useState(false);
+  const [sessionDuration, setSessionDuration] = useState(0);
+  const [reactions, setReactions] = useState<Map<string, any>>(new Map());
+
+
   // Immersive Mobile Controls
   const [controlsVisible, setControlsVisible] = useState(true);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -472,6 +510,48 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     };
   }, [showControls]);
+
+  // Keyboard Shortcuts Integration
+  useKeyboardShortcuts({
+    "ctrl+shift+b": () => setShowBreakoutRooms(true),
+    "ctrl+shift+q": () => setShowLiveQuiz(true),
+    "ctrl+shift+t": () => setShowTranscription(true),
+    "ctrl+shift+n": () => setShowNotes(true),
+    "ctrl+shift+a": () => setShowAnalytics(true),
+    "ctrl+shift+k": () => setShowKeyboardShortcuts(true),
+    "ctrl+shift+w": () => setShowWhiteboard(true),
+    "ctrl+shift+p": () => setSidebarView(sidebarView === 'participants' ? 'none' : 'participants'),
+    "ctrl+shift+c": () => setSidebarView(sidebarView === 'chat' ? 'none' : 'chat'),
+    "ctrl+shift+h": () => toggleRaiseHand(),
+    "ctrl+shift+f": () => setFocusModeActive(!focusModeActive),
+    "ctrl+shift+g": () => setViewMode(viewMode === 'gallery' ? 'speaker' : 'gallery'),
+    "esc": () => {
+      // Close any open overlays
+      setShowBreakoutRooms(false);
+      setShowAttendance(false);
+      setShowLiveQuiz(false);
+      setShowTranscription(false);
+      setShowRecordings(false);
+      setShowNotes(false);
+      setShowAnalytics(false);
+      setShowKeyboardShortcuts(false);
+      setShowAIAssistant(false);
+      setShowWordCloud(false);
+      setShowSessionReplay(false);
+      setShowWhiteboard(false);
+      setShowPolls(false);
+      setShowBackgroundEffects(false);
+    },
+  });
+
+  // Track session duration
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSessionDuration(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
 
   const handleVideoTap = (e: React.MouseEvent | React.TouchEvent) => {
     // Don't toggle if clicking a button or interactive element
@@ -726,6 +806,121 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
         />
       )}
 
+      {/* Breakout Rooms Overlay */}
+      {showBreakoutRooms && (
+        <BreakoutRooms
+          room={room}
+          isTeacher={isTeacher}
+          participants={participants}
+          onClose={() => setShowBreakoutRooms(false)}
+        />
+      )}
+
+      {/* Attendance Tracker Overlay */}
+      {showAttendance && (
+        <AttendanceTracker
+          room={room}
+          isTeacher={isTeacher}
+          participants={participants}
+          onClose={() => setShowAttendance(false)}
+        />
+      )}
+
+      {/* Live Quiz Overlay */}
+      {showLiveQuiz && (
+        <LiveQuiz
+          room={room}
+          isTeacher={isTeacher}
+          participants={participants}
+          onClose={() => setShowLiveQuiz(false)}
+        />
+      )}
+
+      {/* Live Transcription Overlay */}
+      {showTranscription && (
+        <LiveTranscription
+          room={room}
+          isTeacher={isTeacher}
+          onClose={() => setShowTranscription(false)}
+        />
+      )}
+
+      {/* Recording Manager Overlay */}
+      {showRecordings && (
+        <RecordingManager
+          classroomId={roomName}
+          onClose={() => setShowRecordings(false)}
+        />
+      )}
+
+      {/* Collaborative Notes Overlay */}
+      {showNotes && (
+        <CollaborativeNotes
+          room={room}
+          participants={participants}
+          onClose={() => setShowNotes(false)}
+        />
+      )}
+
+      {/* Analytics Dashboard Overlay */}
+      {showAnalytics && (
+        <AnalyticsDashboard
+          classroomId={roomName}
+          onClose={() => setShowAnalytics(false)}
+        />
+      )}
+
+      {/* Keyboard Shortcuts Overlay */}
+      {showKeyboardShortcuts && (
+        <KeyboardShortcuts onClose={() => setShowKeyboardShortcuts(false)} />
+      )}
+
+      {/* Phase 3 - AI Assistant Overlay */}
+      {showAIAssistant && (
+        <AIAssistant
+          room={room}
+          participants={participants}
+          sessionDuration={sessionDuration}
+          onClose={() => setShowAIAssistant(false)}
+        />
+      )}
+
+      {/* Phase 3 - Word Cloud Poll Overlay */}
+      {showWordCloud && (
+        <WordCloudPoll
+          room={room}
+          question="Quel est le mot clé de cette session?"
+          isTeacher={isTeacher}
+          onClose={() => setShowWordCloud(false)}
+        />
+      )}
+
+      {/* Phase 3 - Session Replay Overlay */}
+      {showSessionReplay && (
+        <SessionReplay
+          sessionId={roomName}
+          duration={sessionDuration}
+          events={[]}
+          highlights={[]}
+          onClose={() => setShowSessionReplay(false)}
+        />
+      )}
+
+      {/* Phase 3 - Focus Mode */}
+      <FocusMode
+        isActive={focusModeActive}
+        onToggle={() => setFocusModeActive(!focusModeActive)}
+        onHideParticipants={(hide) => {
+          if (hide) setSidebarView('none');
+        }}
+        onHideChat={(hide) => {
+          if (hide) setSidebarView('none');
+        }}
+        onMuteNotifications={(mute) => {
+          // Handle notification muting
+        }}
+      />
+
       {/* Waiting Room (for teachers) */}
       {isTeacher && waitingParticipants.length > 0 && (
         <WaitingRoom
@@ -778,7 +973,11 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
                 onMuteAll={muteAll}
                 onOpenWhiteboard={() => setShowWhiteboard(true)}
                 onOpenPolls={() => setShowPolls(true)}
+                onOpenBreakoutRooms={() => setShowBreakoutRooms(true)}
+                onOpenAttendance={() => setShowAttendance(true)}
+                onOpenQuiz={() => setShowLiveQuiz(true)}
               />
+
               <Button
                 variant="ghost"
                 size="sm"
