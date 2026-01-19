@@ -372,7 +372,7 @@ export function BreakoutRooms({ room, isTeacher, participants, onClose }: Breako
                     onClick={() => {
                       const shuffled = [...participants.filter(p => !p.isLocal)].sort(() => Math.random() - 0.5);
                       setBreakoutRooms(prev => {
-                        const updated = prev.map(room => ({ ...room, participants: [] }));
+                        const updated = prev.map(room => ({ ...room, participants: [] as string[] }));
                         shuffled.forEach((participant, index) => {
                           const roomIndex = index % updated.length;
                           updated[roomIndex].participants.push(participant.identity);
