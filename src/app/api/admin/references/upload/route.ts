@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     let textContent = "";
     try {
       textContent = await new Promise((resolve, reject) => {
-        const parser = new PDFParser(this, 1); // 1 = text only
+        const parser = new PDFParser(null, 1); // 1 = text only
         parser.on("pdfParser_dataError", (errData: any) => reject(errData.parserError));
         parser.on("pdfParser_dataReady", (pdfData: any) => {
           // getRawTextContent() returns distinct lines. We join them.
