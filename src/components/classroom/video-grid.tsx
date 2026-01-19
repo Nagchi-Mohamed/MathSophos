@@ -110,7 +110,11 @@ export function VideoGrid({
         {/* Video or Avatar */}
         {isVideoEnabled ? (
           <VideoTrack
-            trackRef={videoTrack}
+            trackRef={{
+              participant: participant,
+              source: Track.Source.Camera,
+              publication: videoTrack
+            }}
             className="w-full h-full object-cover"
           />
         ) : (
