@@ -94,7 +94,9 @@ import { FocusMode } from "@/components/classroom/focus-mode";
 import { SessionReplay } from "@/components/classroom/session-replay";
 import { SmartSpotlight } from "@/components/classroom/smart-spotlight";
 import { WordCloudPoll } from "@/components/classroom/word-cloud-poll";
-
+import { VideoGrid } from "@/components/classroom/video-grid";
+import { AudioSettings } from "@/components/classroom/audio-settings";
+import { MobileControls } from "@/components/classroom/mobile-controls";
 
 interface LiveSessionProps {
   roomName: string;
@@ -476,6 +478,36 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
   const [showSmartSpotlight, setShowSmartSpotlight] = useState(false);
   const [showWordCloud, setShowWordCloud] = useState(false);
   const [sessionDuration, setSessionDuration] = useState(0);
+
+  // New Enhanced States
+  const [showAudioSettings, setShowAudioSettings] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  const handleLeave = useCallback(async () => {
+    await room.disconnect();
+    window.location.href = '/classrooms';
+  }, [room]);
   const [reactions, setReactions] = useState<Map<string, any>>(new Map());
 
 
@@ -958,26 +990,38 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <EnhancedControls
-                room={room}
-                isTeacher={isTeacher}
-                participants={participants}
-                raisedHands={raisedHands}
-                pinnedParticipants={pinnedParticipants}
-                spotlightedParticipant={spotlightedParticipant}
-                onToggleRaiseHand={toggleRaiseHand}
-                onMuteParticipant={muteParticipant}
-                onRemoveParticipant={removeParticipant}
-                onPinParticipant={pinParticipant}
-                onSpotlightParticipant={spotlightParticipant}
-                onMuteAll={muteAll}
-                onOpenWhiteboard={() => setShowWhiteboard(true)}
-                onOpenPolls={() => setShowPolls(true)}
-                onOpenBreakoutRooms={() => setShowBreakoutRooms(true)}
-                onOpenAttendance={() => setShowAttendance(true)}
-                onOpenQuiz={() => setShowLiveQuiz(true)}
-              />
+              {!isMobile && (
+                <EnhancedControls
+                  room={room}
+                  isTeacher={isTeacher}
+                  participants={participants}
+                  raisedHands={raisedHands}
+                  pinnedParticipants={pinnedParticipants}
+                  spotlightedParticipant={spotlightedParticipant}
+                  onToggleRaiseHand={toggleRaiseHand}
+                  onMuteParticipant={muteParticipant}
+                  onRemoveParticipant={removeParticipant}
+                  onPinParticipant={pinParticipant}
+                  onSpotlightParticipant={spotlightParticipant}
+                  onMuteAll={muteAll}
+                  onOpenWhiteboard={() => setShowWhiteboard(true)}
+                  onOpenPolls={() => setShowPolls(true)}
+                  onOpenBreakoutRooms={() => setShowBreakoutRooms(true)}
+                  onOpenAttendance={() => setShowAttendance(true)}
+                  onOpenQuiz={() => setShowLiveQuiz(true)}
+                />
+              )}
 
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAudioSettings(true)}
+                className="h-7 w-7 p-0 bg-[#1a1a1a]/80 hover:bg-[#2a2a2a] text-white border border-white/10 rounded-full"
+              >
+                <Settings2 className="h-4 w-4" />
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -989,12 +1033,37 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
               </Button>
             </div>
           </div>
-          {viewMode === 'gallery' ? (
-            <GridLayout tracks={tracks} style={{ height: '100%' }}>
-              <CustomParticipantTileRenderer />
-            </GridLayout>
-          ) : (
-            <SpeakerView tracks={tracks} />
+
+          <VideoGrid
+            viewMode={viewMode}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={toggleFullscreen}
+            isMobile={isMobile}
+          />
+
+          {/* Audio Settings Overlay */}
+          {showAudioSettings && (
+            <AudioSettings
+              room={room}
+              onClose={() => setShowAudioSettings(false)}
+            />
+          )}
+
+          {/* Mobile Controls */}
+          {isMobile && (
+            <MobileControls
+              isAudioEnabled={localParticipant.isMicrophoneEnabled}
+              isVideoEnabled={localParticipant.isCameraEnabled}
+              isHandRaised={false} // Would need to track this state for local user
+              hasUnreadMessages={false} // Would need to track unread messages
+              onToggleAudio={() => room.localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)}
+              onToggleVideo={() => room.localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled)}
+              onToggleHand={toggleRaiseHand}
+              onLeave={handleLeave}
+              onOpenChat={() => setSidebarView(sidebarView === 'chat' ? 'none' : 'chat')}
+              onOpenParticipants={() => setSidebarView(sidebarView === 'participants' ? 'none' : 'participants')}
+              onOpenMore={() => setShowAudioSettings(true)}
+            />
           )}
         </div>
 
