@@ -91,101 +91,101 @@ model VerificationToken {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  passwordHash  String?
-  role          UserRole  @default(STUDENT)
-  preferredLang String    @default("fr")
+  id                    String    @id @default(cuid())
+  name                  String?
+  email                 String?   @unique
+  emailVerified         DateTime?
+  image                 String?
+  passwordHash          String?
+  role                  UserRole  @default(STUDENT)
+  preferredLang         String    @default("fr")
   commentSuspendedUntil DateTime?
-  isCommentBlocked Boolean @default(false)
-  reportSuspendedUntil DateTime?
-  isReportBlocked Boolean @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  isCommentBlocked      Boolean   @default(false)
+  reportSuspendedUntil  DateTime?
+  isReportBlocked       Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   // Relations
-  accounts         Account[]
-  sessions         Session[]
-  createdLessons   Lesson[]         @relation("LessonCreatedBy")
-  createdChapters  Chapter[]        @relation("ChapterCreatedBy")
-  createdExams     Exam[]
-  forumPosts       ForumPost[]
-  forumReplies     ForumReply[]
-  forumReactions   ForumReaction[]
-  userProgress     UserProgress[]
-  uploadedImages   PlatformImage[]  @relation("uploadedImages")
-  uploadedVideos   PlatformVideo[]  @relation("uploadedVideos")
-  reports          Report[]
-  reportReplies    ReportReply[]
+  accounts          Account[]
+  sessions          Session[]
+  createdLessons    Lesson[]           @relation("LessonCreatedBy")
+  createdChapters   Chapter[]          @relation("ChapterCreatedBy")
+  createdExams      Exam[]
+  forumPosts        ForumPost[]
+  forumReplies      ForumReply[]
+  forumReactions    ForumReaction[]
+  userProgress      UserProgress[]
+  uploadedImages    PlatformImage[]    @relation("uploadedImages")
+  uploadedVideos    PlatformVideo[]    @relation("uploadedVideos")
+  reports           Report[]
+  reportReplies     ReportReply[]
   pedagogicalSheets PedagogicalSheet[]
-  
+
   // Classroom Relations
-  ownedClassrooms   Classroom[]     @relation("OwnedClassrooms")
-  classroomMemberships ClassroomMember[]
+  ownedClassrooms        Classroom[]             @relation("OwnedClassrooms")
+  classroomMemberships   ClassroomMember[]
   classroomAnnouncements ClassroomAnnouncement[]
   classroomSubmissions   ClassroomSubmission[]
 }
 
 model AiContext {
-  id             String   @id @default(cuid())
-  name           String   @unique
-  description    String?
-  systemPrompt   String
+  id                String   @id @default(cuid())
+  name              String   @unique
+  description       String?
+  systemPrompt      String
   structureTemplate String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   // Relations
   lessons Lesson[]
 }
 
 model Course {
-  id             String   @id @default(cuid())
-  name           String
-  description    String?
+  id               String           @id @default(cuid())
+  name             String
+  description      String?
   educationalLevel EducationalLevel
-  subject        String
-  imageUrl       String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  subject          String
+  imageUrl         String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   // Relations
   lessons Lesson[]
 }
 
 model Lesson {
-  id             String   @id @default(cuid())
-  titleFr        String
-  titleEn        String?
-  slug           String   @unique
-  contentFr      String?
-  contentEn      String?
-  level          EducationalLevel
-  stream         Stream   @default(NONE)
-  semester       Int      @default(1)
-  order          Int      @default(1)
-  category       String?
-  status         LessonStatus @default(DRAFT)
-  courseId       String?
-  createdById    String?
-  aiContextId    String?
-  imagesUsed     String[] @default([])
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id          String           @id @default(cuid())
+  titleFr     String
+  titleEn     String?
+  slug        String           @unique
+  contentFr   String?
+  contentEn   String?
+  level       EducationalLevel
+  stream      Stream           @default(NONE)
+  semester    Int              @default(1)
+  order       Int              @default(1)
+  category    String?
+  status      LessonStatus     @default(DRAFT)
+  courseId    String?
+  createdById String?
+  aiContextId String?
+  imagesUsed  String[]         @default([])
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   // Relations
-  course         Course?         @relation(fields: [courseId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  createdBy      User?           @relation("LessonCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  aiContext      AiContext?      @relation(fields: [aiContextId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  course            Course?            @relation(fields: [courseId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  createdBy         User?              @relation("LessonCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  aiContext         AiContext?         @relation(fields: [aiContextId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   educationalStream EducationalStream? @relation(fields: [educationalStreamId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  module         Module?         @relation(fields: [moduleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  exercises      Exercise[]
-  series         Series[]
-  userProgress   UserProgress[]
-  chapters       Chapter[]
+  module            Module?            @relation(fields: [moduleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  exercises         Exercise[]
+  series            Series[]
+  userProgress      UserProgress[]
+  chapters          Chapter[]
 
   educationalStreamId String?
   moduleId            String?
@@ -195,79 +195,79 @@ model Lesson {
 }
 
 model Exercise {
-  id             String   @id @default(cuid())
-  slug           String   @unique
-  problemTextFr  String
-  problemTextEn  String?
-  solutionFr     String
-  solutionEn     String?
-  hints          String[]
-  order          Int      @default(0)
-  lessonId       String?
-  seriesId       String?
-  exerciseType   String?  // "QCM" | "FREE_RESPONSE" | null (legacy field, not actively used)
-  qcmOptions     String[] @default([]) // For QCM: ["Option A", "Option B", "Option C", "Option D"]
-  correctAnswer  String?  // For QCM: "A", "B", "C", "D" or "1", "2", "3", "4" | For free response: the expected answer
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  problemTextFr String
+  problemTextEn String?
+  solutionFr    String
+  solutionEn    String?
+  hints         String[]
+  order         Int      @default(0)
+  lessonId      String?
+  seriesId      String?
+  exerciseType  String? // "QCM" | "FREE_RESPONSE" | null (legacy field, not actively used)
+  qcmOptions    String[] @default([]) // For QCM: ["Option A", "Option B", "Option C", "Option D"]
+  correctAnswer String? // For QCM: "A", "B", "C", "D" or "1", "2", "3", "4" | For free response: the expected answer
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
-  lesson         Lesson?         @relation(fields: [lessonId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  series         Series?         @relation(fields: [seriesId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  userProgress   UserProgress[]
+  lesson       Lesson?        @relation(fields: [lessonId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  series       Series?        @relation(fields: [seriesId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  userProgress UserProgress[]
 
   @@index([lessonId])
 }
 
 model Series {
-  id             String   @id @default(cuid())
-  title          String
-  titleEn        String?
-  description    String?
-  descriptionEn  String?
-  slug           String?  @unique
-  cycle          String
-  level          EducationalLevel
-  stream         Stream   @default(NONE)
-  semester       Int      @default(1)
-  public         Boolean  @default(false)
-  lessonId       String?
+  id                  String           @id @default(cuid())
+  title               String
+  titleEn             String?
+  description         String?
+  descriptionEn       String?
+  slug                String?          @unique
+  cycle               String
+  level               EducationalLevel
+  stream              Stream           @default(NONE)
+  semester            Int              @default(1)
+  public              Boolean          @default(false)
+  lessonId            String?
   educationalStreamId String?
-  imagesUsed     String[] @default([])
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  imagesUsed          String[]         @default([])
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 
   // Relations
-  lesson         Lesson?         @relation(fields: [lessonId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  lesson            Lesson?            @relation(fields: [lessonId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   educationalStream EducationalStream? @relation(fields: [educationalStreamId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  exercises      Exercise[]
+  exercises         Exercise[]
 }
 
 model EducationalStream {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  slug        String   @unique
-  description String?
-  level       EducationalLevel
-  semesterCount Int    @default(1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String           @id @default(cuid())
+  name          String           @unique
+  slug          String           @unique
+  description   String?
+  level         EducationalLevel
+  semesterCount Int              @default(1)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   // Relations
-  lessons     Lesson[]
-  series      Series[]
-  modules     Module[]
+  lessons Lesson[]
+  series  Series[]
+  modules Module[]
 }
 
 model Module {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  description String?
+  id                  String   @id @default(cuid())
+  name                String
+  slug                String   @unique
+  description         String?
   educationalStreamId String
-  order       Int      @default(1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  order               Int      @default(1)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   // Relations
   educationalStream EducationalStream @relation(fields: [educationalStreamId], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -278,62 +278,62 @@ model Module {
 }
 
 model Chapter {
-  id          String   @id @default(cuid())
-  titleFr     String
-  titleEn     String?
-  slug        String   @unique
-  contentFr   String?
-  contentEn   String?
-  chapterNumber Int    @default(1)
-  lessonId    String
-  order       Int      @default(1)
-  status      LessonStatus @default(DRAFT)
-  createdById String?
-  imagesUsed  String[] @default([])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String       @id @default(cuid())
+  titleFr       String
+  titleEn       String?
+  slug          String       @unique
+  contentFr     String?
+  contentEn     String?
+  chapterNumber Int          @default(1)
+  lessonId      String
+  order         Int          @default(1)
+  status        LessonStatus @default(DRAFT)
+  createdById   String?
+  imagesUsed    String[]     @default([])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   // Relations
-  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  createdBy   User?    @relation("ChapterCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  lesson    Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdBy User?  @relation("ChapterCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([lessonId])
   @@index([createdById])
 }
 
 model ForumPost {
-  id             String   @id @default(cuid())
-  title          String
-  content        String
-  userId         String
-  isAiAnswered   Boolean  @default(false)
-  aiAnswer       String?
-  imageUrl       String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id           String   @id @default(cuid())
+  title        String
+  content      String
+  userId       String
+  isAiAnswered Boolean  @default(false)
+  aiAnswer     String?
+  imageUrl     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  replies        ForumReply[]
-  reactions      ForumReaction[]
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  replies   ForumReply[]
+  reactions ForumReaction[]
 
   @@index([userId])
 }
 
 model ForumReply {
-  id             String   @id @default(cuid())
-  content        String
-  postId         String
-  userId         String
-  imageUrl       String?
-  isAcceptedAnswer Boolean @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id               String   @id @default(cuid())
+  content          String
+  postId           String
+  userId           String
+  imageUrl         String?
+  isAcceptedAnswer Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relations
-  post           ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  reactions      ForumReaction[]
+  post      ForumPost       @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  reactions ForumReaction[]
 }
 
 model ForumReaction {
@@ -344,92 +344,92 @@ model ForumReaction {
   replyId   String?
   createdAt DateTime @default(now())
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  post      ForumPost? @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  reply     ForumReply? @relation(fields: [replyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  post  ForumPost?  @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  reply ForumReply? @relation(fields: [replyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
   @@unique([userId, postId, emoji])
   @@unique([userId, replyId, emoji])
 }
 
 model UserProgress {
-  id             String   @id @default(cuid())
-  userId         String
-  lessonId       String?
-  exerciseId     String?
-  isCompleted    Boolean  @default(false)
-  score          Int?
-  completedAt    DateTime @default(now())
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String?
+  exerciseId  String?
+  isCompleted Boolean  @default(false)
+  score       Int?
+  completedAt DateTime @default(now())
 
   // Relations
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  lesson         Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  exercise       Exercise? @relation(fields: [exerciseId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  lesson   Lesson?   @relation(fields: [lessonId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  exercise Exercise? @relation(fields: [exerciseId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@unique([userId, lessonId])
   @@unique([userId, exerciseId])
 }
 
 model PlatformImage {
-  id             String   @id @default(cuid())
-  entityType     String
-  entityId       String?
-  filename       String
+  id               String   @id @default(cuid())
+  entityType       String
+  entityId         String?
+  filename         String
   originalFilename String
-  filepath       String?  // Made optional - will be null when using base64
-  base64Data     String?  @db.Text // Store image as base64 string
-  mimeType       String
-  fileSize       Int
-  uploaderId     String
-  metadata       Json?
-  createdAt      DateTime @default(now())
+  filepath         String? // Made optional - will be null when using base64
+  base64Data       String?  @db.Text // Store image as base64 string
+  mimeType         String
+  fileSize         Int
+  uploaderId       String
+  metadata         Json?
+  createdAt        DateTime @default(now())
 
   // Relations
-  uploader       User     @relation("uploadedImages", fields: [uploaderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  uploader User @relation("uploadedImages", fields: [uploaderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 }
 
 model PlatformVideo {
-  id             String   @id @default(cuid())
-  entityType     String
-  entityId       String?
-  title          String?
-  description    String?
-  filename       String
+  id               String   @id @default(cuid())
+  entityType       String
+  entityId         String?
+  title            String?
+  description      String?
+  filename         String
   originalFilename String
-  filepath       String?
-  url            String?
-  mimeType       String
-  fileSize       Int
-  duration       Float?   // Duration in seconds
-  thumbnailUrl   String?
-  isPublic       Boolean  @default(true)
-  uploaderId     String
-  metadata       Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  filepath         String?
+  url              String?
+  mimeType         String
+  fileSize         Int
+  duration         Float? // Duration in seconds
+  thumbnailUrl     String?
+  isPublic         Boolean  @default(true)
+  uploaderId       String
+  metadata         Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relations
-  uploader       User     @relation("uploadedVideos", fields: [uploaderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  uploader User @relation("uploadedVideos", fields: [uploaderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 }
 
 model Exam {
-  id             String   @id @default(cuid())
-  title          String
-  subtitle       String?
-  content        Json
-  cycle          String
-  level          EducationalLevel
-  stream         Stream   @default(NONE)
-  semester       Int      @default(1)
-  type           String
-  examType       String?
-  controlNumber  Int?
-  createdById    String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String           @id @default(cuid())
+  title         String
+  subtitle      String?
+  content       Json
+  cycle         String
+  level         EducationalLevel
+  stream        Stream           @default(NONE)
+  semester      Int              @default(1)
+  type          String
+  examType      String?
+  controlNumber Int?
+  createdById   String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   // Relations
-  createdBy      User     @relation(fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([level])
   @@index([createdById])
@@ -448,40 +448,40 @@ model Report {
   updatedAt   DateTime   @updatedAt
 
   // Relations
-  user        User?      @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  replies     ReportReply[]
+  user    User?         @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  replies ReportReply[]
 }
 
 model ReportReply {
-  id          String     @id @default(cuid())
+  id          String   @id @default(cuid())
   reportId    String
   content     String
   repliedById String
-  isRead      Boolean   @default(false)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
-  report      Report     @relation(fields: [reportId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  repliedBy   User       @relation(fields: [repliedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  report    Report @relation(fields: [reportId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  repliedBy User   @relation(fields: [repliedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([reportId])
   @@index([repliedById])
 }
 
 model Announcement {
-  id          String   @id @default(cuid())
-  title       String
-  content     String
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model PedagogicalSheet {
-  id                    String   @id @default(cuid())
-  userId                String
-  
+  id     String @id @default(cuid())
+  userId String
+
   // Metadata
   teacherName           String
   schoolName            String
@@ -489,23 +489,23 @@ model PedagogicalSheet {
   stream                String?
   lessonTitle           String?
   duration              String
-  pedagogicalGuidelines String?  @db.Text
-  prerequisites         String?  @db.Text
-  extensions            String?  @db.Text
-  didacticTools         String?  @db.Text
-  
+  pedagogicalGuidelines String?          @db.Text
+  prerequisites         String?          @db.Text
+  extensions            String?          @db.Text
+  didacticTools         String?          @db.Text
+
   // Content
-  content               Json     // Array of steps: { type, duration, content, observations }
-  
-  semester              Int          @default(1)
-  status                LessonStatus @default(DRAFT)
-  isPublic              Boolean      @default(false)
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  content Json // Array of steps: { type, duration, content, observations }
+
+  semester Int          @default(1)
+  status   LessonStatus @default(DRAFT)
+  isPublic Boolean      @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([userId])
 }
@@ -522,7 +522,7 @@ model Classroom {
   code        String   @unique // For joining: "7g5h9k3"
   ownerId     String
   isActive    Boolean  @default(true)
-  settings    Json?    // For flexible future settings
+  settings    Json? // For flexible future settings
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -532,7 +532,6 @@ model Classroom {
   assignments   ClassroomAssignment[]
   sessions      ClassroomSession[]
 }
-
 
 model ClassroomMember {
   id          String   @id @default(cuid())
@@ -553,7 +552,7 @@ model ClassroomAnnouncement {
   content     String   @db.Text
   classroomId String
   authorId    String
-  attachments Json?    // Array of file URLs/metadata
+  attachments Json? // Array of file URLs/metadata
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -562,17 +561,17 @@ model ClassroomAnnouncement {
 }
 
 model ClassroomAssignment {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   classroomId String
   title       String
-  description String?  @db.Text
+  description String?   @db.Text
   dueDate     DateTime?
-  points      Int?     @default(100)
-  attachments Json?    // Array of file metadata
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  classroom   Classroom           @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  points      Int?      @default(100)
+  attachments Json? // Array of file metadata
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  classroom   Classroom             @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   submissions ClassroomSubmission[]
 }
 
@@ -581,7 +580,7 @@ model ClassroomSubmission {
   assignmentId String
   studentId    String
   content      String?  @db.Text
-  attachments  Json?    // Submitted files
+  attachments  Json? // Submitted files
   grade        Int?
   feedback     String?  @db.Text
   status       String   @default("SUBMITTED") // "DRAFT", "SUBMITTED", "GRADED", "RETURNED"
@@ -594,60 +593,60 @@ model ClassroomSubmission {
   @@unique([assignmentId, studentId])
 }
 
-
 model PedagogicalReference {
-  id          String   @id @default(cuid())
-  title       String
-  
+  id    String @id @default(cuid())
+  title String
+
   // Categorization (Arrays)
-  types       String[] @default([]) // e.g. ["ORIENTATION", "MANUEL", "COURS"]
-  levels      EducationalLevel[]
-  streams     Stream[]
-  semesters   Int[]
+  types     String[]           @default([]) // e.g. ["ORIENTATION", "MANUEL", "COURS"]
+  levels    EducationalLevel[]
+  streams   Stream[]
+  semesters Int[]
 
   // Scope
-  targetsAllLessons Boolean @default(false) // If true, matches purely on tags
+  targetsAllLessons Boolean  @default(false) // If true, matches purely on tags
   targetLessonIds   String[] // Specific Lesson IDs this reference supports
 
-  subject     String?  @default("MATH")
-  fileUrl     String
-  textContent String?  @db.Text
-  extractedData Json?  // AI extracted Structured Content
-  isActive    Boolean  @default(true)
-  metadata    Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  subject       String?  @default("MATH")
+  fileUrl       String
+  textContent   String?  @db.Text
+  extractedData Json? // AI extracted Structured Content
+  isActive      Boolean  @default(true)
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 // Enhanced Classroom Models for Enterprise Features
 
 model ClassroomSession {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   classroomId     String
-  roomName        String   // LiveKit room name
+  roomName        String // LiveKit room name
   hostId          String
   title           String?
-  description     String?  @db.Text
+  description     String?   @db.Text
   scheduledStart  DateTime?
   scheduledEnd    DateTime?
   actualStart     DateTime?
   actualEnd       DateTime?
-  status          String   @default("SCHEDULED") // SCHEDULED, LIVE, ENDED, CANCELLED
+  status          String    @default("SCHEDULED") // SCHEDULED, LIVE, ENDED, CANCELLED
   recordingUrl    String?
-  recordingSize   Int?     // in bytes
+  recordingSize   Int? // in bytes
   transcriptUrl   String?
-  duration        Int?     // in seconds
-  maxParticipants Int      @default(100)
-  settings        Json?    // Session-specific settings
-  metadata        Json?    // Analytics, etc.
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  duration        Int? // in seconds
+  maxParticipants Int       @default(100)
+  settings        Json? // Session-specific settings
+  metadata        Json? // Analytics, etc.
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  attendances     ClassroomAttendance[]
-  chatMessages    ClassroomChatMessage[]
-  breakoutRooms   ClassroomBreakoutRoom[]
-  polls           ClassroomPoll[]
-  recordings      ClassroomRecording[]
+  classroom     Classroom               @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  attendances   ClassroomAttendance[]
+  chatMessages  ClassroomChatMessage[]
+  breakoutRooms ClassroomBreakoutRoom[]
+  polls         ClassroomPoll[]
+  recordings    ClassroomRecording[]
 
   @@index([classroomId])
   @@index([status])
@@ -655,19 +654,19 @@ model ClassroomSession {
 }
 
 model ClassroomAttendance {
-  id          String   @id @default(cuid())
-  sessionId   String
-  userId      String
-  joinedAt    DateTime @default(now())
-  leftAt      DateTime?
-  duration    Int?     // in seconds
-  isPresent   Boolean  @default(true)
-  deviceInfo  Json?    // Browser, OS, etc.
-  ipAddress   String?
-  metadata    Json?    // Participation metrics
-  createdAt   DateTime @default(now())
+  id         String    @id @default(cuid())
+  sessionId  String
+  userId     String
+  joinedAt   DateTime  @default(now())
+  leftAt     DateTime?
+  duration   Int? // in seconds
+  isPresent  Boolean   @default(true)
+  deviceInfo Json? // Browser, OS, etc.
+  ipAddress  String?
+  metadata   Json? // Participation metrics
+  createdAt  DateTime  @default(now())
 
-  session     ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@index([userId])
@@ -675,49 +674,49 @@ model ClassroomAttendance {
 }
 
 model ClassroomRecording {
-  id              String   @id @default(cuid())
-  sessionId       String
-  title           String
-  description     String?  @db.Text
-  fileUrl         String
-  thumbnailUrl    String?
-  duration        Int      // in seconds
-  fileSize        Int      // in bytes
-  format          String   @default("webm") // webm, mp4, etc.
-  quality         String   @default("HD")   // SD, HD, FHD, 4K
-  hasTranscript   Boolean  @default(false)
-  transcriptUrl   String?
-  hasSubtitles    Boolean  @default(false)
-  subtitlesUrl    String?
-  viewCount       Int      @default(0)
-  downloadCount   Int      @default(0)
-  isPublic        Boolean  @default(false)
-  metadata        Json?    // Chapters, highlights, etc.
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(cuid())
+  sessionId     String
+  title         String
+  description   String?  @db.Text
+  fileUrl       String
+  thumbnailUrl  String?
+  duration      Int // in seconds
+  fileSize      Int // in bytes
+  format        String   @default("webm") // webm, mp4, etc.
+  quality       String   @default("HD") // SD, HD, FHD, 4K
+  hasTranscript Boolean  @default(false)
+  transcriptUrl String?
+  hasSubtitles  Boolean  @default(false)
+  subtitlesUrl  String?
+  viewCount     Int      @default(0)
+  downloadCount Int      @default(0)
+  isPublic      Boolean  @default(false)
+  metadata      Json? // Chapters, highlights, etc.
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  session         ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@index([createdAt])
 }
 
 model ClassroomBreakoutRoom {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   sessionId   String
   name        String
   roomNumber  Int
-  capacity    Int      @default(10)
-  duration    Int?     // in seconds
+  capacity    Int       @default(10)
+  duration    Int? // in seconds
   startedAt   DateTime?
   endedAt     DateTime?
-  status      String   @default("PENDING") // PENDING, ACTIVE, ENDED
-  assignments Json?    // Array of user IDs assigned to this room
+  status      String    @default("PENDING") // PENDING, ACTIVE, ENDED
+  assignments Json? // Array of user IDs assigned to this room
   metadata    Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  session     ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@index([status])
@@ -730,17 +729,17 @@ model ClassroomChatMessage {
   senderName  String
   message     String   @db.Text
   messageType String   @default("TEXT") // TEXT, FILE, POLL, ANNOUNCEMENT
-  attachments Json?    // File metadata
+  attachments Json? // File metadata
   replyToId   String?
   isPrivate   Boolean  @default(false)
-  recipientId String?  // For private messages
-  reactions   Json?    // Array of reactions
+  recipientId String? // For private messages
+  reactions   Json? // Array of reactions
   isDeleted   Boolean  @default(false)
   metadata    Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  session     ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@index([senderId])
@@ -748,75 +747,75 @@ model ClassroomChatMessage {
 }
 
 model ClassroomPoll {
-  id          String   @id @default(cuid())
-  sessionId   String
-  creatorId   String
-  question    String   @db.Text
-  options     Json     // Array of poll options
-  pollType    String   @default("MULTIPLE_CHOICE") // MULTIPLE_CHOICE, RATING, WORD_CLOUD
-  allowMultiple Boolean @default(false)
-  isAnonymous Boolean  @default(false)
-  isActive    Boolean  @default(true)
-  results     Json?    // Aggregated results
-  responses   Json?    // Individual responses
-  startedAt   DateTime @default(now())
-  endedAt     DateTime?
-  metadata    Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String    @id @default(cuid())
+  sessionId     String
+  creatorId     String
+  question      String    @db.Text
+  options       Json // Array of poll options
+  pollType      String    @default("MULTIPLE_CHOICE") // MULTIPLE_CHOICE, RATING, WORD_CLOUD
+  allowMultiple Boolean   @default(false)
+  isAnonymous   Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  results       Json? // Aggregated results
+  responses     Json? // Individual responses
+  startedAt     DateTime  @default(now())
+  endedAt       DateTime?
+  metadata      Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  session     ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@index([isActive])
 }
 
 model ClassroomQuiz {
-  id          String   @id @default(cuid())
-  classroomId String
-  title       String
-  description String?  @db.Text
-  questions   Json     // Array of questions with answers
-  duration    Int?     // in seconds
-  passingScore Int     @default(70)
-  isActive    Boolean  @default(true)
-  settings    Json?    // Shuffle, show answers, etc.
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  classroomId  String
+  title        String
+  description  String?  @db.Text
+  questions    Json // Array of questions with answers
+  duration     Int? // in seconds
+  passingScore Int      @default(70)
+  isActive     Boolean  @default(true)
+  settings     Json? // Shuffle, show answers, etc.
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  responses   ClassroomQuizResponse[]
+  responses ClassroomQuizResponse[]
 
   @@index([classroomId])
 }
 
 model ClassroomQuizResponse {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   quizId      String
   studentId   String
-  answers     Json     // Array of student answers
+  answers     Json // Array of student answers
   score       Int?
   totalPoints Int?
-  isPassed    Boolean  @default(false)
-  startedAt   DateTime @default(now())
+  isPassed    Boolean   @default(false)
+  startedAt   DateTime  @default(now())
   submittedAt DateTime?
-  duration    Int?     // in seconds
+  duration    Int? // in seconds
   metadata    Json?
 
-  quiz        ClassroomQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quiz ClassroomQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
 
   @@index([quizId])
   @@index([studentId])
 }
 
 model ClassroomAnalytics {
-  id              String   @id @default(cuid())
-  classroomId     String
-  sessionId       String?
-  userId          String?
-  eventType       String   // JOIN, LEAVE, CHAT, POLL_VOTE, HAND_RAISE, etc.
-  eventData       Json?
-  timestamp       DateTime @default(now())
-  metadata        Json?
+  id          String   @id @default(cuid())
+  classroomId String
+  sessionId   String?
+  userId      String?
+  eventType   String // JOIN, LEAVE, CHAT, POLL_VOTE, HAND_RAISE, etc.
+  eventData   Json?
+  timestamp   DateTime @default(now())
+  metadata    Json?
 
   @@index([classroomId])
   @@index([sessionId])
@@ -824,4 +823,3 @@ model ClassroomAnalytics {
   @@index([eventType])
   @@index([timestamp])
 }
-
