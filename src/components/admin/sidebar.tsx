@@ -32,6 +32,7 @@ const navigation = [
   { name: "Signalements", href: "/admin/reports", icon: Mail },
   { name: "Tutoriels", href: "/admin/tutorials", icon: Video },
   { name: "Fiches Pédago", href: "/admin/fiches", icon: FileText },
+  { name: "Documents de Référence", href: "/admin/references", icon: BookOpen },
   { name: "Générateur PDF", href: "/admin/pdf-playground", icon: FileText },
 ]
 

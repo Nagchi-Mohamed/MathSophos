@@ -4,7 +4,8 @@ import { canManageContent } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-import pdf from "pdf-parse";
+// @ts-ignore
+const PDFParser = require("pdf2json");
 
 export const maxDuration = 60; // Allow enough time for parsing
 
@@ -22,56 +23,64 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const title = formData.get("title") as string;
-    const type = formData.get("type") as string;
-    const level = formData.get("level") as string;
     const subject = formData.get("subject") as string || "MATH";
 
-    if (!file || !title || !type || !level) {
+    // Parse Array Fields
+    const types = JSON.parse(formData.get("types") as string || "[]");
+    const levels = JSON.parse(formData.get("levels") as string || "[]");
+    const streams = JSON.parse(formData.get("streams") as string || "[]");
+    const semesters = JSON.parse(formData.get("semesters") as string || "[]");
+    const targetLessonIds = JSON.parse(formData.get("targetLessonIds") as string || "[]");
+    const targetsAllLessons = formData.get("targetsAllLessons") === "true";
+
+    if (!file || !title) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      return NextResponse.json(
-        { error: "Only PDF files are supported" },
-        { status: 400 }
-      );
-    }
-
-    // 1. Save File Locally (for this environment)
+    // ... file saving logic (unchanged) ...
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-
-    // Ensure directory exists
     const uploadDir = path.join(process.cwd(), "public", "uploads", "references");
     await mkdir(uploadDir, { recursive: true });
-
     const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "")}`;
     const filepath = path.join(uploadDir, filename);
     const fileUrl = `/uploads/references/${filename}`;
-
     await writeFile(filepath, buffer);
 
     // 2. Extract Text
     let textContent = "";
     try {
-      const data = await pdf(buffer);
-      textContent = data.text;
-      console.log(`[Reference Upload] Extracted ${textContent.length} characters`);
+      textContent = await new Promise((resolve, reject) => {
+        const parser = new PDFParser(this, 1); // 1 = text only
+        parser.on("pdfParser_dataError", (errData: any) => reject(errData.parserError));
+        parser.on("pdfParser_dataReady", (pdfData: any) => {
+          // getRawTextContent() returns distinct lines. We join them.
+          resolve(parser.getRawTextContent());
+        });
+        parser.parseBuffer(buffer);
+      });
+
+      // Cleanup common issues
+      textContent = textContent.replace(/----------------Page \(\d+\) Break----------------/g, "\n");
+      // Remove null bytes which crash Postgres
+      textContent = textContent.replace(/\u0000/g, "");
     } catch (parseError) {
       console.error("Failed to parse PDF:", parseError);
-      // We continue even if parse fails, just without text content
-      textContent = "";
     }
 
     // 3. Save to Database
     const reference = await prisma.pedagogicalReference.create({
       data: {
         title,
-        type,
-        level: level as any, // Cast to enum
+        types,
+        levels: levels as any[],
+        streams: streams as any[],
+        semesters: semesters.map(Number),
+        targetLessonIds,
+        targetsAllLessons,
         subject,
         fileUrl,
         textContent,

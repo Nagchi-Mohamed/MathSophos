@@ -194,7 +194,7 @@ export async function getAdminStats() {
       recentUsersResult
     ] = await Promise.allSettled([
       db.user.count(),
-      db.lesson.count({ where: { status: "PUBLISHED" } }),
+      db.lesson.count(),
       db.exercise.count(),
       db.forumPost.count(),
       db.user.count({
@@ -285,6 +285,56 @@ export async function getPaginatedUsers(limit: number = 20, offset: number = 0) 
     return { success: true, data: { users, total } }
   } catch (error: any) {
     console.error("Error fetching users:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+export async function getAnalyticsData() {
+  try {
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    const [users, lessons] = await Promise.all([
+      db.user.findMany({
+        where: { createdAt: { gte: thirtyDaysAgo } },
+        select: { createdAt: true }
+      }),
+      db.lesson.findMany({
+        where: { createdAt: { gte: thirtyDaysAgo } },
+        select: { createdAt: true }
+      })
+    ])
+
+    // aggregate by day locally
+    const statsByDay = new Map<string, { date: string, users: number, lessons: number }>()
+
+    // Initialize last 30 days
+    for (let i = 0; i < 30; i++) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      const dateStr = d.toISOString().split('T')[0]
+      statsByDay.set(dateStr, { date: dateStr, users: 0, lessons: 0 })
+    }
+
+    users.forEach(u => {
+      const dateStr = u.createdAt.toISOString().split('T')[0]
+      if (statsByDay.has(dateStr)) {
+        statsByDay.get(dateStr)!.users++
+      }
+    })
+
+    lessons.forEach(l => {
+      const dateStr = l.createdAt.toISOString().split('T')[0]
+      if (statsByDay.has(dateStr)) {
+        statsByDay.get(dateStr)!.lessons++
+      }
+    })
+
+    const chartData = Array.from(statsByDay.values()).sort((a, b) => a.date.localeCompare(b.date))
+
+    return { success: true, data: chartData }
+  } catch (error: any) {
+    console.error("Failed to get analytics data:", error)
     return { success: false, error: error.message }
   }
 }

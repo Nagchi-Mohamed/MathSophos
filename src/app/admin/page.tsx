@@ -43,14 +43,6 @@ export default async function AdminDashboard() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Tableau de Bord</h1>
-        <div className="flex gap-2">
-          <Link href="/admin/lessons/create">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Nouvelle Leçon
-            </Button>
-          </Link>
-        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -66,7 +58,7 @@ export default async function AdminDashboard() {
         </Card>
         <Card className="transform transition-transform hover:scale-105 hover:shadow-xl bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900 dark:to-emerald-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Leçons Publiées</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Leçons</CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -163,6 +155,15 @@ export default async function AdminDashboard() {
                 <div className="flex flex-col items-start">
                   <span className="font-medium">Banque d'Exercices</span>
                   <span className="text-xs text-muted-foreground">Gérer les exercices et corrections</span>
+                </div>
+              </Button>
+            </Link>
+            <Link href="/admin/references">
+              <Button variant="outline" className="w-full justify-start h-auto py-4">
+                <BookOpen className="mr-2 h-5 w-5" />
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">Documents de Référence</span>
+                  <span className="text-xs text-muted-foreground">Uploader Manuels et Orientations</span>
                 </div>
               </Button>
             </Link>
