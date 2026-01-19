@@ -848,7 +848,7 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
       {/* Recording Manager Overlay */}
       {showRecordings && (
         <RecordingManager
-          classroomId={roomName}
+          classroomId={room.name}
           onClose={() => setShowRecordings(false)}
         />
       )}
