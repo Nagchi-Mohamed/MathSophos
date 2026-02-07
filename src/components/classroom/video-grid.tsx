@@ -88,7 +88,7 @@ export function VideoGrid({
     });
   }, [participants]);
 
-  const renderParticipantTile = (participant: Participant, isLocal: boolean = false) => {
+  const renderParticipantTile = (participant: Participant, isLocal: boolean = false, fitContainer: boolean = false) => {
     const videoTrack = participant.videoTrackPublications.values().next().value;
     const audioTrack = participant.audioTrackPublications.values().next().value;
     const isVideoEnabled = videoTrack?.isSubscribed && !videoTrack?.isMuted;
@@ -101,7 +101,7 @@ export function VideoGrid({
         key={participant.identity}
         className={cn(
           "relative rounded-lg overflow-hidden bg-zinc-900 border-2 transition-all",
-          getTileAspectRatio(),
+          fitContainer ? "w-full h-full" : getTileAspectRatio(),
           isActive && "border-blue-500 ring-2 ring-blue-500/50",
           isPinned && "border-green-500 ring-2 ring-green-500/50",
           !isActive && !isPinned && "border-zinc-800"
@@ -221,7 +221,7 @@ export function VideoGrid({
       <div className="h-full flex flex-col gap-2 p-2">
         {/* Main Speaker */}
         <div className="flex-1 min-h-0">
-          {mainSpeaker && renderParticipantTile(mainSpeaker)}
+          {mainSpeaker && renderParticipantTile(mainSpeaker, false, true)}
         </div>
 
         {/* Thumbnails */}
@@ -240,20 +240,24 @@ export function VideoGrid({
   }
 
   // Gallery View
+  const totalCount = participants.length + (localParticipant ? 1 : 0);
+  const isSingleParticipant = totalCount === 1;
+
   return (
     <div
       ref={gridRef}
       className={cn(
-        "h-full w-full p-2 overflow-auto",
+        "h-full w-full p-2",
+        isSingleParticipant ? "overflow-hidden" : "overflow-auto",
         "grid gap-2 auto-rows-fr",
         getGridLayout()
       )}
     >
       {/* Local Participant */}
-      {localParticipant && renderParticipantTile(localParticipant, true)}
+      {localParticipant && renderParticipantTile(localParticipant, true, isSingleParticipant)}
 
       {/* Remote Participants */}
-      {participants.map((participant) => renderParticipantTile(participant))}
+      {participants.map((participant) => renderParticipantTile(participant, false, isSingleParticipant))}
     </div>
   );
 }
