@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Copy, Check, Sparkles, ExternalLink, BookOpen, Loader2 } from "lucide-react"
+import { Copy, Check, Sparkles, ExternalLink, BookOpen, Loader2, ChevronDown, ChevronUp } from "lucide-react"
 import { toast } from "sonner"
 import { searchReferences } from "@/actions/references"
 
@@ -31,6 +31,7 @@ export function AIPromptGenerator({ lesson, context, contentType = 'series' }: A
   const [exerciseCount, setExerciseCount] = useState(10)
   const [additionalInstructions, setAdditionalInstructions] = useState("")
   const [copied, setCopied] = useState(false)
+  const [showHelp, setShowHelp] = useState(true)
 
   // References State
   const [references, setReferences] = useState<any[]>([])
@@ -166,6 +167,20 @@ ${additionalInstructions ? `## INSTRUCTIONS SUPPLÉMENTAIRES\n${additionalInstru
 ## RÈGLES CRITIQUES DE GÉNÉRATION
 
 ${getPromptTemplate()}
+
+### INSTRUCTIONS GEOGEBRA (OBLIGATOIRE POUR FIGURES)
+Si l'exercice ou le contenu nécessite une figure géométrique ou un graphique :
+1. Fournis le **code/script pour GeoGebra Classique** (Saisie) permettant de construire la figure.
+2. Place ce code dans un bloc clairement identifié (ex: "Code GeoGebra").
+3. Exemple de format attendu dans le champ contenu/solution :
+\`\`\`
+...explication...
+**Code GeoGebra :**
+A = (0,0)
+B = (3,4)
+Cercle(A, B)
+...suite...
+\`\`\`
 
 ### SYNTAXE LATEX (CRITIQUE - COMPATIBLE KATEX)
 
@@ -324,15 +339,28 @@ Dans le JSON, tu DOIS échapper les backslashes:
           </Button>
         </div>
 
-        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">📝 Comment utiliser:</h4>
-          <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside">
-            <li>Cliquez sur "Copier le Prompt"</li>
-            <li>Ouvrez votre IA préférée (DeepSeek recommandé)</li>
-            <li>Collez le prompt et validez</li>
-            <li>Copiez le JSON généré</li>
-            <li>Revenez et collez dans l'onglet "Mode JSON"</li>
-          </ol>
+        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden transition-all">
+          <button
+            onClick={() => setShowHelp(!showHelp)}
+            className="w-full flex items-center justify-between p-4 hover:bg-blue-100/50 dark:hover:bg-blue-900/20 transition-colors text-left"
+          >
+            <h4 className="font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+              📝 Comment utiliser
+            </h4>
+            {showHelp ? <ChevronUp className="h-4 w-4 text-blue-700" /> : <ChevronDown className="h-4 w-4 text-blue-700" />}
+          </button>
+
+          {showHelp && (
+            <div className="px-4 pb-4 animate-in slide-in-from-top-2 duration-200">
+              <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside">
+                <li>Cliquez sur "Copier le Prompt"</li>
+                <li>Ouvrez votre IA préférée (DeepSeek recommandé)</li>
+                <li>Collez le prompt et validez</li>
+                <li>Copiez le JSON généré</li>
+                <li>Revenez et collez dans l'onglet "Mode JSON"</li>
+              </ol>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

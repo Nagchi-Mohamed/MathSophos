@@ -213,6 +213,65 @@ function CustomLobby({ userName, isTeacher, onJoin }: { userName: string, isTeac
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedVideoDevice, setSelectedVideoDevice] = useState<string>("");
   const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>("");
+  const [audioLevel, setAudioLevel] = useState(0);
+
+  useEffect(() => {
+    if (!audioEnabled || !selectedAudioDevice) {
+      setAudioLevel(0);
+      return;
+    }
+
+    let audioContext: AudioContext | null = null;
+    let microphone: MediaStreamAudioSourceNode | null = null;
+    let analyser: AnalyserNode | null = null;
+    let javascriptNode: ScriptProcessorNode | null = null;
+    let stream: MediaStream | null = null;
+
+    const startAnalysis = async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: { exact: selectedAudioDevice } }
+        });
+
+        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        microphone = audioContext.createMediaStreamSource(stream);
+        javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
+
+        analyser.smoothingTimeConstant = 0.8;
+        analyser.fftSize = 1024;
+
+        microphone.connect(analyser);
+        analyser.connect(javascriptNode);
+        javascriptNode.connect(audioContext.destination);
+
+        javascriptNode.onaudioprocess = () => {
+          if (!analyser) return;
+          const array = new Uint8Array(analyser.frequencyBinCount);
+          analyser.getByteFrequencyData(array);
+          let values = 0;
+          const length = array.length;
+          for (let i = 0; i < length; i++) {
+            values += array[i];
+          }
+          const average = values / length;
+          setAudioLevel(Math.min(100, Math.max(0, average * 2)));
+        };
+      } catch (e) {
+        console.error("Error accessing audio for visualizer", e);
+      }
+    };
+
+    startAnalysis();
+
+    return () => {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      if (javascriptNode) javascriptNode.disconnect();
+      if (analyser) analyser.disconnect();
+      if (microphone) microphone.disconnect();
+      if (audioContext && audioContext.state !== 'closed') audioContext.close();
+    };
+  }, [audioEnabled, selectedAudioDevice]);
 
   useEffect(() => {
     const getDevices = async () => {
@@ -327,7 +386,17 @@ function CustomLobby({ userName, isTeacher, onJoin }: { userName: string, isTeac
           )}
           <div className="absolute bottom-4 left-4 right-4 flex justify-between text-xs text-white/50">
             <div>{videoEnabled ? "Vérification vidéo : Réussie" : "Vidéo : Désactivée"}</div>
-            <div>{audioEnabled ? "Vérification audio : Réussie" : "Audio : Désactivé"}</div>
+
+            <div className="flex items-center gap-2">
+              <div className={cn("h-2 w-2 rounded-full", audioLevel > 5 ? "bg-green-500 animate-pulse" : "bg-red-500")} />
+              <div className="w-24 h-1 bg-zinc-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-green-500 transition-all duration-100 ease-out"
+                  style={{ width: `${audioLevel}%` }}
+                />
+              </div>
+              <span>{audioEnabled ? "Micro activé" : "Micro désactivé"}</span>
+            </div>
           </div>
         </div>
       </Card>
@@ -360,6 +429,21 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleTyping = useCallback(() => {
+    if (typingTimeoutRef.current) return;
+
+    if (room && localParticipant) {
+      const data = new TextEncoder().encode(JSON.stringify({ type: 'typing', identity: localParticipant.identity }));
+      room.localParticipant.publishData(data, { reliable: false });
+
+      typingTimeoutRef.current = setTimeout(() => {
+        typingTimeoutRef.current = null;
+      }, 2000);
+    }
+  }, [room, localParticipant]);
 
   // Zoom-like Controls State
   const [isRecording, setIsRecording] = useState(false);
@@ -768,6 +852,24 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
           toast.success(`${participant?.name || 'Someone'} shared a file`);
         }
 
+        // Handle typing
+        if (parsed.type === 'typing' && participant) {
+          setTypingUsers(prev => {
+            const next = new Set(prev);
+            next.add(participant.name || participant.identity);
+            return next;
+          });
+
+          // Clear typing status after 3 seconds
+          setTimeout(() => {
+            setTypingUsers(prev => {
+              const next = new Set(prev);
+              next.delete(participant.name || participant.identity);
+              return next;
+            });
+          }, 3000);
+        }
+
       } catch (e) {
         console.error("Failed to parse data message:", e);
       }
@@ -1142,6 +1244,16 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
                     <div ref={chatEndRef} />
                   </div>
 
+                  {/* Typing Indicator */}
+                  {typingUsers.size > 0 && (
+                    <div className="px-4 py-1 text-xs text-zinc-500 italic animate-pulse">
+                      {Array.from(typingUsers).length > 2
+                        ? "Multiple people are typing..."
+                        : `${Array.from(typingUsers).join(", ")} is typing...`
+                      }
+                    </div>
+                  )}
+
                   {/* Chat Input */}
                   <div className="p-3 border-t border-[#333] bg-[#1a1a1a]">
                     <form
@@ -1155,7 +1267,10 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
                       <FileShare onFileSelect={handleFileSelect} />
                       <Input
                         value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
+                        onChange={(e) => {
+                          setChatInput(e.target.value);
+                          handleTyping();
+                        }}
                         placeholder="Tapez un message..."
                         className="bg-[#2a2a2a] border-none focus-visible:ring-1 focus-visible:ring-zinc-600 text-zinc-200"
                       />

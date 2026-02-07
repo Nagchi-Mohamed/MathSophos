@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Participant, Track } from "livekit-client";
 import {
-  useParticipants,
+  useRemoteParticipants,
   useLocalParticipant,
   VideoTrack,
   AudioTrack,
@@ -37,7 +37,7 @@ export function VideoGrid({
   onToggleFullscreen,
   isMobile = false,
 }: VideoGridProps) {
-  const participants = useParticipants();
+  const participants = useRemoteParticipants();
   const { localParticipant } = useLocalParticipant();
   const [pinnedParticipant, setPinnedParticipant] = useState<Participant | null>(null);
   const [activeSpeaker, setActiveSpeaker] = useState<Participant | null>(null);
@@ -173,8 +173,30 @@ export function VideoGrid({
                   onClick={() =>
                     setPinnedParticipant(isPinned ? null : participant)
                   }
+                  title={isPinned ? "Détacher" : "Épingler"}
                 >
                   <Pin className={cn("h-3 w-3", isPinned && "text-green-400")} />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 bg-black/40 hover:bg-black/60 backdrop-blur-sm"
+                  onClick={() => {
+                    if (isPinned && isFullscreen) {
+                      onToggleFullscreen();
+                    } else {
+                      setPinnedParticipant(participant);
+                      if (!isFullscreen) onToggleFullscreen();
+                    }
+                  }}
+                  title={isPinned && isFullscreen ? "Quitter le plein écran" : "Plein écran"}
+                >
+                  {isPinned && isFullscreen ? (
+                    <Minimize className="h-3 w-3 text-white" />
+                  ) : (
+                    <Maximize className="h-3 w-3 text-white" />
+                  )}
                 </Button>
               </div>
             </div>
@@ -203,9 +225,9 @@ export function VideoGrid({
         </div>
 
         {/* Thumbnails */}
-        {otherParticipants.length > 0 && (
+        {((localParticipant && localParticipant.identity !== mainSpeaker?.identity) || otherParticipants.length > 0) && (
           <div className="h-32 flex gap-2 overflow-x-auto">
-            {localParticipant && renderParticipantTile(localParticipant, true)}
+            {localParticipant && localParticipant.identity !== mainSpeaker?.identity && renderParticipantTile(localParticipant, true)}
             {otherParticipants.map((p) => (
               <div key={p.identity} className="w-40 flex-shrink-0">
                 {renderParticipantTile(p)}

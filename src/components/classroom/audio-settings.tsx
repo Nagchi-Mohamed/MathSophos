@@ -117,30 +117,66 @@ export function AudioSettings({ room, onClose }: AudioSettingsProps) {
 
   const testMicrophone = async () => {
     setIsTestingMic(true);
+    let audioContext: AudioContext | null = null;
+    let microphone: MediaStreamAudioSourceNode | null = null;
+    let analyser: AnalyserNode | null = null;
+    let javascriptNode: ScriptProcessorNode | null = null;
+    let stream: MediaStream | null = null;
+
     try {
-      const track = await createLocalAudioTrack({
-        deviceId: selectedMicrophone,
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { deviceId: selectedMicrophone ? { exact: selectedMicrophone } : undefined }
       });
 
-      // Monitor audio level
-      const interval = setInterval(() => {
-        // Simulate audio level (in production, use actual audio analysis)
-        const level = Math.random() * 100;
+      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      analyser = audioContext.createAnalyser();
+      microphone = audioContext.createMediaStreamSource(stream);
+      javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
+
+      analyser.smoothingTimeConstant = 0.8;
+      analyser.fftSize = 1024;
+
+      microphone.connect(analyser);
+      analyser.connect(javascriptNode);
+      javascriptNode.connect(audioContext.destination);
+
+      javascriptNode.onaudioprocess = () => {
+        if (!analyser) return;
+        const array = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(array);
+        let values = 0;
+        const length = array.length;
+        for (let i = 0; i < length; i++) {
+          values += array[i];
+        }
+        const average = values / length;
+        // Normalize to 0-100 range roughly
+        const level = Math.min(100, Math.max(0, average * 2));
         setAudioLevel(level);
         setIsMicrophoneWorking(level > 5);
-      }, 100);
+      };
 
-      // Stop after 5 seconds
+      // Stop after 10 seconds or when component unmounts
       setTimeout(() => {
-        clearInterval(interval);
-        track.stop();
         setIsTestingMic(false);
         setAudioLevel(0);
-      }, 5000);
+
+        // Cleanup
+        if (stream) stream.getTracks().forEach(track => track.stop());
+        if (javascriptNode) javascriptNode.disconnect();
+        if (analyser) analyser.disconnect();
+        if (microphone) microphone.disconnect();
+        if (audioContext && audioContext.state !== 'closed') audioContext.close();
+      }, 10000);
+
     } catch (error) {
       console.error("Microphone test failed:", error);
       toast.error("Test du microphone échoué");
       setIsTestingMic(false);
+
+      // Cleanup on error
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      if (audioContext && audioContext.state !== 'closed') audioContext.close();
     }
   };
 

@@ -230,12 +230,33 @@ export function EnhancedControls({
               <>
                 <DropdownMenuItem onClick={onOpenWhiteboard} className="gap-2 cursor-pointer focus:bg-[#333]">
                   <Presentation className="h-4 w-4" />
-                  Open Whiteboard
+                  Whiteboard
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={onOpenPolls} className="gap-2 cursor-pointer focus:bg-[#333]">
                   <MessageSquarePlus className="h-4 w-4" />
-                  Open Polls
+                  Polls
                 </DropdownMenuItem>
+
+                {onOpenBreakoutRooms && (
+                  <DropdownMenuItem onClick={onOpenBreakoutRooms} className="gap-2 cursor-pointer focus:bg-[#333]">
+                    <Users2 className="h-4 w-4" />
+                    Breakout Rooms
+                  </DropdownMenuItem>
+                )}
+
+                {onOpenAttendance && (
+                  <DropdownMenuItem onClick={onOpenAttendance} className="gap-2 cursor-pointer focus:bg-[#333]">
+                    <Users2 className="h-4 w-4" />
+                    Attendance
+                  </DropdownMenuItem>
+                )}
+
+                {onOpenQuiz && (
+                  <DropdownMenuItem onClick={onOpenQuiz} className="gap-2 cursor-pointer focus:bg-[#333]">
+                    <MessageSquarePlus className="h-4 w-4" />
+                    Quiz
+                  </DropdownMenuItem>
+                )}
 
                 <DropdownMenuSeparator className="bg-[#333]" />
                 <DropdownMenuLabel className="text-zinc-500 uppercase text-xs font-bold tracking-wider">Host Actions</DropdownMenuLabel>

@@ -29,7 +29,7 @@ export async function getParticipantToken(
 
   at.addGrant({ roomJoin: true, room: roomName, canPublish: true, canSubscribe: true });
 
-  at.addGrant({ roomJoin: true, room: roomName, canPublish: true, canSubscribe: true });
+
 
   return at.toJwt();
 }

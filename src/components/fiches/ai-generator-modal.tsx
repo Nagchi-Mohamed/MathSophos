@@ -30,6 +30,10 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      if (file.size > 4 * 1024 * 1024) { // 4MB limit
+        toast.error("Fichier trop volumineux (Max 4MB)")
+        return
+      }
       setUploadedFile(file)
       toast.success(`Fichier "${file.name}" chargé`)
     }
@@ -40,8 +44,21 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
 
     setIsGenerating(true)
     try {
-      // For now, just use the filename as context
-      // In a full implementation, you'd extract text from PDF/image using OCR
+      // Read file as base64
+      const reader = new FileReader()
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string
+          // Remove data:application/pdf;base64, prefix
+          const base64 = result.split(',')[1]
+          resolve(base64)
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(uploadedFile)
+      })
+
+      const base64Data = await base64Promise
+
       const context = `
         Metadata:
         Teacher: ${metadata.teacherName}
@@ -51,13 +68,15 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
         Duration: ${metadata.duration}
         
         File uploaded: ${uploadedFile.name}
-        Note: Please generate a comprehensive fiche based on typical content for this level and subject.
+        Note: The user has uploaded a file (PDF or Image) containing the source material. Use this content to generate the fiche.
       `
 
-      const filePrompt = `Génère une fiche pédagogique complète pour le niveau ${metadata.gradeLevel}. 
-      Inclus des activités d'initiation, des définitions, des théorèmes, des exemples et des exercices.`
+      const filePrompt = `Génère une fiche pédagogique complète pour le niveau ${metadata.gradeLevel} en utilisant le contenu du fichier fourni. 
+      Inclus des activités d'initiation, des définitions, des théorèmes, des exemples et des exercices.
+      Si des figures sont nécessaires, fournis le code GeoGebra.`
 
-      const response = await generateFicheWithAIAction(filePrompt, context)
+      // Call action with 4 arguments: prompt, context, fileData, mimeType
+      const response = await generateFicheWithAIAction(filePrompt, context, base64Data, uploadedFile.type)
 
       if (response && response.content) {
         const newSteps: FicheContentStep[] = response.content.map((item: any) => ({
@@ -73,9 +92,9 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
         setUploadedFile(null)
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      toast.error("Erreur lors de la génération")
+      toast.error(error.message || "Erreur lors de la génération")
     } finally {
       setIsGenerating(false)
     }
@@ -168,7 +187,7 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
                 <input
                   id="file-upload"
                   type="file"
-                  accept=".pdf,image/*"
+                  accept=".pdf, .docx, .jpg, .jpeg, .png, .webp"
                   className="hidden"
                   onChange={handleFileUpload}
                 />

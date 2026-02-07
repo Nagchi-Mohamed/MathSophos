@@ -50,7 +50,7 @@ export function TiptapEditor({ content, onChange, uploaderContext }: TiptapEdito
     content: content,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[300px] p-4 border rounded-md',
+        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[300px] max-h-[600px] overflow-y-auto p-4 border rounded-md',
       },
     },
     onUpdate: ({ editor }) => {
