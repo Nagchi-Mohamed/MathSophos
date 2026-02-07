@@ -453,6 +453,26 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
 
+  // Speech detection for local participant
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  useEffect(() => {
+    if (!localParticipant) return;
+
+    const onSpeakingChanged = (speaking: boolean) => {
+      setIsSpeaking(speaking);
+    };
+
+    localParticipant.on(ParticipantEvent.IsSpeakingChanged, onSpeakingChanged);
+
+    // Check initial state
+    setIsSpeaking(localParticipant.isSpeaking);
+
+    return () => {
+      localParticipant.off(ParticipantEvent.IsSpeakingChanged, onSpeakingChanged);
+    };
+  }, [localParticipant]);
+
   const startLocalRecording = async () => {
     try {
       // 1. Capture Screen (Video + System Audio)
@@ -1303,11 +1323,17 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
         <div className="flex items-center gap-1 min-w-[180px]">
           <div className="flex items-center gap-1 bg-[#2a2a2a] rounded-lg p-1">
             <button
-              className={cn("p-2 rounded hover:bg-[#333] transition-colors relative group min-w-[40px] flex items-center justify-center isolate")}
+              className={cn(
+                "p-2 rounded hover:bg-[#333] transition-colors relative group min-w-[40px] flex items-center justify-center isolate",
+                isSpeaking && isMicrophoneEnabled && "bg-green-500/10 ring-1 ring-green-500/50"
+              )}
               onClick={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}
             >
               {isMicrophoneEnabled ? (
-                <Mic className="h-5 w-5 text-white" />
+                <div className="relative">
+                  <Mic className={cn("h-5 w-5 transition-colors duration-150", isSpeaking ? "text-green-500 fill-green-500" : "text-white")} />
+                  {isSpeaking && <span className="absolute inset-0 rounded-full animate-ping bg-green-500/50 opacity-75 -z-10"></span>}
+                </div>
               ) : (
                 <MicOff className="h-5 w-5 text-red-500" />
               )}
