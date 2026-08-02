@@ -31,7 +31,7 @@ export function DownloadPdfButton({
   const handleDownload = async () => {
     try {
       setIsLoading(true)
-      toast.info("Génération du PDF en cours...")
+      const toastId = toast.loading("Génération du PDF en cours...")
 
       // Construct full URL if it's relative
       const fullUrl = url.startsWith("http") ? url : `${window.location.origin}${url}`
@@ -47,8 +47,11 @@ export function DownloadPdfButton({
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
         console.error("PDF generation failed:", errorData)
-        throw new Error(errorData.details || errorData.error || "Erreur lors de la génération du PDF")
+        toast.error("Erreur lors de la génération du PDF", { id: toastId, description: errorData.details || errorData.error })
+        return
       }
+
+      toast.loading("Téléchargement en cours...", { id: toastId })
 
       const blob = await response.blob()
       const downloadUrl = window.URL.createObjectURL(blob)
@@ -60,10 +63,10 @@ export function DownloadPdfButton({
       window.URL.revokeObjectURL(downloadUrl)
       document.body.removeChild(a)
 
-      toast.success("PDF téléchargé avec succès")
+      toast.success("PDF téléchargé avec succès !", { id: toastId })
     } catch (error) {
       console.error(error)
-      toast.error("Impossible de générer le PDF")
+      toast.error("Impossible de générer le PDF", { description: error instanceof Error ? error.message : undefined })
     } finally {
       setIsLoading(false)
     }

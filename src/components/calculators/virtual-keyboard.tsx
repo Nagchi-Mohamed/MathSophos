@@ -90,17 +90,47 @@ export function VirtualKeyboard({ onInput, onDelete, onClear, className = '' }: 
       <div className="p-2 grid gap-1">
         {currentKeys.map((row, rowIndex) => (
           <div key={rowIndex} className="grid grid-cols-5 gap-1">
-            {row.map((key) => (
-              <Button
-                key={key}
-                variant="outline"
-                size="sm"
-                onClick={() => onInput(key)}
-                className="h-10 text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20"
-              >
-                {key === 'sqrt' ? '√' : key === 'pi' ? 'π' : key}
-              </Button>
-            ))}
+            {row.map((key) => {
+              const displayMap: Record<string, string> = {
+                sqrt: '√x',
+                pi: 'π',
+                alpha: 'α',
+                beta: 'β',
+                gamma: 'γ',
+                delta: 'δ',
+                epsilon: 'ε',
+                theta: 'θ',
+                lambda: 'λ',
+                mu: 'μ',
+                rho: 'ρ',
+                sigma: 'σ',
+                tau: 'τ',
+                phi: 'φ',
+                omega: 'ω',
+                Delta: 'Δ',
+                sum: '∑',
+                prod: '∏',
+                int: '∫',
+                lim: 'lim',
+                infty: '∞',
+                asin: 'sin⁻¹',
+                acos: 'cos⁻¹',
+                atan: 'tan⁻¹',
+                exp: 'eˣ',
+                abs: '|x|'
+              };
+              return (
+                <Button
+                  key={key}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onInput(key)}
+                  className="h-10 text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                >
+                  {displayMap[key] || key}
+                </Button>
+              );
+            })}
           </div>
         ))}
 

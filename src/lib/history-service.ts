@@ -104,6 +104,28 @@ export class HistoryService {
       console.error('Error deleting entry:', error);
     }
   }
+  getFavorites(): CalculationHistoryItem[] {
+    return this.getHistory().filter(item => item.favorite);
+  }
+
+  exportToJson(): string {
+    const history = this.getHistory();
+    return JSON.stringify(history, null, 2);
+  }
+
+  downloadHistory(): void {
+    if (typeof window === 'undefined') return;
+    const json = this.exportToJson();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mathsophos_historique_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  }
 }
 
 export const historyService = HistoryService.getInstance();

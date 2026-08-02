@@ -225,15 +225,19 @@ export function ExamPreview({ exam: initialExam, onBack, onSave, isSaving = fals
               </div>
             )}
 
-            {/* Barème Section - Format Marocain */}
-            <div className="mb-6 p-3 bg-muted/30 rounded-lg border border-border">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-foreground">
-                  Barème : {exam.totalPoints} points
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Durée : {exam.duration}
-                </p>
+            {/* Summary Stats Bar */}
+            <div className="mb-6 grid grid-cols-3 gap-3">
+              <div className="flex flex-col items-center justify-center p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl">
+                <span className="text-2xl font-extrabold text-blue-600 dark:text-blue-400">{exam.exercises.length}</span>
+                <span className="text-xs text-muted-foreground mt-0.5">Exercices</span>
+              </div>
+              <div className="flex flex-col items-center justify-center p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+                <span className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{exam.totalPoints}</span>
+                <span className="text-xs text-muted-foreground mt-0.5">Points</span>
+              </div>
+              <div className="flex flex-col items-center justify-center p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-xl">
+                <span className="text-lg font-extrabold text-purple-600 dark:text-purple-400">{exam.duration}</span>
+                <span className="text-xs text-muted-foreground mt-0.5">Durée</span>
               </div>
             </div>
 
@@ -262,8 +266,10 @@ export function ExamPreview({ exam: initialExam, onBack, onSave, isSaving = fals
             {/* Exercises */}
             <div className="space-y-8">
               {exam.exercises.map((exercise, index) => {
+                const accentColors = ['border-blue-500','border-emerald-500','border-purple-500','border-orange-500','border-rose-500'];
+                const accentColor = accentColors[index % accentColors.length];
                 return (
-                  <div key={index} className="border-l-4 border-border pl-6 py-4 rounded-r-lg bg-muted/10 print:break-inside-avoid">
+                  <div key={index} className={`border-l-4 ${accentColor} pl-6 py-4 rounded-r-lg bg-muted/10 print:break-inside-avoid`}>
                     <div className="flex justify-between items-baseline mb-4 flex-wrap gap-2">
                       {isEditing ? (
                         <Input
@@ -308,8 +314,9 @@ export function ExamPreview({ exam: initialExam, onBack, onSave, isSaving = fals
             </div>
 
             {/* Footer */}
-            <div className="mt-12 pt-6 border-t-2 border-border text-center text-sm text-muted-foreground">
-              <p>Bonne chance!</p>
+            <div className="mt-12 pt-6 border-t-2 border-border text-center text-sm text-muted-foreground space-y-1">
+              <p className="font-semibold text-foreground">🍀 Bonne chance! — تمنياتنا بالتوفيق</p>
+              <p className="text-xs opacity-70">MathSophos — Plateforme d'éducation mathématique gratuite pour tous les étudiants</p>
             </div>
           </div>
         </div>

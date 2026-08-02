@@ -7,11 +7,15 @@ import Credentials from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "mathsophos_secret_key_2026_super_secure",
   adapter: PrismaAdapter(prisma) as any,
   session: { strategy: "jwt" },
   ...authConfig,
   providers: [
-    Google,
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET,
+    }),
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },

@@ -229,6 +229,9 @@ export function MathAISolver({ context }: MathAISolverProps = {}) {
   const exampleProblems = [
     "Résoudre l'équation : 2x + 5 = 13",
     "Calculer la dérivée de f(x) = x³ + 2x² - 5x + 1",
+    "Calculer l'intégrale de ∫ (2x + 3) dx",
+    "Résoudre le système : 2x + y = 5 et x - y = 1",
+    "Trouver les valeurs propres de la matrice [[1, 2], [3, 4]]",
     "Trouver l'aire d'un cercle de rayon 7 cm",
   ]
 

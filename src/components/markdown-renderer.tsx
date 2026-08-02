@@ -13,6 +13,27 @@ import { cn } from "@/lib/utils";
 import { remarkSectionize } from "@/lib/remark-sectionize";
 import { remarkLatexImages } from "@/lib/remark-latex-images";
 import { VideoPlayerTrigger } from "@/components/content/video-player-trigger";
+import { Copy, Check } from "lucide-react";
+
+function CodeCopyButton({ code }: { code: string }) {
+  const [copied, setCopied] = React.useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="absolute top-2 right-2 p-1.5 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors print:hidden text-xs flex items-center gap-1 z-10"
+      title="Copier le code"
+    >
+      {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+      <span>{copied ? "Copié" : "Copier"}</span>
+    </button>
+  );
+}
 
 // Icons for different section types
 const SectionIcon = ({ type }: { type: string }) => {
@@ -58,7 +79,7 @@ export function MarkdownRenderer({ content, className, hideVideoLinks = false }:
     <div className={cn("markdown-content", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkMath, remarkGfm, remarkSectionize, remarkLatexImages, remarkBreaks]}
-        rehypePlugins={[rehypeRaw, rehypeKatex]}
+        rehypePlugins={[rehypeRaw, [rehypeKatex, { throwOnError: false, errorColor: "#ef4444" }]]}
         components={{
           // Handle the custom 'section' wrapper created by remarkSectionize
           // @ts-ignore
@@ -150,8 +171,9 @@ export function MarkdownRenderer({ content, className, hideVideoLinks = false }:
               </code>
             ) : (
               <div className="relative rounded-lg overflow-hidden my-4 bg-slate-950 border border-slate-900 print:bg-transparent print:border-gray-300 break-inside-avoid">
-                <div className="absolute top-0 right-0 px-2 py-1 text-xs text-gray-500 bg-slate-900 rounded-bl print:hidden">
-                  {match?.[1] || 'text'}
+                <CodeCopyButton code={String(children).replace(/\n$/, '')} />
+                <div className="absolute top-0 right-12 px-2 py-1 text-xs text-gray-400 bg-slate-900/80 rounded-b print:hidden font-mono">
+                  {match?.[1] || 'code'}
                 </div>
                 <pre className="p-4 overflow-x-auto" data-source-line={node?.position?.start?.line}>
                   <code className={`${className} text-slate-100 print:text-black print:whitespace-pre-wrap`} {...props}>

@@ -18,6 +18,7 @@ import { auth } from "@/auth"
 import { canAccessAdmin } from "@/lib/roles"
 import { LessonPdfDownloadButton } from "@/components/lessons/lesson-pdf-download-button"
 import { FloatingAssistant } from "@/components/ui/floating-assistant"
+import { ReadingProgressBar } from "@/components/lessons/reading-progress-bar"
 
 // Enable ISR - revalidate every 60 seconds
 export const revalidate = 60
@@ -88,6 +89,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
 
   return (
     <div className="container py-10 max-w-7xl">
+      <ReadingProgressBar />
       <Link href="/lessons" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-8 transition-colors">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Retour aux leçons

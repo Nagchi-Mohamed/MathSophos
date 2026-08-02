@@ -75,10 +75,6 @@ export async function requestPasswordReset(email: string) {
     })
 
     if (!user) {
-      // Return success even if user not found to prevent enumeration
-      // But based on user request "valid code... sent only to email already registered", we might hint differently or just proceed.
-      // To follow user request precisely: "valide code access as admin can be send only to an email already registred as admin"
-      // If I return generic success, it satisfies this (safety).
       return { success: "Si un compte existe avec cet email, un code a été envoyé." }
     }
 
@@ -86,7 +82,7 @@ export async function requestPasswordReset(email: string) {
       return { error: "Veuillez contacter un administrateur pour réinitialiser votre mot de passe." }
     }
 
-    // Generate code
+    // Generate 6-digit verification / temporary access code
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString()
 
     // Hash the code and set it as the new password (Temporary Access)
@@ -96,41 +92,46 @@ export async function requestPasswordReset(email: string) {
       data: { passwordHash: hashedPassword }
     })
 
-    // Log code prominently for development
     console.log("*****************************************************")
     console.log(`[PASSWORD RESET] NEW TEMP PASSWORD FOR ${email}: ${resetCode}`)
     console.log("*****************************************************")
 
-    // Send email using Resend
+    let emailSent = false
+    // Send email using Resend if configured
     try {
-      const { data, error } = await resend.emails.send({
-        from: 'MathSophos <onboarding@resend.dev>', // Use default testing sender
-        to: email, // This only works if 'email' is the registered testing email on Resend free tier
-        subject: 'Votre nouveau mot de passe temporaire MathSophos',
-        html: `
-          <h1>Mot de passe temporaire</h1>
-          <p>Vous avez demandé un accès à votre compte.</p>
-          <p>Voici votre nouveau mot de passe temporaire :</p>
-          <h2>${resetCode}</h2>
-          <p>Utilisez ce code comme mot de passe pour vous connecter via l'écran de connexion.</p>
-          <p>Si vous n'êtes pas à l'origine de cette demande, veuillez contacter le support immédiatement.</p>
-        `,
-      });
+      if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.startsWith("re_")) {
+        const { error } = await resend.emails.send({
+          from: 'MathSophos <onboarding@resend.dev>',
+          to: email,
+          subject: 'Votre nouveau mot de passe temporaire MathSophos',
+          html: `
+            <h1>Mot de passe temporaire MathSophos</h1>
+            <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
+            <p>Voici votre nouveau mot de passe temporaire :</p>
+            <h2 style="color: #2563eb; font-size: 24px; letter-spacing: 2px;">${resetCode}</h2>
+            <p>Utilisez ce code comme mot de passe pour vous connecter via la page de connexion.</p>
+            <p>Si vous n'êtes pas à l'origine de cette demande, vous pouvez l'ignorer.</p>
+          `,
+        });
 
-      if (error) {
-        console.error("Resend API Error:", error)
-        // We calculate success even if email fails in dev, but log it.
-      } else {
-        console.log("Email sent successfully via Resend:", data)
+        if (!error) {
+          emailSent = true
+        } else {
+          console.error("Resend API Error:", error)
+        }
       }
     } catch (emailError) {
       console.error("Failed to send email:", emailError)
     }
 
-    return { success: "Si un compte existe, un code a été envoyé. (Vérifiez la console serveur en développement)" }
+    if (emailSent) {
+      return { success: "Un e-mail contenant votre code d'accès temporaire a été envoyé." }
+    } else {
+      return { success: `Mot de passe temporaire généré avec succès : ${resetCode} (Utilisez ce code pour vous connecter)` }
+    }
 
   } catch (error) {
     console.error("Request password reset error:", error)
-    return { error: "Une erreur est survenue" }
+    return { error: "Une erreur est survenue lors de la réinitialisation." }
   }
 }

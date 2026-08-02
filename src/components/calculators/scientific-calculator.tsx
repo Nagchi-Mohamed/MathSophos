@@ -5,14 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calculator, Delete, RotateCcw, Equal } from 'lucide-react';
+import { Calculator, Delete, RotateCcw, Equal, Copy, Clock, CheckCheck } from 'lucide-react';
 import { VirtualKeyboard } from './virtual-keyboard';
 import { LatexRenderer } from '@/components/latex-renderer';
+import { toast } from 'sonner';
 
 export function ScientificCalculator() {
   const [expression, setExpression] = useState('');
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
+  const [history, setHistory] = useState<{ expr: string; res: string }[]>([]);
 
   const appendToExpression = (value: string) => {
     setExpression(prev => prev + value);
@@ -59,6 +61,7 @@ export function ScientificCalculator() {
 
       setResult(calculatedResult.toString());
       setError('');
+      setHistory(prev => [{ expr: expression, res: calculatedResult.toString() }, ...prev].slice(0, 10));
     } catch (err) {
       setError('Expression invalide');
       setResult('');
@@ -133,10 +136,24 @@ export function ScientificCalculator() {
             </div>
 
             {result && (
-              <div className="bg-primary/10 p-4 rounded-lg">
-                <div className="text-sm text-primary mb-1">Résultat:</div>
-                <div className="text-xl font-bold text-primary">
-                  {result}
+              <div className="bg-gradient-to-r from-primary/10 to-emerald-500/10 border border-primary/20 p-4 rounded-lg animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-xs text-primary font-semibold uppercase tracking-wider">Résultat</div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => {
+                      navigator.clipboard.writeText(result);
+                      toast.success('Copié !');
+                    }}
+                  >
+                    <Copy className="h-3 w-3 mr-1" />
+                    Copier
+                  </Button>
+                </div>
+                <div className="text-2xl font-bold text-primary font-mono">
+                  = {result}
                 </div>
               </div>
             )}
@@ -221,7 +238,40 @@ export function ScientificCalculator() {
         </CardContent>
       </Card>
 
-      {/* Help Section */}
+      {/* Calculation History */}
+      {history.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Clock className="w-4 h-4" />
+              Historique des calculs
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1.5 max-h-48 overflow-y-auto">
+              {history.map((item, i) => (
+                <li
+                  key={i}
+                  className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer group"
+                  onClick={() => setExpression(item.res)}
+                >
+                  <span className="font-mono text-muted-foreground truncate flex-1">{item.expr}</span>
+                  <span className="font-bold text-primary ml-3">= {item.res}</span>
+                  <span className="ml-2 opacity-0 group-hover:opacity-100 text-xs text-muted-foreground transition-opacity">↵</span>
+                </li>
+              ))}
+            </ul>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2 w-full text-xs text-muted-foreground"
+              onClick={() => setHistory([])}
+            >
+              Effacer l'historique
+            </Button>
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>Aide et Syntaxe</CardTitle>

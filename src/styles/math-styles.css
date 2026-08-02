@@ -1,85 +1,199 @@
-/* Math rendering styles */
-.math-display {
+/* ============================================================
+   MathSophos – Math Rendering Styles
+   KaTeX + custom section boxes + print optimization
+   ============================================================ */
+
+/* ── Inline math ─────────────────────────────────────────── */
+.math-inline,
+.katex-inline {
+  font-style: normal;
+  background: hsl(var(--muted));
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  color: hsl(var(--foreground));
+  white-space: nowrap;
+}
+
+/* ── Display (block) math ─────────────────────────────────── */
+.math-display,
+.katex-display {
   text-align: center;
   margin: 1.5em 0;
-  padding: 0.5em;
-  background: hsl(var(--muted));
-  border-radius: 4px;
+  padding: 1em 1.5em;
+  background: linear-gradient(135deg, hsl(var(--muted)/0.6) 0%, hsl(var(--muted)/0.3) 100%);
+  border: 1px solid hsl(var(--border));
+  border-left: 4px solid hsl(var(--primary));
+  border-radius: 8px;
   overflow-x: auto;
   color: hsl(var(--foreground));
+  animation: math-fade-in 0.3s ease-out;
 }
 
-.math-inline {
-  font-style: italic;
-  background: hsl(var(--muted));
-  padding: 0.1em 0.3em;
-  border-radius: 3px;
+@keyframes math-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── KaTeX global colour fix (dark mode) ─────────────────────*/
+.dark .katex,
+.dark .katex-display {
   color: hsl(var(--foreground));
 }
 
-/* Error states */
-.latex-error {
-  background: hsl(48 100% 90%);
-  border: 1px solid hsl(48 100% 80%);
-  border-radius: 4px;
-  padding: 10px;
-  margin: 10px 0;
-  color: hsl(40 60% 30%);
+.katex .katex-html {
+  font-size: 1.05em;
 }
 
-.dark .latex-error {
-  background: hsl(48 60% 20%);
-  border: 1px solid hsl(48 60% 30%);
-  color: hsl(48 100% 85%);
-}
-
-.latex-error .raw-latex {
-  font-family: monospace;
-  background: hsl(var(--card));
-  color: hsl(var(--card-foreground));
-  padding: 5px;
-  border-radius: 3px;
-  display: block;
-  margin-top: 5px;
-}
-
-.latex-errors-panel {
-  background: hsl(0 100% 95%);
-  border: 1px solid hsl(0 100% 85%);
-  border-radius: 4px;
-  padding: 15px;
-  margin: 15px 0;
-  color: hsl(0 60% 30%);
-}
-
-.dark .latex-errors-panel {
-  background: hsl(0 60% 20%);
-  border: 1px solid hsl(0 60% 30%);
-  color: hsl(0 100% 85%);
-}
-
-/* MathJax specific */
-.MathJax {
-  outline: none;
-  color: hsl(var(--foreground));
-}
-
-.MathJax_Display {
-  margin: 1em 0 !important;
-}
-
-/* Loading state */
-.math-loading {
-  opacity: 0.5;
+/* ── Formula highlight boxes ─────────────────────────────── */
+.formula-box {
+  background: hsl(var(--primary)/0.08);
+  border: 2px solid hsl(var(--primary)/0.35);
+  border-radius: 10px;
+  padding: 1rem 1.5rem;
+  margin: 1.2rem 0;
   position: relative;
 }
 
+.formula-box::before {
+  content: attr(data-label);
+  position: absolute;
+  top: -10px;
+  left: 12px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0 8px;
+  border-radius: 9999px;
+}
+
+/* ── Variation tables ────────────────────────────────────── */
+.variation-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.95em;
+  margin: 1em 0;
+}
+
+.variation-table th,
+.variation-table td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.5em 1em;
+  text-align: center;
+}
+
+.variation-table th {
+  background: hsl(var(--muted));
+  font-weight: 600;
+}
+
+.variation-table tr:hover td {
+  background: hsl(var(--muted)/0.5);
+  transition: background 0.15s;
+}
+
+/* ── LaTeX error states ──────────────────────────────────── */
+.latex-error {
+  background: hsl(48 100% 90%);
+  border: 1px solid hsl(48 100% 75%);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 10px 0;
+  color: hsl(40 60% 25%);
+  font-size: 0.9em;
+}
+
+.dark .latex-error {
+  background: hsl(48 40% 15%);
+  border-color: hsl(48 60% 30%);
+  color: hsl(48 100% 80%);
+}
+
+.latex-error .raw-latex {
+  font-family: "Source Code Pro", "Fira Code", monospace;
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: block;
+  margin-top: 6px;
+  font-size: 0.85em;
+  overflow-x: auto;
+}
+
+.latex-errors-panel {
+  background: hsl(0 100% 97%);
+  border: 1px solid hsl(0 80% 85%);
+  border-radius: 6px;
+  padding: 14px;
+  margin: 14px 0;
+  color: hsl(0 60% 25%);
+}
+
+.dark .latex-errors-panel {
+  background: hsl(0 40% 12%);
+  border-color: hsl(0 60% 30%);
+  color: hsl(0 90% 82%);
+}
+
+/* ── Loading state ───────────────────────────────────────── */
+.math-loading {
+  opacity: 0.45;
+  position: relative;
+  pointer-events: none;
+}
+
 .math-loading::after {
-  content: 'Rendering math...';
+  content: 'Rendering…';
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 0.9em;
+  font-size: 0.85em;
   color: hsl(var(--muted-foreground));
+  background: hsl(var(--background)/0.85);
+  padding: 4px 10px;
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
 }
+
+/* ── Section boxes (Definitions, Theorems, etc.) ─────────── */
+.section-box {
+  border-left: 4px solid hsl(var(--border));
+  background: hsl(var(--muted)/0.3);
+  border-radius: 4px 12px 12px 4px;
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+  transition: box-shadow 0.2s;
+}
+
+.section-box:hover {
+  box-shadow: 0 2px 16px hsl(var(--primary)/0.08);
+}
+
+/* ── Print optimizations ─────────────────────────────────── */
+@media print {
+  .katex-display,
+  .math-display {
+    background: transparent !important;
+    border: 1px solid #ccc !important;
+    border-left: 3px solid #555 !important;
+    box-shadow: none !important;
+  }
+
+  .katex {
+    color: black !important;
+  }
+
+  .latex-error,
+  .latex-errors-panel {
+    display: none !important;
+  }
+}
+
+/* ── notranslate guard ──────────────────────────────────── */
+.notranslate .katex,
+.katex {
+  font-family: KaTeX_Main, "Times New Roman", serif;
+}
