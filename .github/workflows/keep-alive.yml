@@ -1,0 +1,29 @@
+name: 🗄️ Supabase Keep-Alive Ping
+
+on:
+  # Run every day at 08:00 UTC — well within the 7-day inactivity window
+  schedule:
+    - cron: '0 8 * * *'
+
+  # Allow manual trigger from the GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping Supabase Database
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: 🏓 Send keep-alive ping
+        run: |
+          echo "Pinging MathSophos keep-alive endpoint..."
+          RESPONSE=$(curl -s -o response.json -w "%{http_code}" \
+            "${{ secrets.APP_URL }}/api/keep-alive?secret=${{ secrets.KEEP_ALIVE_SECRET }}")
+          echo "HTTP Status: $RESPONSE"
+          cat response.json
+          if [ "$RESPONSE" != "200" ]; then
+            echo "❌ Keep-alive ping failed with status $RESPONSE"
+            exit 1
+          fi
+          echo "✅ Keep-alive ping successful"

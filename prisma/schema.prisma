@@ -823,3 +823,10 @@ model ClassroomAnalytics {
   @@index([eventType])
   @@index([timestamp])
 }
+
+model KeepAlive {
+  id        String   @id @default("singleton")
+  ping      Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
