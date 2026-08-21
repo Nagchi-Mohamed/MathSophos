@@ -33,18 +33,12 @@ export function Footer() {
 
           {/* Brand column */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div
-                className="flex items-center justify-center w-9 h-9 rounded-xl"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary)/0.7))',
-                  boxShadow: '0 4px 12px hsl(var(--primary)/0.3)',
-                }}
-              >
-                <GraduationCap className="h-5 w-5 text-white" />
+            <div className="flex items-center gap-3">
+              <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/30 border border-white/20">
+                <GraduationCap className="h-5.5 w-5.5 text-white" />
               </div>
-              <span className="notranslate font-extrabold text-xl text-primary">
-                MathSophos
+              <span className="notranslate font-black text-xl tracking-tight text-blue-500 dark:text-blue-400">
+                Math<span className="text-foreground">Sophos</span>
               </span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">

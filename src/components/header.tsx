@@ -116,19 +116,15 @@ export function Header() {
         <div className="container flex h-16 items-center justify-between gap-4">
 
           {/* ── Logo ─────────────────────────────────────────── */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div
-              className="flex items-center justify-center w-9 h-9 rounded-xl transition-transform duration-200 group-hover:scale-105"
-              style={{
-                background: 'hsl(var(--primary))',
-                boxShadow: '0 4px 14px hsl(var(--primary)/0.35)',
-              }}
-            >
-              <GraduationCap className="h-5 w-5 text-primary-foreground" />
+          <Link href="/" className="flex items-center gap-3 shrink-0 group">
+            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/30 transition-transform duration-200 group-hover:scale-105 border border-white/20">
+              <GraduationCap className="h-5.5 w-5.5 text-white" />
             </div>
-            <span className="notranslate font-extrabold text-xl tracking-tight text-primary hover:text-primary/90 transition-colors">
-              MathSophos
-            </span>
+            <div className="flex flex-col">
+              <span className="notranslate font-black text-xl tracking-tight text-blue-500 dark:text-blue-400 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors leading-none">
+                Math<span className="text-foreground">Sophos</span>
+              </span>
+            </div>
           </Link>
 
           {/* ── Desktop Nav ───────────────────────────────────── */}
