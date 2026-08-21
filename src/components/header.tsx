@@ -120,20 +120,13 @@ export function Header() {
             <div
               className="flex items-center justify-center w-9 h-9 rounded-xl transition-transform duration-200 group-hover:scale-105"
               style={{
-                background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary)/0.7))',
-                boxShadow: '0 4px 14px hsl(var(--primary)/0.4)',
+                background: 'hsl(var(--primary))',
+                boxShadow: '0 4px 14px hsl(var(--primary)/0.35)',
               }}
             >
-              <GraduationCap className="h-5 w-5 text-white" />
+              <GraduationCap className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span
-              className="font-extrabold text-xl tracking-tight"
-              style={{
-                background: 'linear-gradient(135deg, hsl(var(--primary)), #60a5fa)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
+            <span className="notranslate font-extrabold text-xl tracking-tight text-primary hover:text-primary/90 transition-colors">
               MathSophos
             </span>
           </Link>

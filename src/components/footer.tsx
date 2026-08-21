@@ -43,14 +43,7 @@ export function Footer() {
               >
                 <GraduationCap className="h-5 w-5 text-white" />
               </div>
-              <span
-                className="font-extrabold text-xl"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(var(--primary)), #60a5fa)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
+              <span className="notranslate font-extrabold text-xl text-primary">
                 MathSophos
               </span>
             </div>
