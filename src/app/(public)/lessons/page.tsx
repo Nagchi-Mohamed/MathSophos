@@ -430,25 +430,66 @@ export default async function LessonsPage({ searchParams }: PageProps) {
 
 // --- Components ---
 
-function CycleCard({ title, description, icon, href, color }: { title: React.ReactNode, description: React.ReactNode, icon: React.ReactNode, href: string, color: string }) {
+function CycleCard({
+  title,
+  description,
+  icon,
+  href,
+  color,
+  badgeText,
+}: {
+  title: React.ReactNode;
+  description: React.ReactNode;
+  icon: React.ReactNode;
+  href: string;
+  color: string;
+  badgeText?: string;
+}) {
   return (
-    <Link href={href} className="group">
-      <div className={`h-full p-6 rounded-xl border dark:border-gray-700 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${color}`}>
-        <div className="mb-4 bg-white dark:bg-gray-800 p-3 rounded-full w-fit shadow-sm group-hover:scale-110 transition-transform">
-          {icon}
+    <Link href={href} className="group block h-full">
+      <div className="relative h-full p-7 rounded-2xl border border-border/60 bg-gradient-to-b from-card/90 to-card/50 backdrop-blur-xl shadow-md transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1.5 hover:border-primary/50 overflow-hidden flex flex-col justify-between">
+        {/* Ambient background glow on hover */}
+        <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full bg-primary/10 blur-3xl group-hover:bg-primary/20 transition-all duration-500 pointer-events-none" />
+
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <div className="p-3.5 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20 text-primary shadow-sm group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+              {icon}
+            </div>
+            {badgeText && (
+              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+                {badgeText}
+              </span>
+            )}
+          </div>
+
+          <h3 className="text-2xl font-bold mb-2 text-foreground group-hover:text-primary transition-colors tracking-tight">
+            {title}
+          </h3>
+          <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+            {description}
+          </p>
         </div>
-        <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-gray-100">{title}</h3>
-        <p className="text-gray-600 dark:text-gray-400 text-sm">{description}</p>
+
+        <div className="flex items-center text-sm font-semibold text-primary pt-4 border-t border-border/40 group-hover:border-primary/30 transition-colors">
+          <span>Explorer les cours</span>
+          <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1.5 transition-transform duration-300" />
+        </div>
       </div>
     </Link>
   );
 }
 
-function SelectionCard({ label, href }: { label: React.ReactNode, href: string }) {
+function SelectionCard({ label, href }: { label: React.ReactNode; href: string }) {
   return (
-    <Link href={href}>
-      <div className="p-6 h-full flex items-center justify-center text-center bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border dark:border-gray-700 rounded-xl transition-all hover:shadow-md hover:border-primary/50 dark:hover:border-primary/50 group">
-        <span className="text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary transition-colors">{label}</span>
+    <Link href={href} className="group block h-full">
+      <div className="p-6 h-full flex items-center justify-between bg-card/80 hover:bg-card border border-border/60 hover:border-primary/50 rounded-2xl transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+        <span className="text-base font-semibold text-foreground group-hover:text-primary transition-colors">
+          {label}
+        </span>
+        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+          <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+        </div>
       </div>
     </Link>
   );
