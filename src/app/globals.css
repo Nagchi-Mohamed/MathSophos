@@ -573,3 +573,25 @@ body>div[style*="position: absolute"].skiptranslate {
   visibility: visible !important;
   opacity: 1 !important;
 }
+
+/* 14. Suppress Google Translate floating bubble, circle badges, and popups */
+div[class*="VIpgJd"],
+span[class*="VIpgJd"],
+iframe[class*="VIpgJd"],
+.VIpgJd-yLiRosa-Ja2t1b,
+.VIpgJd-yLiRosa-Lgflfd-jgmo2b,
+.VIpgJd-jT2Vfd-B12zHc,
+.goog-te-gadget-icon,
+.goog-te-gadget-simple,
+.goog-te-gadget,
+.goog-te-spinner-pos {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
+}

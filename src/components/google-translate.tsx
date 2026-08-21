@@ -66,18 +66,17 @@ export function GoogleTranslate() {
         setCurrentLang(combo.value || 'fr');
       }
 
-      // SELECTIVELY REMOVE only the visible banner elements, NOT the functional parts
-      const topBanners = document.querySelectorAll(
-        'iframe.goog-te-banner-frame, .goog-te-banner-frame:not(#google_translate_element):not(.goog-te-gadget)'
+      // SELECTIVELY REMOVE all Google Translate floating elements, banners, and widgets
+      const googleElements = document.querySelectorAll(
+        'iframe.goog-te-banner-frame, .goog-te-banner-frame, [class*="VIpgJd"], .goog-te-spinner-pos'
       );
-      topBanners.forEach((el) => {
+      googleElements.forEach((el) => {
         try {
-          // Check if element still exists in DOM and has a parent
-          if (el && el.parentNode && document.body.contains(el) && !el.querySelector('.goog-te-combo')) {
-            el.parentNode.removeChild(el);
+          if (el && el.id !== 'google_translate_element' && !el.querySelector('.goog-te-combo')) {
+            el.setAttribute('style', 'display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;');
           }
         } catch (e) {
-          // Silently ignore removal errors
+          // Ignore
         }
       });
 

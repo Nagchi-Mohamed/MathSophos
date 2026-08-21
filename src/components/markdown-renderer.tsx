@@ -76,7 +76,7 @@ export function MarkdownRenderer({ content, className, hideVideoLinks = false }:
   }, [content])
 
   return (
-    <div className={cn("markdown-content", className)}>
+    <div className={cn("markdown-content notranslate", className)} translate="no">
       <ReactMarkdown
         remarkPlugins={[remarkMath, remarkGfm, remarkSectionize, remarkLatexImages, remarkBreaks]}
         rehypePlugins={[rehypeRaw, [rehypeKatex, { throwOnError: false, errorColor: "#ef4444" }]]}
