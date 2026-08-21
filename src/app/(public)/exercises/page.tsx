@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { EducationalLevel, Stream } from "@/lib/enums";
 import { EDUCATION_SYSTEM, Cycle, SEMESTERS } from "@/lib/education-system";
-import { BookOpen, GraduationCap, School, Calculator, Folder } from "lucide-react";
+import { BookOpen, GraduationCap, School, Calculator, Folder, ArrowRight } from "lucide-react";
 import { ExerciseSearchFilters } from "@/components/exercises/exercise-search-filters";
 import { getStreamsByLevel, getStreamById } from "@/actions/streams";
 import { getModulesByStream } from "@/actions/modules";
