@@ -7,6 +7,7 @@ import {
   MessageSquare, Monitor, BookMarked, Mail, Heart,
   ExternalLink, Github
 } from 'lucide-react';
+import { MathSophosIcon } from '@/components/ui/math-sophos-logo';
 
 const ContactDialog = dynamic(
   () => import('./ui/contact-dialog').then((mod) => mod.ContactDialog),
@@ -34,8 +35,8 @@ export function Footer() {
           {/* Brand column */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/30 border border-white/20">
-                <GraduationCap className="h-5.5 w-5.5 text-white" />
+              <div className="transition-transform duration-200 hover:scale-105">
+                <MathSophosIcon size={40} />
               </div>
               <span className="notranslate font-black text-xl tracking-tight text-blue-500 dark:text-blue-400">
                 Math<span className="text-foreground">Sophos</span>

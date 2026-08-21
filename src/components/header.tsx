@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/language-context';
 import {
-  GraduationCap, Menu, X, BookOpen, Calculator, MessageSquare,
+  Menu, X, BookOpen, Calculator, MessageSquare,
   FlaskConical, GraduationCap as ExamIcon, Monitor, FileText,
-  BookMarked, Search, ChevronDown
+  BookMarked, ChevronDown
 } from 'lucide-react';
+import { MathSophosIcon } from '@/components/ui/math-sophos-logo';
 import dynamic from 'next/dynamic';
 import { HeaderAuth } from './auth/header-auth';
 import { useSession } from 'next-auth/react';
@@ -117,8 +118,8 @@ export function Header() {
 
           {/* ── Logo ─────────────────────────────────────────── */}
           <Link href="/" className="flex items-center gap-3 shrink-0 group">
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/30 transition-transform duration-200 group-hover:scale-105 border border-white/20">
-              <GraduationCap className="h-5.5 w-5.5 text-white" />
+            <div className="transition-transform duration-200 group-hover:scale-105">
+              <MathSophosIcon size={40} />
             </div>
             <div className="flex flex-col">
               <span className="notranslate font-black text-xl tracking-tight text-blue-500 dark:text-blue-400 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors leading-none">

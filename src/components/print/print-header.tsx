@@ -1,6 +1,7 @@
 "use client"
 
-import { GraduationCap, BookOpen } from "lucide-react"
+import { GraduationCap } from "lucide-react"
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo"
 
 interface PrintHeaderProps {
   title: string
@@ -29,8 +30,8 @@ export function PrintHeader({
       <div className="flex justify-between items-start mb-6">
         {/* Left: Branding */}
         <div className="flex gap-4 items-center">
-          <div className="p-3 bg-primary rounded-xl text-primary-foreground print:bg-blue-600 print:text-white">
-            <BookOpen className="w-8 h-8" />
+          <div className="shrink-0">
+            <MathSophosIcon size={48} />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-primary print:text-blue-600 leading-none mb-1">MathSophos</h1>

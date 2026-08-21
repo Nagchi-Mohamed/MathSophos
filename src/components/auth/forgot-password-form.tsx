@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { GraduationCap, Mail, Loader2, ArrowLeft } from "lucide-react"
+import { Mail, Loader2, ArrowLeft } from "lucide-react"
+import { MathSophosCircleLogo } from "@/components/ui/math-sophos-logo"
 import { useTheme } from "@/components/theme-provider"
 import { requestPasswordReset } from "@/actions/auth-actions"
 import { toast } from "sonner"
@@ -46,12 +47,7 @@ export function ForgotPasswordForm() {
   return (
     <div className="relative">
       {/* Logo Circle */}
-      <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center w-[70px] h-[70px] rounded-full shadow-lg" style={{
-        background: 'rgb(var(--primary))',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-      }}>
-        <GraduationCap className="h-8 w-8 text-white" />
-      </div>
+      <MathSophosCircleLogo className="absolute -top-10 left-1/2 -translate-x-1/2 z-20 w-[70px] h-[70px]" />
 
       <Card className="w-full border-none shadow-2xl backdrop-blur-md pt-8" style={{
         background: isDark ? 'var(--gradient-paper-dark)' : 'var(--gradient-paper)',
