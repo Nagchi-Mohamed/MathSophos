@@ -1,6 +1,7 @@
 "use client";
 
 import { GraduationCap, BookOpen } from "lucide-react";
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo";
 import { useLanguage } from "@/contexts/language-context";
 
 interface ChapterHeaderProps {
@@ -36,8 +37,8 @@ export function ChapterHeader({
       {/* Top Section - Branding & Professor */}
       <div className="flex items-center justify-between mb-6 pb-6 border-b-2 border-primary/20">
         <div className="flex items-center gap-4">
-          <div className="bg-primary text-primary-foreground p-3 rounded-lg shadow-md">
-            <BookOpen className="w-8 h-8" />
+          <div className="shrink-0">
+            <MathSophosIcon size={36} />
           </div>
           <div>
             <h3 className="text-2xl font-bold text-primary">MathSophos</h3>

@@ -16,11 +16,11 @@ import {
   Copy,
   CheckCircle2,
   AlertCircle,
-  Sparkles,
   X,
   Download,
   FileDown,
 } from "lucide-react"
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo"
 import {
   Dialog,
   DialogContent,
@@ -239,8 +239,8 @@ export function MathAISolver({ context }: MathAISolverProps = {}) {
     <Card className="w-full max-w-4xl mx-auto shadow-xl border-2">
       <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 border-b">
         <CardTitle className="flex items-center gap-3 text-2xl">
-          <div className="p-2 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg">
-            <Sparkles className="h-6 w-6 text-white" />
+          <div className="shrink-0">
+            <MathSophosIcon size={28} />
           </div>
           MathSophos AI
         </CardTitle>
@@ -310,7 +310,7 @@ export function MathAISolver({ context }: MathAISolverProps = {}) {
                 </>
               ) : (
                 <>
-                  <Sparkles className="mr-2 h-5 w-5" />
+                  <MathSophosIcon size={20} className="mr-2" />
                   Résoudre le problème
                 </>
               )}
@@ -390,7 +390,7 @@ export function MathAISolver({ context }: MathAISolverProps = {}) {
                 </>
               ) : (
                 <>
-                  <Sparkles className="mr-2 h-5 w-5" />
+                  <MathSophosIcon size={20} className="mr-2" />
                   Analyser et résoudre
                 </>
               )}
@@ -468,7 +468,7 @@ export function MathAISolver({ context }: MathAISolverProps = {}) {
                 </>
               ) : (
                 <>
-                  <Sparkles className="mr-2 h-5 w-5" />
+                  <MathSophosIcon size={20} className="mr-2" />
                   Analyser et résoudre
                 </>
               )}

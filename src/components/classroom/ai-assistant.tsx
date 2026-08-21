@@ -24,6 +24,7 @@ import {
   Brain,
   Zap,
 } from "lucide-react";
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo";
 import { cn } from "@/lib/utils";
 
 interface MeetingSummary {
@@ -176,8 +177,8 @@ Généré automatiquement par l'Assistant IA MathSphere
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-zinc-800">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-white" />
+            <div className="shrink-0">
+              <MathSophosIcon size={32} />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-white">
@@ -225,8 +226,8 @@ Généré automatiquement par l'Assistant IA MathSphere
             </div>
           ) : !summary ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-purple-500/10 to-pink-500/10 flex items-center justify-center mb-4">
-                <Sparkles className="h-8 w-8 text-purple-500" />
+              <div className="shrink-0 mb-4">
+                <MathSophosIcon size={40} />
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">
                 Résumé intelligent
@@ -239,7 +240,7 @@ Généré automatiquement par l'Assistant IA MathSphere
                 onClick={generateSummary}
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
               >
-                <Sparkles className="h-4 w-4 mr-2" />
+                <MathSophosIcon size={18} className="mr-2" />
                 Générer le résumé
               </Button>
             </div>

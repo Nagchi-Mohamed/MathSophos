@@ -14,8 +14,8 @@ import {
   TrendingUp,
   History,
   Lightbulb,
-  Sparkles
 } from "lucide-react"
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { MathAISolver } from "@/components/math-ai-solver"
@@ -118,7 +118,7 @@ export default function Home() {
               transition={{ duration: 0.5 }}
             >
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-600/10 to-purple-600/10 border border-blue-600/20 mb-4">
-                <Sparkles className="h-4 w-4 text-blue-600" />
+                <MathSophosIcon size={16} />
                 <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Nouveau</span>
               </div>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { GraduationCap, BookOpen, PlayCircle, Loader2 } from "lucide-react";
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo";
 import { formatLevel } from "@/utils/formatters";
 import { useLanguage } from "@/contexts/language-context";
 import type { EducationalLevel, Stream } from "@/lib/enums";
@@ -100,8 +101,8 @@ export function LessonHeader({
         {/* Top Section - Branding & Professor */}
         <div className={`flex items-center justify-between mb-6 pb-6 border-b-2 border-primary/20 ${isPrintView ? '' : 'print:mb-4 print:pb-4'}`}>
           <div className="flex items-center gap-4">
-            <div className={`bg-primary text-primary-foreground p-3 rounded-lg shadow-md ${isPrintView ? '' : 'print:bg-transparent print:text-black print:p-0 print:shadow-none print:border print:border-black'}`}>
-              <BookOpen className="w-8 h-8" />
+            <div className="shrink-0">
+              <MathSophosIcon size={36} />
             </div>
             <div>
               <h3 className={`text-2xl font-bold text-primary ${isPrintView ? '' : 'print:text-black'}`}>MathSophos</h3>
