@@ -34,12 +34,20 @@ const adminKeys = getAdminKeys();
 export const googleGenAIAdmin = new GoogleGenerativeAI(adminKeys[0] || "");
 
 /**
+ * Get an API key specific to a rotation index.
+ */
+export const getRotatedApiKey = (retryCount: number = 0): string => {
+  const keyIndex = retryCount % adminKeys.length;
+  return adminKeys[keyIndex] || process.env.GOOGLE_GENERATIVE_AI_API_KEY || "";
+}
+
+/**
  * Get an admin client specific to a rotation index.
  * Useful for retrying with different keys.
  */
 export const getRotatedAdminClient = (retryCount: number) => {
+  const key = getRotatedApiKey(retryCount);
   const keyIndex = retryCount % adminKeys.length;
-  const key = adminKeys[keyIndex];
   console.log(`🔑 Using API Key index: ${keyIndex} (Total keys: ${adminKeys.length})`);
   return new GoogleGenerativeAI(key);
 }

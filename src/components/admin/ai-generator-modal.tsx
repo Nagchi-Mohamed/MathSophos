@@ -73,11 +73,6 @@ export function AiGeneratorModal({ mode, onGenerate, contexts = [] }: AiGenerato
       return
     }
 
-    if (!contextId && contexts.length > 0) {
-      toast.error("Veuillez sélectionner un contexte IA")
-      return
-    }
-
     setIsGenerating(true)
     try {
       let result

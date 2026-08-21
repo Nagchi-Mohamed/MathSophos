@@ -1,34 +1,42 @@
 'use server'
 
 import { generateObject } from "ai"
+import { createGoogleGenerativeAI } from "@ai-sdk/google"
 import { z } from "zod"
-import { LATEX_FORMATTING_SYSTEM_PROMPT, getModel } from "@/lib/ai-utils"
+import { LATEX_FORMATTING_SYSTEM_PROMPT } from "@/lib/ai-utils"
+import { getRotatedApiKey, getAdminKeyCount, parseGoogleAIError } from "@/lib/google-ai"
 import { PDFParse } from "pdf-parse"
 // @ts-ignore
 import mammoth from "mammoth"
 
 // Schema for the AI response
 const FicheSchema = z.object({
-  pedagogicalGuidelines: z.string().describe("Directives pédagogiques basées sur les orientations officielles"),
+  pedagogicalGuidelines: z.string().describe("Directives pédagogiques basées sur les orientations officielles du Ministère de l'Éducation Nationale du Maroc"),
   prerequisites: z.string().describe("Pré-requis nécessaires pour cette leçon"),
   extensions: z.string().describe("Extensions et activités complémentaires"),
-  didacticTools: z.string().describe("Outils didactiques suggérés"),
+  didacticTools: z.string().describe("Outils didactiques suggérés (calculatrice, GeoGebra, fiches d'exercices)"),
   content: z.array(z.object({
     type: z.string().describe("Type of step: 'Activité', 'Définition', 'Théorème', 'Exemple', 'Remarque', 'Propriété', 'Preuve', 'Exercice'"),
     duration: z.string().optional().describe("Duration estimate, e.g., '15 min'"),
-    content: z.string().describe("Content of the step in HTML format with LaTeX math using $ delimiters. If a figure is needed, include the GeoGebra commands in a <pre> block labeled 'GeoGebra'."),
-    observations: z.string().optional().describe("Notes for the teacher")
+    content: z.string().describe("Content of the step in HTML format with LaTeX math using $ for inline and $$ for block. If a figure is needed, include the GeoGebra commands in a <pre> block labeled 'GeoGebra'."),
+    observations: z.string().optional().describe("Notes for the teacher (Orientations pédagogiques et gestion de la classe)")
   })).describe("List of steps for the lesson")
 })
 
 export async function generateFicheInternal(prompt: string, context?: string, fileData?: string, mimeType?: string) {
-  // Check API key
-  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    throw new Error("Google AI API key not configured")
-  }
+  let retryCount = 0;
+  const maxRetries = getAdminKeyCount() + 1;
+  let lastError: any = null;
 
-  try {
-    const model = getModel({ provider: 'google', modelId: 'gemini-2.5-flash' })
+  while (retryCount < maxRetries) {
+    try {
+      const apiKey = getRotatedApiKey(retryCount);
+      if (!apiKey) {
+        throw new Error("Clé API Google AI non configurée.");
+      }
+
+      const googleProvider = createGoogleGenerativeAI({ apiKey });
+      const model = googleProvider('gemini-2.5-flash');
 
     let finalPrompt = prompt;
     let images: any[] = [];
@@ -108,20 +116,17 @@ export async function generateFicheInternal(prompt: string, context?: string, fi
       temperature: 0.7,
     })
 
-    console.log("AI Generation successful, generated", object.content?.length || 0, "steps")
-    return object
-  } catch (error: any) {
-    console.error("AI Generation Error Details:", {
-      message: error?.message,
-      cause: error?.cause,
-      response: error?.response?.data,
-      status: error?.response?.status,
-    })
-
-    // Return more specific error message
-    const errorMessage = error?.message || "Unknown error"
-    throw new Error(`Failed to generate fiche content: ${errorMessage}`)
+      console.log("AI Generation successful, generated", object.content?.length || 0, "steps")
+      return object;
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`⚠️ AI Fiche Generation attempt ${retryCount + 1}/${maxRetries} failed:`, error?.message || error);
+      retryCount++;
+    }
   }
+
+  const parsedError = parseGoogleAIError(lastError);
+  throw new Error(`Échec de la génération de la fiche pédagogique : ${parsedError}`);
 }
 
 export async function generateFicheAction(prompt: string, context: string, fileData?: string, mimeType?: string) {

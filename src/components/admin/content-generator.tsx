@@ -48,8 +48,8 @@ export default function ContentGenerator({ contexts }: { contexts: { id: string,
   }
 
   const handleGenerate = async () => {
-    if ((!topic && !extractedText) || !level || !contextId) {
-      toast.error("Veuillez remplir les champs obligatoires (Sujet ou Document, Niveau, Contexte).")
+    if ((!topic && !extractedText) || !level) {
+      toast.error("Veuillez remplir le Sujet (ou Document) et le Niveau Scolaire.")
       return
     }
 
@@ -95,9 +95,11 @@ export default function ContentGenerator({ contexts }: { contexts: { id: string,
                 <SelectValue placeholder="Choisir un modèle" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="google:gemini-2.5-flash">Google Gemini 2.5 Flash (Rapide & Stable)</SelectItem>
-                <SelectItem value="openai:gpt-4o">OpenAI GPT-4o (Puissant)</SelectItem>
-                <SelectItem value="openai:gpt-4o-mini">OpenAI GPT-4o Mini (Économique)</SelectItem>
+                <SelectItem value="google:gemini-2.5-flash">Google Gemini 2.5 Flash (Ultra-rapide & Précis)</SelectItem>
+                <SelectItem value="google:gemini-1.5-pro">Google Gemini 1.5 Pro (Raisonnement Complexe)</SelectItem>
+                <SelectItem value="deepseek:deepseek-chat">DeepSeek V3 (Excellence Mathématique)</SelectItem>
+                <SelectItem value="deepseek:deepseek-reasoner">DeepSeek R1 (Raisonnement Pas à Pas)</SelectItem>
+                <SelectItem value="openai:gpt-4o">OpenAI GPT-4o</SelectItem>
               </SelectContent>
             </Select>
           </div>
