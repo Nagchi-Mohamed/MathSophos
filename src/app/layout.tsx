@@ -58,6 +58,9 @@ export const metadata: Metadata = {
     title: "MathSophos - Plateforme Éducative Marocaine",
     description: "Révolutionnez votre apprentissage des maths.",
   },
+  verification: {
+    google: "7XFOa_oGsf3lPZA1xbqFA6T3uDheLigUfEaQomxsvIo",
+  },
 };
 
 export default function RootLayout({
