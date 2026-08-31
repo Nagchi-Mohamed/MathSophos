@@ -16,7 +16,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ExamType, ControlType, LessonSelection, GenerateExamParams, generateExamFromSeries, GeneratedExam } from "@/actions/exams"
-import { Loader2, Plus, Trash2, GraduationCap, BookOpen, FileText, Settings2, Sparkles, AlertCircle, PenTool, Bot, List } from "lucide-react"
+import { Loader2, Plus, Trash2, GraduationCap, BookOpen, FileText, Settings2, AlertCircle, PenTool, Bot, List } from "lucide-react"
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo"
 import { EDUCATION_SYSTEM, Cycle } from "@/lib/education-system"
 import { getPaginatedLessons } from "@/actions/content"
 import { getPaginatedSeries } from "@/actions/series"
@@ -318,7 +319,7 @@ export function ExamConfigurationForm({
     <Card className="w-full max-w-5xl mx-auto border-none shadow-xl bg-gradient-to-br from-background to-muted/20">
       <CardHeader className="text-center pb-8 border-b bg-background/50 backdrop-blur-sm rounded-t-xl">
         <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-          <Sparkles className="w-6 h-6 text-primary" />
+          <MathSophosIcon size={28} />
         </div>
         <CardTitle className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
           Générateur d'Évaluations
@@ -671,7 +672,7 @@ export function ExamConfigurationForm({
                     <div className="bg-card p-6 rounded-xl border shadow-sm space-y-6">
                       <div className="space-y-3">
                         <Label htmlFor="context" className="text-base font-semibold flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-amber-500" />
+                          <MathSophosIcon size={18} />
                           Instructions pour l'IA (Prompt)
                         </Label>
                         <Textarea
@@ -788,7 +789,7 @@ export function ExamConfigurationForm({
               ) : (
                 <div className="flex flex-col items-center">
                   <span className="flex items-center gap-2 font-bold text-xl">
-                    {method === "AI" ? <Sparkles className="h-5 w-5" /> : <PenTool className="h-5 w-5" />}
+                    {method === "AI" ? <MathSophosIcon size={20} /> : <PenTool className="h-5 w-5" />}
                     {method === "AI" ? "Générer l'évaluation" : "Créer l'évaluation manuellement"}
                   </span>
                   <span className="text-sm font-normal opacity-90 mt-1">

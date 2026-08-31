@@ -21,7 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, Sparkles, Wand2 } from "lucide-react"
+import { Loader2, Wand2 } from "lucide-react"
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo"
 import { generateLessonContent, generateExerciseContent } from "@/actions/ai-generate"
 import { extractTextFromFile } from "@/actions/extract-text"
 import { toast } from "sonner"
@@ -113,7 +114,7 @@ export function AiGeneratorModal({ mode, onGenerate, contexts = [] }: AiGenerato
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-purple-600" />
+            <MathSophosIcon size={20} />
             Générateur {mode === "LESSON" ? "de Leçon" : "d'Exercice"}
           </DialogTitle>
           <DialogDescription>
@@ -197,7 +198,7 @@ export function AiGeneratorModal({ mode, onGenerate, contexts = [] }: AiGenerato
               </>
             ) : (
               <>
-                <Sparkles className="mr-2 h-4 w-4" />
+                <MathSophosIcon size={18} className="mr-2" />
                 Générer
               </>
             )}

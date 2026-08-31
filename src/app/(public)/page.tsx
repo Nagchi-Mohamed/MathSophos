@@ -9,7 +9,6 @@ import {
   GraduationCap,
   Users,
   Check,
-  Stars,
   LifeBuoy,
   TrendingUp,
   History,
@@ -89,10 +88,14 @@ export default function Home() {
               {[
                 { icon: LifeBuoy, text: "Support 24/7" },
                 { icon: Check, text: "Programme Officiel" },
-                { icon: Stars, text: "IA Avancée" }
+                { icon: MathSophosIcon, text: "IA Avancée" }
               ].map((item, index) => (
                 <div key={index} className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 backdrop-blur-sm text-white text-sm font-medium">
-                  <item.icon className="h-4 w-4" />
+                  {typeof item.icon === 'function' && item.icon === MathSophosIcon ? (
+                    <item.icon size={18} />
+                  ) : (
+                    <item.icon className="h-4 w-4" />
+                  )}
                   {item.text}
                 </div>
               ))}

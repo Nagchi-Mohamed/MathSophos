@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Copy, Check, Sparkles, ExternalLink, BookOpen, Loader2, ChevronDown, ChevronUp } from "lucide-react"
+import { Copy, Check, ExternalLink, BookOpen, Loader2, ChevronDown, ChevronUp } from "lucide-react"
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo"
 import { toast } from "sonner"
 import { searchReferences } from "@/actions/references"
 
@@ -245,7 +246,7 @@ Dans le JSON, tu DOIS échapper les backslashes:
     <Card className="border-2 border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-purple-600" />
+          <MathSophosIcon size={20} />
           <CardTitle>Générateur de Prompt AI ({contentType})</CardTitle>
         </div>
         <CardDescription>

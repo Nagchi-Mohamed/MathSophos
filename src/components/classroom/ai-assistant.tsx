@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo";
 import {
-  Sparkles,
   Download,
   Copy,
   X,

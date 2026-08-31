@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TiptapEditor } from "@/components/admin/tiptap-editor"
 import { generateLessonContent, type ModelConfig } from "@/actions/ai-generate"
 import { extractTextFromFile } from "@/actions/extract-text"
-import { Loader2, Sparkles, Bot } from "lucide-react"
+import { Loader2, Bot } from "lucide-react"
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo"
 import { toast } from "sonner"
 import { ImageUploadButton } from "@/components/admin/image-upload-button"
 
@@ -179,7 +180,7 @@ export default function ContentGenerator({ contexts }: { contexts: { id: string,
               </>
             ) : (
               <>
-                <Sparkles className="mr-2 h-4 w-4" />
+                <MathSophosIcon size={18} className="mr-2" />
                 Générer le contenu
               </>
             )}

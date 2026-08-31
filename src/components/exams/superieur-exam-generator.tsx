@@ -12,7 +12,8 @@ import { ExamPreview } from "./exam-preview"
 import { ManualExamEditor } from "./manual-exam-editor"
 import { GenerateExamParams, GeneratedExam, generateExamWithAI, saveExam } from "@/actions/exams"
 import { EducationalLevel } from "@/lib/enums"
-import { Loader2, Plus, Trash2, Sparkles, PenTool, Bot, BookOpen } from "lucide-react"
+import { Loader2, Plus, Trash2, PenTool, Bot, BookOpen } from "lucide-react"
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
@@ -354,7 +355,7 @@ export function SuperieurExamGenerator({
                   </>
                 ) : method === "AI" ? (
                   <>
-                    <Sparkles className="w-4 h-4 mr-2" />
+                    <MathSophosIcon size={18} className="mr-2" />
                     Générer avec l'IA
                   </>
                 ) : (

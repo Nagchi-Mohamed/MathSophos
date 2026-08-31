@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { generateFicheInternal } from "@/actions/ai-fiche"
 import { toast } from "sonner"
-import { Loader2, Sparkles, FileText, Upload } from "lucide-react"
+import { Loader2, FileText, Upload } from "lucide-react"
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo"
 
 // Create a server action wrapper for the client to call
 // We can't import the server action directly if it returns rich objects sometimes without careful serialization?
@@ -150,7 +151,7 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-purple-600" />
+            <MathSophosIcon size={20} />
             Générateur IA
           </DialogTitle>
           <DialogDescription>
@@ -172,7 +173,7 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
               className="min-h-[150px]"
             />
             <Button onClick={handleGenerate} disabled={isGenerating || !prompt.trim()} className="w-full bg-gradient-to-r from-purple-500 to-blue-600 border-0">
-              {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+              {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MathSophosIcon size={18} className="mr-2" />}
               Générer
             </Button>
           </TabsContent>
@@ -208,7 +209,7 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
                 disabled={isGenerating || !uploadedFile}
                 className="w-full bg-gradient-to-r from-purple-500 to-blue-600 border-0"
               >
-                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MathSophosIcon size={18} className="mr-2" />}
                 Générer depuis le fichier
               </Button>
             </div>

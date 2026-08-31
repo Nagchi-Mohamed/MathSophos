@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo";
 import {
   School,
   Search,
@@ -15,7 +16,6 @@ import {
   Users,
   Video,
   BookOpen,
-  Sparkles,
   LayoutGrid,
   List,
   GraduationCap,
@@ -97,7 +97,7 @@ export function ClassroomDashboardClient({ classrooms }: ClassroomDashboardClien
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
           <div className="space-y-4 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold tracking-wide uppercase">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <MathSophosIcon size={16} />
               <span>Plateforme Interactive MathSophos</span>
             </div>
 
