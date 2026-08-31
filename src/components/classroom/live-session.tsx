@@ -1100,17 +1100,18 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
             "absolute top-0 left-0 right-0 h-16 z-50 flex items-center justify-between px-4 transition-all duration-300 ease-in-out bg-gradient-to-b from-black/90 via-black/50 to-transparent pointer-events-auto",
             controlsVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
           )}>
-            <div className="flex items-center gap-4 text-xs text-zinc-300">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-green-500" />
-                <span className="font-semibold text-white">MathSophos Classroom</span>
-                <span className="scale-50 text-zinc-600">|</span>
-                <span className="truncate max-w-[200px]">{room.name}</span>
+            <div className="flex items-center gap-3 text-xs text-zinc-300">
+              <div className="flex items-center gap-2.5">
+                <MathSophosIcon size={26} />
+                <span className="font-extrabold text-sm text-white tracking-tight hidden sm:inline">MathSophos Direct</span>
+                <Badge className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold px-2 py-0.5 shadow-xs uppercase tracking-wider">
+                  ● DIRECT HD
+                </Badge>
               </div>
               {isRecording && (
-                <div className="flex items-center gap-2 bg-zinc-900/80 px-2 py-1 rounded">
-                  <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-white font-medium">Recording...</span>
+                <div className="flex items-center gap-2 bg-red-950/80 border border-red-500/30 px-2.5 py-1 rounded-full text-xs">
+                  <div className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
+                  <span className="text-red-200 font-bold">Enregistrement...</span>
                 </div>
               )}
             </div>
@@ -1143,7 +1144,8 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowAudioSettings(true)}
-                className="h-7 w-7 p-0 bg-[#1a1a1a]/80 hover:bg-[#2a2a2a] text-white border border-white/10 rounded-full"
+                className="h-8 w-8 p-0 bg-zinc-900/80 hover:bg-zinc-800 text-white border border-zinc-700 rounded-xl"
+                title="Paramètres audio/vidéo"
               >
                 <Settings2 className="h-4 w-4" />
               </Button>
@@ -1151,10 +1153,10 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setViewMode(viewMode === 'gallery' ? 'speaker' : 'gallery')}
-                className="h-7 text-xs bg-[#1a1a1a]/80 hover:bg-[#2a2a2a] text-white border border-white/10"
+                className="h-8 text-xs font-semibold bg-zinc-900/80 hover:bg-zinc-800 text-white border border-zinc-700 rounded-xl px-3 gap-1.5"
               >
-                {viewMode === 'gallery' ? <Maximize2 className="h-3 w-3 mr-2" /> : <LayoutGrid className="h-3 w-3 mr-2" />}
-                {viewMode === 'gallery' ? 'Speaker View' : 'Gallery View'}
+                {viewMode === 'gallery' ? <Maximize2 className="h-3.5 w-3.5" /> : <LayoutGrid className="h-3.5 w-3.5" />}
+                <span>{viewMode === 'gallery' ? 'Vue Intervenant' : 'Vue Mosaïque'}</span>
               </Button>
             </div>
           </div>
