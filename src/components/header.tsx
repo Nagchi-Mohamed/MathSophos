@@ -5,7 +5,7 @@ import { useLanguage } from '@/contexts/language-context';
 import {
   Menu, X, BookOpen, Calculator, MessageSquare,
   FlaskConical, GraduationCap as ExamIcon, Monitor, FileText,
-  BookMarked, ChevronDown
+  BookMarked, ChevronDown, Home
 } from 'lucide-react';
 import { MathSophosIcon } from '@/components/ui/math-sophos-logo';
 import dynamic from 'next/dynamic';
@@ -32,6 +32,7 @@ interface NavItem {
 
 /* ── Nav map ────────────────────────────────────────────────── */
 const NAV_ITEMS: NavItem[] = [
+  { href: '/',              label: 'Accueil',        icon: <Home className="h-4 w-4" />,        description: 'Page d\'accueil' },
   { href: '/lessons',       label: 'Leçons',         icon: <BookOpen className="h-4 w-4" />,    description: 'Cours & chapitres' },
   { href: '/exercises',     label: 'Exercices',      icon: <FlaskConical className="h-4 w-4" />, description: 'Séries & problèmes' },
   { href: '/exams-controls',label: 'Examens',        icon: <ExamIcon className="h-4 w-4" />,    description: 'Contrôles & épreuves' },

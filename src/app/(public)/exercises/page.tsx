@@ -12,6 +12,16 @@ import { getModulesByStream } from "@/actions/modules";
 import { getPaginatedLessons, LessonFilters } from "@/actions/content";
 import { T } from "@/components/ui/t";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Exercices Corrigés & Séries de Maths",
+  description: "Accédez à nos séries d'exercices corrigés de mathématiques pour le collège, le lycée et l'université au Maroc.",
+  alternates: {
+    canonical: '/exercises',
+  },
+};
+
 export const revalidate = 60;
 
 interface PageProps {

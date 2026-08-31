@@ -25,6 +25,16 @@ import { getModulesByStream } from "@/actions/modules";
 import { getChaptersByLesson } from "@/actions/chapters";
 import { getLessonById } from "@/actions/content";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Cours & Leçons de Mathématiques",
+  description: "Explorez nos cours et leçons de mathématiques structurés par cycle (Collège, Lycée, Supérieur), filière et niveau.",
+  alternates: {
+    canonical: '/lessons',
+  },
+};
+
 export const revalidate = 60;
 
 interface PageProps {

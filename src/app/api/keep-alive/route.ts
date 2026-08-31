@@ -10,10 +10,19 @@ import { db } from '@/lib/db';
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const secret = searchParams.get('secret');
+  const secretParam = searchParams.get('secret');
+  const authHeader = request.headers.get('authorization');
+  const bearerSecret = authHeader ? authHeader.replace(/^Bearer\s+/i, '') : null;
+  const isVercelCron = request.headers.get('user-agent')?.includes('vercel-cron');
+
+  const expectedSecret = process.env.KEEP_ALIVE_SECRET || process.env.CRON_SECRET;
+
+  const isValidSecret =
+    (expectedSecret && (secretParam === expectedSecret || bearerSecret === expectedSecret)) ||
+    (isVercelCron && process.env.VERCEL === '1');
 
   // Validate the secret token
-  if (!secret || secret !== process.env.KEEP_ALIVE_SECRET) {
+  if (!isValidSecret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

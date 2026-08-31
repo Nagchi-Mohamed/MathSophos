@@ -1,29 +1,49 @@
-name: 🗄️ Supabase Keep-Alive Ping
+name: 🗄️ Supabase Keep-Alive Multi-Layer Ping
 
 on:
-  # Run every day at 08:00 UTC — well within the 7-day inactivity window
+  # Run twice daily (04:00 UTC and 16:00 UTC) to ensure a 14x margin of safety inside 7-day window
   schedule:
-    - cron: '0 8 * * *'
+    - cron: '0 4,16 * * *'
 
-  # Allow manual trigger from the GitHub Actions UI
+  # Allow manual execution from GitHub Actions UI
   workflow_dispatch:
 
 jobs:
-  ping:
-    name: Ping Supabase Database
+  keep-alive:
+    name: Execute Multi-Layer Supabase Keep-Alive
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
-      - name: 🏓 Send keep-alive ping
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install Prisma Client
         run: |
-          echo "Pinging MathSophos keep-alive endpoint..."
-          RESPONSE=$(curl -s -o response.json -w "%{http_code}" \
-            "${{ secrets.APP_URL }}/api/keep-alive?secret=${{ secrets.KEEP_ALIVE_SECRET }}")
-          echo "HTTP Status: $RESPONSE"
-          cat response.json
-          if [ "$RESPONSE" != "200" ]; then
-            echo "❌ Keep-alive ping failed with status $RESPONSE"
-            exit 1
-          fi
-          echo "✅ Keep-alive ping successful"
+          npm ci --ignore-scripts || npm install --no-audit
+          npx prisma generate
+
+      - name: 🏓 Run Direct Keep-Alive Script (REST + DB + Web App)
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          APP_URL: ${{ secrets.APP_URL }}
+          KEEP_ALIVE_SECRET: ${{ secrets.KEEP_ALIVE_SECRET }}
+        run: |
+          node scripts/keep-alive-direct.js
+
+      - name: 🛡️ Fallback Direct Curl to Supabase REST Gateway
+        if: ${{ secrets.SUPABASE_PROJECT_REF != '' && secrets.SUPABASE_ANON_KEY != '' }}
+        run: |
+          echo "Executing fallback HTTP ping to Supabase API gateway..."
+          curl -s -f --retry 3 --retry-connrefused \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            "https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co/rest/v1/" || echo "Fallback rest gateway check completed."

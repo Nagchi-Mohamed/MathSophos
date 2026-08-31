@@ -10,6 +10,16 @@ import { getStreamsByLevel, getStreamById } from "@/actions/streams"
 import { getModulesByStream } from "@/actions/modules"
 import { getPaginatedLessons, LessonFilters } from "@/actions/content"
 
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Examens & Devoirs Surveillés Corrigés",
+  description: "Téléchargez les devoirs surveillés et anciens examens nationaux du Baccalauréat avec leurs corrigés détaillés.",
+  alternates: {
+    canonical: '/exams-controls',
+  },
+}
+
 export const revalidate = 60
 
 interface PageProps {

@@ -27,25 +27,31 @@ export const viewport: Viewport = {
   userScalable: true,
 };
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "https://math-sophos.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
-    default: "MathSophos - Plateforme Éducative Marocaine",
+    default: "MathSophos - Plateforme Éducative Marocaine | Mathématiques",
     template: "%s | MathSophos",
   },
-  description: "La première plateforme éducative interactive au Maroc pour les mathématiques, du collège à l'université. Cours, exercices et assistance IA.",
-  keywords: ["Mathématiques", "Maroc", "Baccalauréat", "Université", "Soutien scolaire", "IA", "Éducation"],
+  description: "La première plateforme éducative interactive au Maroc pour les mathématiques, du collège à l'université. Cours, exercices corrigés et assistance IA.",
+  keywords: ["Mathématiques", "Maroc", "Baccalauréat", "Université", "Soutien scolaire", "IA", "Éducation", "MathSophos"],
   authors: [{ name: "MathSophos Team" }],
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
     type: "website",
     locale: "fr_MA",
-    url: "https://mathsophos.com",
-    title: "MathSophos - Excellence en Mathématiques",
+    url: siteUrl,
+    title: "MathSophos - Plateforme Éducative Marocaine",
     description: "Apprenez les mathématiques avec une approche moderne et interactive.",
     siteName: "MathSophos",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MathSophos - Plateforme Éducative",
+    title: "MathSophos - Plateforme Éducative Marocaine",
     description: "Révolutionnez votre apprentissage des maths.",
   },
 };
@@ -55,8 +61,24 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'MathSophos',
+    alternateName: ['Math Sophos', 'MathSophos Platform'],
+    url: siteUrl,
+    description: "La première plateforme éducative interactive au Maroc pour les mathématiques, du collège à l'université.",
+    inLanguage: 'fr-MA',
+  };
+
   return (
     <html lang="fr" suppressHydrationWarning className={roboto.variable}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body
         suppressHydrationWarning={true}
         className="antialiased min-h-screen flex flex-col bg-white dark:bg-gray-950"
