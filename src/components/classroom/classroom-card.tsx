@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,9 +13,10 @@ import {
   Video,
   BookOpen,
   ArrowRight,
-  Sparkles,
   ShieldAlert,
-  GraduationCap
+  GraduationCap,
+  Clock,
+  UserCheck
 } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
@@ -56,9 +57,9 @@ interface ClassroomCardProps {
   createdAt: Date;
 }
 
-// Map subject/id to rich color gradients
+// Rich gradient themes
 const GRADIENT_PRESETS = [
-  "from-indigo-600 via-blue-600 to-violet-700",
+  "from-indigo-600 via-blue-600 to-purple-700",
   "from-emerald-600 via-teal-600 to-cyan-700",
   "from-rose-600 via-pink-600 to-purple-700",
   "from-amber-600 via-orange-600 to-red-700",
@@ -114,80 +115,89 @@ export function ClassroomCard({
 
   return (
     <>
-      <Card className="group hover:shadow-2xl transition-all duration-300 flex flex-col h-full bg-white dark:bg-zinc-900 border-zinc-200/80 dark:border-zinc-800 shadow-sm overflow-hidden rounded-2xl relative border">
+      <Card className="group hover:shadow-2xl hover:border-indigo-500/40 transition-all duration-300 flex flex-col h-full bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-md overflow-hidden rounded-3xl relative">
         {/* Banner Header */}
-        <div className={`h-32 bg-gradient-to-br ${gradientClass} p-5 relative overflow-hidden group-hover:scale-[1.02] transition-transform duration-500 origin-top`}>
+        <div className={`h-36 bg-gradient-to-br ${gradientClass} p-5 relative overflow-hidden group-hover:scale-[1.01] transition-transform duration-500 origin-top flex flex-col justify-between`}>
           <div className="absolute inset-0 bg-[url('/patterns/grid.svg')] opacity-20 mix-blend-overlay"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
 
-          <div className="relative z-10 flex justify-between items-start">
-            <div className="space-y-1 max-w-[80%]">
-              <Link href={`/classrooms/${id}`}>
-                <h3 className="text-2xl font-black text-white truncate leading-tight tracking-tight hover:underline">
-                  {name}
-                </h3>
-              </Link>
+          {/* Top Bar: Subject Badge + Role Badge + Menu */}
+          <div className="relative z-10 flex justify-between items-center gap-2">
+            <div className="flex items-center gap-2">
+              <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider text-white border border-white/20 shadow-xs">
+                {subject || "Mathématiques"}
+              </span>
               {section && (
-                <p className="text-blue-100 text-xs font-semibold tracking-wide uppercase opacity-90">
+                <span className="bg-black/30 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-medium text-blue-100 border border-white/10 hidden sm:inline">
                   {section}
-                </p>
+                </span>
               )}
             </div>
 
-            {/* Actions Menu */}
-            <div className="relative z-20">
+            <div className="flex items-center gap-2">
+              {role === "TEACHER" ? (
+                <span className="bg-emerald-500/90 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-xs uppercase tracking-wide">
+                  PROFESSEUR
+                </span>
+              ) : (
+                <span className="bg-black/40 text-white text-[10px] font-semibold px-2.5 py-1 rounded-full backdrop-blur-md border border-white/15 uppercase tracking-wide">
+                  ÉLÈVE
+                </span>
+              )}
+
+              {/* Actions Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-white hover:bg-white/20 rounded-full backdrop-blur-md transition-transform active:scale-95"
+                    className="h-8 w-8 text-white hover:bg-white/25 rounded-full backdrop-blur-md transition-all active:scale-95 border border-white/10"
                   >
-                    <MoreVertical className="h-5 w-5" />
+                    <MoreVertical className="h-4 w-4" />
                     <span className="sr-only">Menu</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-xl">
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">Options de classe</DropdownMenuLabel>
+                <DropdownMenuContent align="end" className="w-52 bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-xl rounded-2xl p-1.5">
+                  <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1">Menu classe</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href={`/classrooms/${id}`} className="flex w-full items-center">
-                      <BookOpen className="mr-2 h-4 w-4 text-blue-500" /> Accéder au Flux
+                  <DropdownMenuItem asChild className="cursor-pointer rounded-xl">
+                    <Link href={`/classrooms/${id}`} className="flex w-full items-center px-2 py-2">
+                      <BookOpen className="mr-2.5 h-4 w-4 text-blue-500" /> Flux & Devoirs
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href={`/classrooms/${id}/live`} className="flex w-full items-center">
-                      <Video className="mr-2 h-4 w-4 text-red-500" /> Direct Visioconférence
+                  <DropdownMenuItem asChild className="cursor-pointer rounded-xl">
+                    <Link href={`/classrooms/${id}/live`} className="flex w-full items-center px-2 py-2">
+                      <Video className="mr-2.5 h-4 w-4 text-rose-500" /> Visioconférence HD
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   {role === "TEACHER" ? (
                     <>
-                      <DropdownMenuItem asChild className="cursor-pointer">
-                        <Link href={`/classrooms/${id}/settings`} className="flex w-full items-center">
-                          <Pencil className="mr-2 h-4 w-4" /> Paramètres
+                      <DropdownMenuItem asChild className="cursor-pointer rounded-xl">
+                        <Link href={`/classrooms/${id}/settings`} className="flex w-full items-center px-2 py-2">
+                          <Pencil className="mr-2.5 h-4 w-4" /> Paramètres
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
+                        className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/40 rounded-xl px-2 py-2"
                         onSelect={(e) => {
                           e.preventDefault();
                           setShowDeleteAlert(true);
                         }}
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
+                        <Trash2 className="mr-2.5 h-4 w-4" />
                         Supprimer la classe
                       </DropdownMenuItem>
                     </>
                   ) : (
                     <DropdownMenuItem
-                      className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
+                      className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/40 rounded-xl px-2 py-2"
                       onSelect={(e) => {
                         e.preventDefault();
                         setShowLeaveAlert(true);
                       }}
                     >
-                      <LogOut className="mr-2 h-4 w-4" />
+                      <LogOut className="mr-2.5 h-4 w-4" />
                       Se désinscrire
                     </DropdownMenuItem>
                   )}
@@ -196,71 +206,76 @@ export function ClassroomCard({
             </div>
           </div>
 
-          {/* Owner Avatar Badge */}
-          <div className="absolute -bottom-6 right-5 z-10 flex items-center">
-            <Avatar className="h-13 w-13 border-4 border-white dark:border-zinc-900 shadow-lg group-hover:scale-105 transition-transform">
-              <AvatarImage src={owner.image || ""} />
-              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-base">
-                {owner.name?.[0]?.toUpperCase() || "P"}
-              </AvatarFallback>
-            </Avatar>
+          {/* Class Name */}
+          <div className="relative z-10 pt-2">
+            <Link href={`/classrooms/${id}`}>
+              <h3 className="text-2xl md:text-3xl font-black text-white truncate leading-tight tracking-tight hover:underline drop-shadow-md">
+                {name}
+              </h3>
+            </Link>
           </div>
         </div>
 
-        {/* Content Body */}
-        <CardHeader className="pt-8 pb-3 px-5">
-          <div className="flex items-center justify-between gap-2 mb-1">
-            <Badge variant="secondary" className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5">
-              {subject || "Mathématiques"}
-            </Badge>
+        {/* Card Body */}
+        <CardContent className="flex-grow p-5 space-y-4">
+          {/* Teacher Info Pill */}
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800">
+            <Avatar className="h-10 w-10 border-2 border-indigo-500/40 shadow-sm shrink-0">
+              <AvatarImage src={owner.image || ""} />
+              <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-bold text-sm">
+                {owner.name?.[0]?.toUpperCase() || "P"}
+              </AvatarFallback>
+            </Avatar>
 
-            {role === "TEACHER" ? (
-              <Badge className="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold px-2 py-0.5 shadow-xs">
-                PROFESSEUR
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="text-[10px] font-semibold text-muted-foreground border-zinc-300 dark:border-zinc-700">
-                ÉLÈVE
-              </Badge>
-            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Enseignant
+              </p>
+              <p className="text-sm font-bold text-foreground truncate">
+                {owner.name || "Professeur MathSophos"}
+              </p>
+            </div>
           </div>
 
-          <div className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 pt-1">
-            <span className="text-muted-foreground text-xs font-normal">Par:</span>
-            <span className="truncate">{owner.name || "Enseignant MathSophos"}</span>
-          </div>
-        </CardHeader>
-
-        <CardContent className="flex-grow px-5 py-2">
-          {/* Quick Shortcuts */}
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            <Link
-              href={`/classrooms/${id}`}
-              className="flex items-center justify-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 transition-colors"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-blue-500" />
-              <span>Voir le Flux</span>
+          {/* Action Buttons */}
+          <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <Link href={`/classrooms/${id}`} className="block">
+              <Button
+                variant="default"
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold shadow-md shadow-blue-500/10 rounded-xl h-10 text-xs gap-1.5 group/btn"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Voir le Flux</span>
+                <ArrowRight className="w-3 h-3 group-hover/btn:translate-x-0.5 transition-transform" />
+              </Button>
             </Link>
 
-            <Link
-              href={`/classrooms/${id}/live`}
-              className="flex items-center justify-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 border border-red-200/50 dark:border-red-900/40 transition-colors"
-            >
-              <Video className="w-3.5 h-3.5 text-red-500 animate-pulse" />
-              <span>Direct Live</span>
+            <Link href={`/classrooms/${id}/live`} className="block">
+              <Button
+                variant="secondary"
+                className="w-full bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold shadow-md shadow-red-500/10 rounded-xl h-10 text-xs gap-1.5 group/btn border-0"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                </span>
+                <Video className="w-3.5 h-3.5" />
+                <span>Direct Live</span>
+              </Button>
             </Link>
           </div>
         </CardContent>
 
         {/* Card Footer */}
-        <CardFooter className="pt-3 pb-4 px-5 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between text-xs text-muted-foreground bg-zinc-50/50 dark:bg-zinc-900/50">
-          <div className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 font-medium">
-            <Users className="h-3.5 w-3.5 text-blue-500" />
+        <CardFooter className="py-3.5 px-5 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between text-xs text-muted-foreground bg-zinc-50/50 dark:bg-zinc-900/60">
+          <div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400 font-semibold">
+            <Users className="h-4 w-4 text-blue-500" />
             <span>{memberCount} membre{memberCount > 1 ? "s" : ""}</span>
           </div>
 
-          <div className="text-[10px] text-zinc-400 font-medium">
-            {formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: fr })}
+          <div className="flex items-center gap-1 text-[11px] text-zinc-400 font-medium">
+            <Clock className="h-3 w-3" />
+            <span>{formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: fr })}</span>
           </div>
         </CardFooter>
       </Card>
@@ -280,7 +295,7 @@ export function ClassroomCard({
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white font-semibold">
-              {isPending ? "Suppression en cours..." : "Supprimer la classe"}
+              {isPending ? "Suppression..." : "Supprimer la classe"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
