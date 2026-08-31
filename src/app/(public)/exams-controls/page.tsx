@@ -15,8 +15,12 @@ import type { Metadata } from "next"
 export const metadata: Metadata = {
   title: "Examens & Devoirs Surveillés Corrigés",
   description: "Téléchargez les devoirs surveillés et anciens examens nationaux du Baccalauréat avec leurs corrigés détaillés.",
+  robots: {
+    index: false,
+    follow: true,
+  },
   alternates: {
-    canonical: '/exams-controls',
+    canonical: 'https://math-sophos.vercel.app/',
   },
 }
 

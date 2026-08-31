@@ -38,8 +38,12 @@ export const metadata: Metadata = {
   description: "La première plateforme éducative interactive au Maroc pour les mathématiques, du collège à l'université. Cours, exercices corrigés et assistance IA.",
   keywords: ["Mathématiques", "Maroc", "Baccalauréat", "Université", "Soutien scolaire", "IA", "Éducation", "MathSophos"],
   authors: [{ name: "MathSophos Team" }],
+  robots: {
+    index: true,
+    follow: true,
+  },
   alternates: {
-    canonical: '/',
+    canonical: 'https://math-sophos.vercel.app/',
   },
   openGraph: {
     type: "website",

@@ -30,8 +30,12 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Cours & Leçons de Mathématiques",
   description: "Explorez nos cours et leçons de mathématiques structurés par cycle (Collège, Lycée, Supérieur), filière et niveau.",
+  robots: {
+    index: false,
+    follow: true,
+  },
   alternates: {
-    canonical: '/lessons',
+    canonical: 'https://math-sophos.vercel.app/',
   },
 };
 

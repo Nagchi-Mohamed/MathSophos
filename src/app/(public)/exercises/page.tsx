@@ -17,8 +17,12 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Exercices Corrigés & Séries de Maths",
   description: "Accédez à nos séries d'exercices corrigés de mathématiques pour le collège, le lycée et l'université au Maroc.",
+  robots: {
+    index: false,
+    follow: true,
+  },
   alternates: {
-    canonical: '/exercises',
+    canonical: 'https://math-sophos.vercel.app/',
   },
 };
 
