@@ -86,54 +86,54 @@ export function ClassroomDashboardClient({ classrooms }: ClassroomDashboardClien
   }, [classrooms, activeTab, searchQuery]);
 
   return (
-    <div className="space-y-8 pb-16">
+    <div className="space-y-5 sm:space-y-8 pb-16">
       {/* 🚀 Hero Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 p-6 md:p-10 border border-indigo-500/20 shadow-2xl">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 p-5 sm:p-7 md:p-10 border border-indigo-500/20 shadow-2xl">
         {/* Background ambient lighting glow */}
         <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-blue-500/20 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-purple-500/20 blur-3xl pointer-events-none" />
         <div className="absolute inset-0 bg-[url('/patterns/grid.svg')] opacity-10 mix-blend-overlay pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-          <div className="space-y-4 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold tracking-wide uppercase">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-8">
+          <div className="space-y-3 sm:space-y-4 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-[11px] sm:text-xs font-semibold tracking-wide uppercase">
               <MathSophosIcon size={16} />
               <span>Plateforme Interactive MathSophos</span>
             </div>
 
-            <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">
-              Espace Classes & <br className="hidden sm:inline" />
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">
+              Espace Classes &{" "}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-300">
-                Direct Visioconférence HD
+                Direct HD
               </span>
             </h1>
 
-            <p className="text-slate-300 text-base md:text-lg leading-relaxed">
+            <p className="text-slate-300 text-sm sm:text-base md:text-lg leading-relaxed line-clamp-3 sm:line-clamp-none">
               Gérez vos cours, partagez vos supports, collaborez sur tableau blanc interactif et participez aux sessions en direct avec assistance IA.
             </p>
 
             {/* Quick Metrics */}
-            <div className="flex flex-wrap items-center gap-4 pt-2">
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3.5 py-1.5 rounded-xl backdrop-blur-md">
-                <School className="w-4 h-4 text-blue-400" />
-                <span className="text-xs text-slate-300 font-medium">Total:</span>
-                <span className="text-sm font-bold text-white">{classrooms.length}</span>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 pt-1 sm:pt-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-white/5 border border-white/10 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl backdrop-blur-md">
+                <School className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
+                <span className="text-[11px] sm:text-xs text-slate-300 font-medium">Total:</span>
+                <span className="text-xs sm:text-sm font-bold text-white">{classrooms.length}</span>
               </div>
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3.5 py-1.5 rounded-xl backdrop-blur-md">
-                <GraduationCap className="w-4 h-4 text-indigo-400" />
-                <span className="text-xs text-slate-300 font-medium">Enseignées:</span>
-                <span className="text-sm font-bold text-white">{teacherCount}</span>
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-white/5 border border-white/10 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl backdrop-blur-md">
+                <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" />
+                <span className="text-[11px] sm:text-xs text-slate-300 font-medium">Enseignées:</span>
+                <span className="text-xs sm:text-sm font-bold text-white">{teacherCount}</span>
               </div>
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3.5 py-1.5 rounded-xl backdrop-blur-md">
-                <Users className="w-4 h-4 text-purple-400" />
-                <span className="text-xs text-slate-300 font-medium">Rejointes:</span>
-                <span className="text-sm font-bold text-white">{studentCount}</span>
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-white/5 border border-white/10 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl backdrop-blur-md">
+                <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400" />
+                <span className="text-[11px] sm:text-xs text-slate-300 font-medium">Rejointes:</span>
+                <span className="text-xs sm:text-sm font-bold text-white">{studentCount}</span>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
+          <div className="flex flex-row sm:flex-col lg:flex-col gap-2 sm:gap-3 shrink-0">
             <CreateClassroomDialog />
             <JoinClassroomDialog />
           </div>
@@ -141,9 +141,9 @@ export function ClassroomDashboardClient({ classrooms }: ClassroomDashboardClien
       </div>
 
       {/* 🔍 Search & Controls Bar */}
-      <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+      <div className="flex flex-col gap-3 bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
         {/* Search */}
-        <div className="relative flex-1 max-w-md">
+        <div className="relative w-full">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Rechercher une classe, matière ou enseignant..."
@@ -153,24 +153,26 @@ export function ClassroomDashboardClient({ classrooms }: ClassroomDashboardClien
           />
         </div>
 
-        <div className="flex items-center justify-between md:justify-end gap-3">
-          {/* Role Filter Tabs */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-            <TabsList className="bg-zinc-100 dark:bg-zinc-950 p-1 rounded-xl">
-              <TabsTrigger value="all" className="rounded-lg text-xs font-semibold px-3 py-1.5">
-                Toutes ({classrooms.length})
-              </TabsTrigger>
-              <TabsTrigger value="teacher" className="rounded-lg text-xs font-semibold px-3 py-1.5">
-                Enseignant ({teacherCount})
-              </TabsTrigger>
-              <TabsTrigger value="student" className="rounded-lg text-xs font-semibold px-3 py-1.5">
-                Élève ({studentCount})
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <div className="flex items-center justify-between gap-2">
+          {/* Role Filter Tabs — scrollable on mobile */}
+          <div className="overflow-x-auto no-scrollbar flex-1">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+              <TabsList className="bg-zinc-100 dark:bg-zinc-950 p-1 rounded-xl flex gap-1 w-max">
+                <TabsTrigger value="all" className="rounded-lg text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 whitespace-nowrap">
+                  Toutes ({classrooms.length})
+                </TabsTrigger>
+                <TabsTrigger value="teacher" className="rounded-lg text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 whitespace-nowrap">
+                  Enseignant ({teacherCount})
+                </TabsTrigger>
+                <TabsTrigger value="student" className="rounded-lg text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 whitespace-nowrap">
+                  Élève ({studentCount})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
 
           {/* View Switcher */}
-          <div className="flex items-center bg-zinc-100 dark:bg-zinc-950 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800">
+          <div className="flex items-center bg-zinc-100 dark:bg-zinc-950 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 shrink-0">
             <Button
               variant="ghost"
               size="icon"
@@ -270,8 +272,8 @@ export function ClassroomDashboardClient({ classrooms }: ClassroomDashboardClien
         <div
           className={
             viewMode === "grid"
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-              : "flex flex-col gap-4"
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+              : "flex flex-col gap-3 sm:gap-4"
           }
         >
           {filteredClassrooms.map((classroom) => (

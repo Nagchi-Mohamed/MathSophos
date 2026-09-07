@@ -165,7 +165,7 @@ export function LiveSession({ roomName, userName, userEmail, isTeacher }: LiveSe
   if (!isMounted) return null;
 
   return (
-    <div className="h-[calc(100dvh-6rem)] md:h-[calc(100vh-6rem)] w-full rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl bg-zinc-950 relative group select-none">
+    <div className="h-[calc(100dvh-10rem)] sm:h-[calc(100dvh-8rem)] md:h-[calc(100vh-7rem)] w-full rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl bg-zinc-950 relative group select-none">
       {token === "" ? (
         <div className="flex h-full w-full items-center justify-center bg-zinc-950">
           <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
@@ -338,31 +338,74 @@ function CustomLobby({ userName, isTeacher, onJoin }: { userName: string, isTeac
   }, [videoEnabled, selectedVideoDevice]);
 
   return (
-    <div className="h-full w-full bg-[#1a1a1a] flex items-center justify-center p-4">
-      <Card className="max-w-4xl w-full bg-[#242424] border-0 shadow-2xl overflow-hidden grid md:grid-cols-2 rounded-lg">
-        <div className="p-10 flex flex-col justify-center bg-[#1a1a1a]">
-          <h2 className="text-2xl font-semibold text-white mb-6">Rejoindre la réunion</h2>
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-zinc-400">VOTRE NOM</label>
-              <div className="h-10 flex items-center px-3 rounded bg-[#242424] text-white border border-[#3e3e3e]">
-                {userName} {isTeacher && "(Enseignant)"}
+    <div className="h-full w-full bg-[#1a1a1a] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <Card className="max-w-4xl w-full bg-[#242424] border-0 shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-2 rounded-2xl">
+        {/* Camera preview — show first on mobile */}
+        <div className="bg-black relative flex items-center justify-center overflow-hidden min-h-[200px] sm:min-h-[240px] md:order-2 md:min-h-[360px]">
+          {videoEnabled ? (
+            <video ref={videoRef} className="w-full h-full object-cover transform -scale-x-100" />
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <Avatar className="h-16 w-16 sm:h-24 sm:w-24">
+                <AvatarFallback className="text-xl sm:text-2xl bg-zinc-800 text-zinc-400">{userName[0]}</AvatarFallback>
+              </Avatar>
+              <div className="text-zinc-500 text-sm">Vidéo désactivée</div>
+            </div>
+          )}
+          <div className="absolute bottom-3 left-3 right-3 flex justify-between text-[11px] text-white/60">
+            <div>{videoEnabled ? "✓ Vidéo OK" : "Vidéo : OFF"}</div>
+            <div className="flex items-center gap-2">
+              <div className={cn("h-2 w-2 rounded-full", audioLevel > 5 ? "bg-green-500 animate-pulse" : "bg-red-500")} />
+              <div className="w-16 sm:w-24 h-1 bg-zinc-700 rounded-full overflow-hidden">
+                <div className="h-full bg-green-500 transition-all duration-100 ease-out" style={{ width: `${audioLevel}%` }} />
+              </div>
+              <span className="hidden sm:inline">{audioEnabled ? "Micro ON" : "Micro OFF"}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Join controls */}
+        <div className="p-5 sm:p-8 md:p-10 flex flex-col justify-center bg-[#1a1a1a] md:order-1">
+          <h2 className="text-xl sm:text-2xl font-semibold text-white mb-5">Rejoindre la réunion</h2>
+          <div className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Votre nom</label>
+              <div className="h-10 flex items-center px-3 rounded-xl bg-[#2a2a2a] text-white border border-[#3e3e3e] text-sm">
+                {userName} {isTeacher && <span className="text-indigo-400 text-xs ml-1">(Enseignant)</span>}
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-300 text-sm">Ne pas se connecter à l'audio</span>
-                <input type="checkbox" checked={!audioEnabled} onChange={() => setAudioEnabled(!audioEnabled)} className="accent-blue-600 h-4 w-4" />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-300 text-sm">Désactiver ma vidéo</span>
-                <input type="checkbox" checked={!videoEnabled} onChange={() => setVideoEnabled(!videoEnabled)} className="accent-blue-600 h-4 w-4" />
-              </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setAudioEnabled(!audioEnabled)}
+                className={cn(
+                  "flex flex-col items-center gap-2 p-3 rounded-xl border transition-all text-sm font-medium",
+                  audioEnabled
+                    ? "border-green-500/50 bg-green-500/10 text-green-400"
+                    : "border-red-500/50 bg-red-500/10 text-red-400"
+                )}
+              >
+                {audioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+                <span className="text-xs">{audioEnabled ? "Micro activé" : "Micro désactivé"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setVideoEnabled(!videoEnabled)}
+                className={cn(
+                  "flex flex-col items-center gap-2 p-3 rounded-xl border transition-all text-sm font-medium",
+                  videoEnabled
+                    ? "border-blue-500/50 bg-blue-500/10 text-blue-400"
+                    : "border-red-500/50 bg-red-500/10 text-red-400"
+                )}
+              >
+                {videoEnabled ? <VideoIcon className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+                <span className="text-xs">{videoEnabled ? "Vidéo activée" : "Vidéo désactivée"}</span>
+              </button>
             </div>
 
             <Button
-              className="w-full h-10 mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded transition-colors"
+              className="w-full h-11 mt-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 text-sm"
               onClick={() => onJoin({
                 username: userName,
                 videoEnabled,
@@ -371,35 +414,8 @@ function CustomLobby({ userName, isTeacher, onJoin }: { userName: string, isTeac
                 audioDeviceId: selectedAudioDevice
               })}
             >
-              Rejoindre
+              Rejoindre maintenant
             </Button>
-          </div>
-        </div>
-
-        <div className="bg-black relative flex items-center justify-center overflow-hidden">
-          {videoEnabled ? (
-            <video ref={videoRef} className="w-full h-full object-cover transform -scale-x-100" />
-          ) : (
-            <div className="flex flex-col items-center gap-4">
-              <Avatar className="h-24 w-24">
-                <AvatarFallback className="text-2xl bg-zinc-800 text-zinc-400">{userName[0]}</AvatarFallback>
-              </Avatar>
-              <div className="text-zinc-500">Vidéo désactivée</div>
-            </div>
-          )}
-          <div className="absolute bottom-4 left-4 right-4 flex justify-between text-xs text-white/50">
-            <div>{videoEnabled ? "Vérification vidéo : Réussie" : "Vidéo : Désactivée"}</div>
-
-            <div className="flex items-center gap-2">
-              <div className={cn("h-2 w-2 rounded-full", audioLevel > 5 ? "bg-green-500 animate-pulse" : "bg-red-500")} />
-              <div className="w-24 h-1 bg-zinc-700 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-green-500 transition-all duration-100 ease-out"
-                  style={{ width: `${audioLevel}%` }}
-                />
-              </div>
-              <span>{audioEnabled ? "Micro activé" : "Micro désactivé"}</span>
-            </div>
           </div>
         </div>
       </Card>
@@ -1097,7 +1113,7 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
         }}>
           {/* Top Bar (Auto-hides or subtle) */}
           <div className={cn(
-            "absolute top-0 left-0 right-0 h-16 z-50 flex items-center justify-between px-4 transition-all duration-300 ease-in-out bg-gradient-to-b from-black/90 via-black/50 to-transparent pointer-events-auto",
+            "absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-3 sm:px-4 h-14 sm:h-16 transition-all duration-300 ease-in-out bg-gradient-to-b from-black/90 via-black/50 to-transparent pointer-events-auto gap-2",
             controlsVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
           )}>
             <div className="flex items-center gap-3 text-xs text-zinc-300">
@@ -1194,14 +1210,14 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
           )}
         </div>
 
-        {/* Sidebar */}
+        {/* Sidebar — full-screen on mobile, fixed-width panel on md+ */}
         {sidebarView !== 'none' && (
-          <div className="absolute inset-0 z-50 md:static md:z-auto w-full md:w-[350px] bg-[#1a1a1a] border-l border-[#333] flex flex-col h-full animate-in slide-in-from-right duration-200 shadow-2xl">
-            <div className="h-12 border-b border-[#333] flex items-center justify-between px-4">
-              <h3 className="font-semibold text-sm">
-                {sidebarView === 'participants' ? `Participants (${participants.length})` : 'Chat'}
+          <div className="absolute inset-0 z-50 md:static md:z-auto w-full md:w-[320px] lg:w-[360px] bg-[#1a1a1a] border-l border-[#333] flex flex-col h-full animate-in slide-in-from-right duration-200 shadow-2xl">
+            <div className="h-13 border-b border-[#333] flex items-center justify-between px-4 py-3 bg-[#111] shrink-0">
+              <h3 className="font-bold text-sm text-white">
+                {sidebarView === 'participants' ? `👥 Participants (${participants.length})` : '💬 Discussion'}
               </h3>
-              <Button variant="ghost" size="icon" onClick={() => setSidebarView('none')} className="h-6 w-6 hover:bg-white/10">
+              <Button variant="ghost" size="icon" onClick={() => setSidebarView('none')} className="h-8 w-8 hover:bg-white/10 rounded-xl">
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -1314,15 +1330,15 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
       {/* Bottom Control Bar */}
       <div
         className={cn(
-          "h-[80px] bg-[#1a1a1a]/90 backdrop-blur-md border-t border-white/10 flex items-center justify-between px-4 select-none shrink-0 z-50 overflow-x-auto no-scrollbar transition-all duration-300 ease-in-out absolute bottom-0 left-0 right-0 md:relative md:translate-y-0",
-          !controlsVisible && "translate-y-full md:translate-y-0 opacity-0 md:opacity-100 pointer-events-none md:pointer-events-auto",
-          "pb-safe"
+          "bg-[#1a1a1a]/95 backdrop-blur-md border-t border-white/10 flex items-center justify-between px-2 sm:px-4 select-none shrink-0 z-50 overflow-x-auto transition-all duration-300 ease-in-out absolute bottom-0 left-0 right-0 md:relative md:translate-y-0",
+          "h-[72px] sm:h-[80px] pb-safe",
+          !controlsVisible && "translate-y-full md:translate-y-0 opacity-0 md:opacity-100 pointer-events-none md:pointer-events-auto"
         )}
         onClick={(e) => e.stopPropagation()}
       >
 
         {/* Left: Audio/Video */}
-        <div className="flex items-center gap-1 min-w-[180px]">
+        <div className="flex items-center gap-1 shrink-0">
           <div className="flex items-center gap-1 bg-[#2a2a2a] rounded-lg p-1">
             <button
               className={cn(
@@ -1365,12 +1381,12 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
         </div>
 
         {/* Center: Main Controls */}
-        <div className="flex items-center justify-center gap-2 flex-1 min-w-max px-4">
+        <div className="flex items-center justify-center gap-1 sm:gap-2 flex-1 overflow-x-auto px-1 sm:px-4 no-scrollbar">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex flex-col items-center gap-1.5 min-w-[64px] py-2 rounded-lg transition-all duration-200 hover:bg-[#2a2a2a] group">
+              <button className="flex flex-col items-center gap-1 sm:gap-1.5 min-w-[48px] sm:min-w-[64px] py-1.5 sm:py-2 rounded-lg transition-all duration-200 hover:bg-[#2a2a2a] group">
                 <ShieldCheck className="h-5 w-5 text-zinc-300 group-hover:text-white stroke-[1.5] transition-colors" />
-                <span className="text-[10px] font-medium text-zinc-500 group-hover:text-zinc-300 transition-colors">Sécurité</span>
+                <span className="text-[9px] sm:text-[10px] font-medium text-zinc-500 group-hover:text-zinc-300 transition-colors hidden xs:block">Sécurité</span>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-[#1a1a1a] border-[#333] text-zinc-300 w-56 mb-2" side="top">
@@ -1494,13 +1510,14 @@ function ZoomLikeConference({ isTeacher }: { isTeacher: boolean }) {
         </div>
 
         {/* Right: End Call */}
-        <div className="flex items-center justify-end min-w-[180px]">
+        <div className="flex items-center justify-end shrink-0">
           <Button
             variant="destructive"
-            className="bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg px-6 h-9"
+            className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl px-3 sm:px-6 h-9 sm:h-10 text-xs sm:text-sm shadow-lg shadow-red-500/20 whitespace-nowrap"
             onClick={() => room.disconnect()}
           >
-            Terminer
+            <span className="hidden sm:inline">Terminer</span>
+            <span className="sm:hidden">Fin</span>
           </Button>
         </div>
 
@@ -1521,8 +1538,8 @@ function ControlButton({ icon: Icon, label, onClick, badge, active, variant = 'd
     <button
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center gap-1.5 min-w-[64px] py-2 rounded-lg transition-all duration-200 relative group",
-        "hover:bg-[#2a2a2a] active:scale-95",
+        "flex flex-col items-center gap-1 sm:gap-1.5 min-w-[48px] sm:min-w-[64px] py-1.5 sm:py-2 rounded-lg transition-all duration-200 relative group active:scale-95",
+        "hover:bg-[#2a2a2a]",
         active && "bg-[#2a2a2a]",
         variant === 'danger' && "text-red-500 hover:bg-red-500/10",
         variant === 'success' && "text-green-500 hover:bg-green-500/10"
@@ -1544,7 +1561,7 @@ function ControlButton({ icon: Icon, label, onClick, badge, active, variant = 'd
         ) : null}
       </div>
       <span className={cn(
-        "text-[10px] font-medium transition-colors",
+        "text-[9px] sm:text-[10px] font-medium transition-colors hidden sm:block",
         active ? "text-blue-400" : "text-zinc-500 group-hover:text-zinc-300",
         variant === 'danger' && "text-red-500/80 group-hover:text-red-400",
         variant === 'success' && "text-green-500/80 group-hover:text-green-400"
@@ -1746,11 +1763,11 @@ function SpeakerView({ tracks }: { tracks: any[] }) {
 
   return (
     <div className="h-full w-full flex flex-col">
-      {/* Top Strip */}
+      {/* Top Strip — responsive thumbnail rail */}
       {otherTracks.length > 0 && (
-        <div className="h-[120px] flex gap-2 p-2 overflow-x-auto bg-black border-b border-[#333] shrink-0">
+        <div className="h-[90px] sm:h-[110px] md:h-[120px] flex gap-1.5 sm:gap-2 p-1.5 sm:p-2 overflow-x-auto bg-black border-b border-[#333] shrink-0">
           {otherTracks.map(track => (
-            <div key={track.participant.identity + track.source} className="h-full aspect-video min-w-[160px]">
+            <div key={track.participant.identity + track.source} className="h-full aspect-video min-w-[120px] sm:min-w-[140px] md:min-w-[160px] rounded overflow-hidden">
               <CustomParticipantTileRenderer trackRef={track} participant={track.participant} />
             </div>
           ))}
