@@ -47,6 +47,7 @@ import {
   Send,
   Lock,
   StopCircle
+} from "lucide-react";
 import { toast } from "sonner";
 import { MathSophosIcon } from "@/components/ui/math-sophos-logo";
 import { getParticipantToken, checkLiveKitConnection } from "@/actions/livekit";
