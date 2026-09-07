@@ -70,12 +70,14 @@ export function TextbookReader({ lesson }: TextbookReaderProps) {
         return <SelfAssessmentBlock key={block.id} block={block} />;
       case 'paragraph':
       case 'text':
-      default:
+      default: {
+        const textContent = 'content' in block ? (block as any).content : 'statement' in block ? (block as any).statement : '';
         return (
           <div key={block.id} className="my-4 text-foreground/90 font-serif text-base md:text-lg leading-relaxed">
-            <MarkdownRenderer content={block.content || ''} />
+            <MarkdownRenderer content={textContent || ''} />
           </div>
         );
+      }
     }
   };
 
