@@ -24,7 +24,6 @@ import {
   Brain,
   Zap,
 } from "lucide-react";
-import { MathSophosIcon } from "@/components/ui/math-sophos-logo";
 import { cn } from "@/lib/utils";
 
 interface MeetingSummary {
