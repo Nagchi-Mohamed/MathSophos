@@ -20,6 +20,7 @@ import { getChaptersByLesson } from "@/actions/chapters"
 import { AdminChapterCard } from "@/components/admin/admin-chapter-card"
 import { ChapterManagerWrapper } from "@/components/admin/chapter-manager-wrapper"
 import { ImportLessonsDialog } from "@/components/admin/import-lessons-dialog"
+import { BatchReviewLessonsDialog } from "@/components/admin/batch-review-lessons-dialog"
 
 export const dynamic = 'force-dynamic'
 
@@ -159,14 +160,17 @@ export default async function AdminLessonsPage({ searchParams }: PageProps) {
               Gérez le contenu éducatif de la plateforme
             </p>
           </div>
-          {showList && cycle !== "SUPERIEUR" && (
-            <Link href={`/admin/lessons/create?cycle=${cycle || ''}&level=${level || ''}&stream=${stream || ''}&semester=${semester || ''}&streamId=${streamId || ''}`}>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Nouvelle Leçon
-              </Button>
-            </Link>
-          )}
+          <div className="flex items-center gap-3">
+            <BatchReviewLessonsDialog filters={{ cycle, level, stream, semester, streamId, moduleId, lessonId }} />
+            {showList && cycle !== "SUPERIEUR" && (
+              <Link href={`/admin/lessons/create?cycle=${cycle || ''}&level=${level || ''}&stream=${stream || ''}&semester=${semester || ''}&streamId=${streamId || ''}`}>
+                <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nouvelle Leçon
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Navigation Views */}

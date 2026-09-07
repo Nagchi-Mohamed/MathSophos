@@ -11,6 +11,7 @@ import { getChaptersByLesson } from "@/actions/chapters"
 import { getLessonById } from "@/actions/content"
 import { EducationalLevel } from "@/lib/enums"
 import { SeriesCard } from "@/components/ui/series-card"
+import { BatchReviewSeriesDialog } from "@/components/admin/batch-review-series-dialog"
 
 export default async function SeriesPage({ searchParams }: { searchParams: Promise<{ cycle?: string; level?: string; stream?: string; semester?: string; streamId?: string; moduleId?: string; lessonId?: string }> }) {
   const resolvedParams = await searchParams
@@ -87,6 +88,9 @@ export default async function SeriesPage({ searchParams }: { searchParams: Promi
                 ? `${cycle} – ${currentLesson?.titleFr || "Leçon"}`
                 : `${cycle} ${level}${stream ? ` – ${stream}` : ""} – Semestre ${semester}`}
             </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <BatchReviewSeriesDialog filters={{ cycle, level, stream, semester, streamId, moduleId, lessonId }} />
           </div>
         </div>
 

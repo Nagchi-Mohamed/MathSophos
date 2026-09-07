@@ -19,13 +19,271 @@ interface RawDbLesson {
 }
 
 /**
+ * Robust stateful block parser function that matches environment headers accurately,
+ * keeps problem, statement, solution, and proof content strictly inside their respective environment cards,
+ * and ensures box titles match their content.
+ */
+function parseSectionBlocks(sectionBody: string, sectionNumber: number): ContentBlock[] {
+  const lines = sectionBody.split('\n');
+  const blocks: ContentBlock[] = [];
+
+  let defCount = 0;
+  let thmCount = 0;
+  let exCount = 0;
+
+  let currentBlock: any = null;
+
+  const flushCurrentBlock = () => {
+    if (!currentBlock) return;
+
+    // Clean up strings
+    if (currentBlock.statement) currentBlock.statement = currentBlock.statement.trim();
+    if (currentBlock.proof) currentBlock.proof = currentBlock.proof.trim();
+    if (currentBlock.problem) currentBlock.problem = currentBlock.problem.trim();
+    if (currentBlock.solution) currentBlock.solution = currentBlock.solution.trim();
+    if (currentBlock.content) currentBlock.content = currentBlock.content.trim();
+
+    // Check if problem contains inline Solution / Résolution
+    if (currentBlock.type === 'example' || currentBlock.type === 'application') {
+      if (!currentBlock.solution && currentBlock.problem) {
+        const solMatch = currentBlock.problem.match(/^([\s\S]*?)(?:\n|\b)(?:Solution|Résolution|Correction)\s*:?\s*([\s\S]*)$/i);
+        if (solMatch && solMatch[2].trim()) {
+          currentBlock.problem = solMatch[1].trim();
+          currentBlock.solution = solMatch[2].trim();
+        }
+      }
+    }
+
+    // Check if statement contains inline Démonstration / Preuve
+    if (['theorem', 'proposition', 'lemma', 'corollary'].includes(currentBlock.type)) {
+      if (!currentBlock.proof && currentBlock.statement) {
+        const proofMatch = currentBlock.statement.match(/^([\s\S]*?)(?:\n|\b)(?:Démonstration|Preuve|Proof)\s*:?\s*([\s\S]*)$/i);
+        if (proofMatch && proofMatch[2].trim()) {
+          currentBlock.statement = proofMatch[1].trim();
+          currentBlock.proof = proofMatch[2].trim();
+        }
+      }
+    }
+
+    // Ensure non-empty problem or statement
+    if (currentBlock.type === 'example') {
+      if (!currentBlock.problem && currentBlock.solution) {
+        currentBlock.problem = currentBlock.title || 'Exemple d\'application';
+      }
+    }
+
+    delete currentBlock.activeTarget;
+    blocks.push(currentBlock);
+    currentBlock = null;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+
+    if (!trimmedLine) {
+      if (currentBlock && currentBlock[currentBlock.activeTarget] !== undefined) {
+        currentBlock[currentBlock.activeTarget] += '\n\n';
+      }
+      continue;
+    }
+
+    // 1. Definition check
+    const defMatch = trimmedLine.match(/^(?:#{3,4}|\*\*|\*|_)*\s*(?:Définition|Definition)\s*(?:[0-9.]*)\s*:?\s*(.*)$/i);
+    if (defMatch) {
+      flushCurrentBlock();
+      defCount++;
+      let title = defMatch[1] ? defMatch[1].replace(/^(?:\*\*|\*|_)+|(?:\*\*|\*|_)+$/g, '').trim() : undefined;
+      if (title && title.startsWith(':')) title = title.substring(1).trim();
+
+      currentBlock = {
+        id: `sec-${sectionNumber}-b-${blocks.length}`,
+        type: 'definition',
+        number: `${sectionNumber}.${defCount}`,
+        title: title || undefined,
+        statement: '',
+        activeTarget: 'statement'
+      };
+      continue;
+    }
+
+    // 2. Theorem / Proposition / Lemma / Corollary check
+    const thmMatch = trimmedLine.match(/^(?:#{3,4}|\*\*|\*|_)*\s*(Théorème|Theorem|Proposition|Propriété|Lemme|Corollaire)\s*(?:[0-9.]*)\s*:?\s*(.*)$/i);
+    if (thmMatch) {
+      flushCurrentBlock();
+      thmCount++;
+      const matchedKey = thmMatch[1];
+      const isProp = /Proposition|Propriété/i.test(matchedKey);
+      const type = isProp ? 'proposition' : /Lemme/i.test(matchedKey) ? 'lemma' : /Corollaire/i.test(matchedKey) ? 'corollary' : 'theorem';
+      let title = thmMatch[2] ? thmMatch[2].replace(/^(?:\*\*|\*|_)+|(?:\*\*|\*|_)+$/g, '').trim() : undefined;
+      if (title && title.startsWith(':')) title = title.substring(1).trim();
+
+      currentBlock = {
+        id: `sec-${sectionNumber}-b-${blocks.length}`,
+        type,
+        number: `${sectionNumber}.${thmCount}`,
+        title: title || undefined,
+        statement: '',
+        proof: '',
+        activeTarget: 'statement'
+      };
+      continue;
+    }
+
+    // 3. Example / Application check
+    const exMatch = trimmedLine.match(/^(?:#{3,4}|\*\*|\*|_)*\s*(Exemple|Application)\s*(?:[0-9.]*)\s*:?\s*(.*)$/i);
+    if (exMatch) {
+      flushCurrentBlock();
+      exCount++;
+      let title = exMatch[2] ? exMatch[2].replace(/^(?:\*\*|\*|_)+|(?:\*\*|\*|_)+$/g, '').trim() : undefined;
+      if (title && title.startsWith(':')) title = title.substring(1).trim();
+
+      currentBlock = {
+        id: `sec-${sectionNumber}-b-${blocks.length}`,
+        type: 'example',
+        number: `${sectionNumber}.${exCount}`,
+        title: title || undefined,
+        problem: '',
+        solution: '',
+        activeTarget: 'problem'
+      };
+      continue;
+    }
+
+    // 4. Method check
+    const methodMatch = trimmedLine.match(/^(?:#{3,4}|\*\*|\*|_)*\s*(?:Méthode|Method)\s*:?\s*(.*)$/i);
+    if (methodMatch) {
+      flushCurrentBlock();
+      let title = methodMatch[1] ? methodMatch[1].replace(/^(?:\*\*|\*|_)+|(?:\*\*|\*|_)+$/g, '').trim() : undefined;
+      currentBlock = {
+        id: `sec-${sectionNumber}-b-${blocks.length}`,
+        type: 'method',
+        title: title || 'Méthode',
+        steps: [],
+        content: '',
+        activeTarget: 'content'
+      };
+      continue;
+    }
+
+    // 5. Remark / Warning / Important check
+    const remMatch = trimmedLine.match(/^(?:#{3,4}|\*\*|\*|_)*\s*(Remarque|Important|Attention|Warning)\s*:?\s*(.*)$/i);
+    if (remMatch) {
+      flushCurrentBlock();
+      const matchedKey = remMatch[1];
+      const type = /Attention|Warning/i.test(matchedKey) ? 'warning' : /Important/i.test(matchedKey) ? 'important' : 'remark';
+      let content = remMatch[2] ? remMatch[2].replace(/^(?:\*\*|\*|_)+|(?:\*\*|\*|_)+$/g, '').trim() : '';
+
+      currentBlock = {
+        id: `sec-${sectionNumber}-b-${blocks.length}`,
+        type,
+        content: content,
+        activeTarget: 'content'
+      };
+      continue;
+    }
+
+    // 6. Sub-section marker: Démonstration / Preuve
+    const proofMarker = trimmedLine.match(/^(?:#{3,4}|\*\*|\*|_)*\s*(?:Démonstration|Preuve|Proof)\s*:?\s*(.*)$/i);
+    if (proofMarker) {
+      if (currentBlock && ['theorem', 'proposition', 'lemma', 'corollary'].includes(currentBlock.type)) {
+        currentBlock.activeTarget = 'proof';
+        if (proofMarker[1]) currentBlock.proof += proofMarker[1] + '\n';
+        continue;
+      } else if (currentBlock && currentBlock.type === 'example') {
+        currentBlock.activeTarget = 'solution';
+        if (proofMarker[1]) currentBlock.solution += proofMarker[1] + '\n';
+        continue;
+      } else {
+        // Attach to previous theorem if valid
+        const lastBlock = blocks[blocks.length - 1];
+        if (lastBlock && ['theorem', 'proposition', 'lemma', 'corollary'].includes(lastBlock.type) && !lastBlock.proof) {
+          lastBlock.proof = proofMarker[1] || '';
+          currentBlock = lastBlock;
+          currentBlock.activeTarget = 'proof';
+          blocks.pop();
+          continue;
+        } else {
+          flushCurrentBlock();
+          currentBlock = {
+            id: `sec-${sectionNumber}-b-${blocks.length}`,
+            type: 'proof',
+            content: proofMarker[1] || '',
+            activeTarget: 'content'
+          };
+          continue;
+        }
+      }
+    }
+
+    // 7. Sub-section marker: Solution / Résolution / Correction
+    const solMarker = trimmedLine.match(/^(?:#{3,4}|\*\*|\*|_)*\s*(?:Solution|Résolution|Correction)\s*:?\s*(.*)$/i);
+    if (solMarker) {
+      if (currentBlock && (currentBlock.type === 'example' || currentBlock.type === 'exercise')) {
+        currentBlock.activeTarget = 'solution';
+        if (solMarker[1]) currentBlock.solution += solMarker[1] + '\n';
+        continue;
+      } else if (currentBlock && ['theorem', 'proposition', 'lemma', 'corollary'].includes(currentBlock.type)) {
+        currentBlock.activeTarget = 'proof';
+        if (solMarker[1]) currentBlock.proof += solMarker[1] + '\n';
+        continue;
+      }
+    }
+
+    // 8. Sub-section marker: Problème / Énoncé
+    const probMarker = trimmedLine.match(/^(?:#{3,4}|\*\*|\*|_)*\s*(?:Problème|Énoncé)\s*:?\s*(.*)$/i);
+    if (probMarker) {
+      if (currentBlock && (currentBlock.type === 'example' || currentBlock.type === 'exercise')) {
+        currentBlock.activeTarget = 'problem';
+        if (probMarker[1]) currentBlock.problem += 'Problème : ' + probMarker[1] + '\n';
+        else currentBlock.problem += 'Problème : ';
+        continue;
+      } else if (currentBlock && ['theorem', 'proposition', 'lemma', 'corollary', 'definition'].includes(currentBlock.type)) {
+        currentBlock.activeTarget = 'statement';
+        if (probMarker[1]) currentBlock.statement += probMarker[1] + '\n';
+        continue;
+      }
+    }
+
+    // 9. Standalone Title Extraction for Example / Theorem / Definition if title wasn't on header line
+    if (currentBlock && !currentBlock.title) {
+      const titleCandidate = trimmedLine.match(/^(?:\*\*|__|\*|_)*(Exemple\s+\d+[^:\n]*|[A-ZÀ-ÿ0-9\s'’-]{3,60})(?:\*\*|__|\*|_)*:?$/);
+      if (titleCandidate && (currentBlock[currentBlock.activeTarget] === '' || currentBlock[currentBlock.activeTarget] === '\n\n')) {
+        currentBlock.title = titleCandidate[1].trim();
+        continue;
+      }
+    }
+
+    // Default: Append line to current activeTarget or start paragraph block
+    if (currentBlock) {
+      if (currentBlock.activeTarget === 'content' && currentBlock.type === 'method') {
+        currentBlock.steps = currentBlock.steps || [];
+        currentBlock.steps.push(trimmedLine);
+      } else {
+        currentBlock[currentBlock.activeTarget] = (currentBlock[currentBlock.activeTarget] || '') + line + '\n';
+      }
+    } else {
+      currentBlock = {
+        id: `sec-${sectionNumber}-b-${blocks.length}`,
+        type: 'paragraph',
+        content: line + '\n',
+        activeTarget: 'content'
+      };
+    }
+  }
+
+  flushCurrentBlock();
+  return blocks;
+}
+
+/**
  * Intelligent Read-Only Runtime Adapter:
  * Converts legacy DB records (Markdown or legacy JSON) into structured TextbookLesson (Schema v2).
  * Preserves 100% of existing text, formulas, exercises, hints, solutions, images, and videos.
  */
 export function toTextbookLesson(lesson: RawDbLesson): TextbookLesson {
   const contentRaw = lesson.contentFr || '';
-  
+
   // 1. Try parsing directly if it's already a Schema v2 JSON
   try {
     const parsed = JSON.parse(contentRaw);
@@ -65,7 +323,6 @@ export function toTextbookLesson(lesson: RawDbLesson): TextbookLesson {
   const prerequisites: string[] = [];
   const vocabulary: { term: string; definition: string }[] = [];
 
-  // Extract list items under "Objectifs" or "Prérequis" if present
   const objMatch = markdown.match(/(?:#+|\*\*)\s*(?:Objectifs|Objectifs d'apprentissage)[^\n]*\n([\s\S]*?)(?=\n#+|\n\*\*|\n\n[A-Z]|$)/i);
   if (objMatch) {
     objMatch[1].split('\n').forEach(line => {
@@ -85,11 +342,7 @@ export function toTextbookLesson(lesson: RawDbLesson): TextbookLesson {
   // 4. Split content into structured sections based on Heading 1 or Heading 2
   const sectionChunks = markdown.split(/\n(?=#{1,2}\s+)/);
   const sections: TextbookSection[] = [];
-
   let sectionCounter = 0;
-  let defCounter = 0;
-  let thmCounter = 0;
-  let exCounter = 0;
 
   sectionChunks.forEach((chunk) => {
     const trimmed = chunk.trim();
@@ -104,100 +357,12 @@ export function toTextbookLesson(lesson: RawDbLesson): TextbookLesson {
       body = trimmed.replace(/^#{1,2}\s+.+$/m, '').trim();
     }
 
-    // Skip creating standalone section if it's purely Objectives/Prerequisites (already extracted)
     if (/^(Objectifs|Prérequis|Prerequisites)/i.test(sectionTitle)) {
       return;
     }
 
     sectionCounter++;
-    defCounter = 0;
-    thmCounter = 0;
-    exCounter = 0;
-
-    const blocks: ContentBlock[] = [];
-
-    // Sub-split body into semantic environment blocks
-    const paragraphBlocks = body.split(/\n{2,}/);
-
-    paragraphBlocks.forEach((pText, blockIdx) => {
-      const text = pText.trim();
-      if (!text) return;
-
-      const blockId = `sec-${sectionCounter}-block-${blockIdx}`;
-
-      // Check for Definition
-      if (/(?:Définition|Definition)\b/i.test(text)) {
-        defCounter++;
-        const statement = text.replace(/^#*\s*(?:Définition|Definition)\s*(?:[0-9.]*)\s*:?\s*/i, '').trim();
-        blocks.push({
-          id: blockId,
-          type: 'definition',
-          number: `${sectionCounter}.${defCounter}`,
-          statement: statement || text,
-        });
-      }
-      // Check for Theorem / Proposition / Lemma
-      else if (/(?:Théorème|Theorem|Proposition|Propriété|Lemme)\b/i.test(text)) {
-        thmCounter++;
-        const isProp = /Proposition|Propriété/i.test(text);
-        const type = isProp ? 'proposition' : 'theorem';
-        const statement = text.replace(/^#*\s*(?:Théorème|Theorem|Proposition|Propriété|Lemme)\s*(?:[0-9.]*)\s*:?\s*/i, '').trim();
-        blocks.push({
-          id: blockId,
-          type,
-          number: `${sectionCounter}.${thmCounter}`,
-          statement: statement || text,
-        });
-      }
-      // Check for Proof
-      else if (/(?:Démonstration|Preuve|Proof)\b/i.test(text)) {
-        const content = text.replace(/^#*\s*(?:Démonstration|Preuve|Proof)\s*:?\s*/i, '').trim();
-        blocks.push({
-          id: blockId,
-          type: 'proof',
-          content: content || text,
-        });
-      }
-      // Check for Example / Application
-      else if (/(?:Exemple|Application)\b/i.test(text)) {
-        exCounter++;
-        const problem = text.replace(/^#*\s*(?:Exemple|Application)\s*(?:[0-9.]*)\s*:?\s*/i, '').trim();
-        blocks.push({
-          id: blockId,
-          type: 'example',
-          number: `${sectionCounter}.${exCounter}`,
-          problem: problem || text,
-        });
-      }
-      // Check for Method
-      else if (/(?:Méthode|Method)\b/i.test(text)) {
-        const steps = text.split('\n').map(l => l.replace(/^[\s*-]+/, '').trim()).filter(Boolean);
-        blocks.push({
-          id: blockId,
-          type: 'method',
-          title: 'Méthode',
-          steps: steps.length > 0 ? steps : [text],
-        });
-      }
-      // Check for Remark / Important / Warning
-      else if (/(?:Remarque|Important|Attention|Warning)\b/i.test(text)) {
-        const type = /Attention|Warning/i.test(text) ? 'warning' : /Important/i.test(text) ? 'important' : 'remark';
-        const content = text.replace(/^#*\s*(?:Remarque|Important|Attention|Warning)\s*:?\s*/i, '').trim();
-        blocks.push({
-          id: blockId,
-          type,
-          content: content || text,
-        });
-      }
-      // Default Text / Paragraph block
-      else {
-        blocks.push({
-          id: blockId,
-          type: 'paragraph',
-          content: text,
-        });
-      }
-    });
+    const blocks = parseSectionBlocks(body, sectionCounter);
 
     sections.push({
       id: `sec-${sectionCounter}`,
@@ -207,19 +372,12 @@ export function toTextbookLesson(lesson: RawDbLesson): TextbookLesson {
     });
   });
 
-  // If no sections were created (e.g. empty or unstructured text), create a single default section
   if (sections.length === 0) {
     sections.push({
       id: 'sec-1',
       number: 1,
       title: 'Contenu du cours',
-      blocks: [
-        {
-          id: 'block-1',
-          type: 'paragraph',
-          content: markdown || 'Aucun contenu disponible pour cette leçon.',
-        },
-      ],
+      blocks: parseSectionBlocks(markdown, 1),
     });
   }
 

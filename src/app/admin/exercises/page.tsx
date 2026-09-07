@@ -8,6 +8,7 @@ import { getStreamsByLevel, getStreamById } from "@/actions/streams"
 
 import { getModulesByStream } from "@/actions/modules"
 import { getPaginatedLessons, LessonFilters } from "@/actions/content"
+import { BatchReviewSeriesDialog } from "@/components/admin/batch-review-series-dialog"
 
 
 export const dynamic = 'force-dynamic'
@@ -129,6 +130,9 @@ export default async function AdminExercisesPage({ searchParams }: PageProps) {
             <p className="text-muted-foreground">
               Gérez les séries d'exercices de la plateforme
             </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <BatchReviewSeriesDialog filters={{ cycle, level, stream, semester, streamId, moduleId, lessonId }} />
           </div>
         </div>
       </div>

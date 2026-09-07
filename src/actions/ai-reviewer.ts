@@ -338,3 +338,493 @@ RÈGLES CRITIQUES :
     error: parseGoogleAIError(lastError || new Error("Unknown error during review"))
   }
 }
+
+// ------ BATCH REVIEW FOR ALL LESSONS & CHAPTERS ------
+
+export interface BatchReviewFilterParams {
+  cycle?: string
+  level?: string
+  stream?: string
+  semester?: string
+  streamId?: string
+  moduleId?: string
+  lessonId?: string
+  titleQuery?: string
+}
+
+export interface BatchItemResult {
+  id: string
+  title: string
+  type: 'lesson' | 'chapter' | 'series'
+  success: boolean
+  changesCount: number
+  error?: string
+  keyUsedIndex?: number
+}
+
+/**
+ * Fetch lessons list for selector dropdown
+ */
+export async function getLessonsListForSelector(params?: { cycle?: string; level?: string; stream?: string }) {
+  try {
+    const where: any = {};
+    if (params?.level && params.level !== 'ALL') {
+      where.level = params.level;
+    } else if (params?.cycle && params.cycle !== 'ALL') {
+      if (params.cycle === 'COLLEGE') where.level = { in: ['COLLEGE_1AC', 'COLLEGE_2AC', 'COLLEGE_3AC'] };
+      if (params.cycle === 'LYCEE') where.level = { in: ['LYCEE_TC', 'LYCEE_1BAC', 'LYCEE_2BAC'] };
+      if (params.cycle === 'SUPERIEUR') where.level = 'UNIVERSITY';
+    }
+    if (params?.stream && params.stream !== 'ALL') where.stream = params.stream;
+
+    const lessons = await prisma.lesson.findMany({
+      where,
+      select: { id: true, titleFr: true, level: true, stream: true, semester: true },
+      orderBy: [{ level: 'asc' }, { semester: 'asc' }, { titleFr: 'asc' }],
+      take: 200
+    });
+    return { success: true, lessons };
+  } catch (error: any) {
+    return { success: false, lessons: [], error: error.message };
+  }
+}
+
+/**
+ * Batch review all lessons or chapters with multi-key rotation and strict Moroccan curriculum alignment
+ */
+export async function batchReviewLessons(params: BatchReviewFilterParams): Promise<{
+  success: boolean
+  totalItems: number
+  processed: number
+  successful: number
+  failed: number
+  results: BatchItemResult[]
+  error?: string
+}> {
+  const session = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
+  if (!session) {
+    return { success: false, totalItems: 0, processed: 0, successful: 0, failed: 0, results: [], error: "Non autorisé" };
+  }
+
+  console.log("🚀 Starting Batch AI Review for Lessons/Chapters with params:", params);
+
+  const results: BatchItemResult[] = [];
+  let successful = 0;
+  let failed = 0;
+
+  try {
+    const isSuperieur = params.cycle === 'SUPERIEUR' || params.level === 'UNIVERSITY';
+
+    if (isSuperieur) {
+      // Review Chapters in Supérieur
+      const chapterWhere: any = {};
+      if (params.lessonId && params.lessonId !== 'ALL') {
+        chapterWhere.lessonId = params.lessonId;
+      } else if (params.moduleId || params.streamId) {
+        chapterWhere.lesson = {
+          ...(params.moduleId ? { moduleId: params.moduleId } : {}),
+          ...(params.streamId ? { educationalStreamId: params.streamId } : {})
+        };
+      }
+      if (params.titleQuery) {
+        chapterWhere.titleFr = { contains: params.titleQuery, mode: 'insensitive' };
+      }
+
+      const chapters = await prisma.chapter.findMany({
+        where: chapterWhere,
+        include: {
+          lesson: {
+            include: {
+              module: {
+                include: { educationalStream: true }
+              }
+            }
+          }
+        },
+        take: 100
+      });
+
+      console.log(`📚 Found ${chapters.length} chapters to review for Supérieur.`);
+
+      for (const chapter of chapters) {
+        let retryCount = 0;
+        const maxRetries = getAdminKeyCount() + 1;
+        let itemSuccess = false;
+        let itemError = '';
+        let changesCount = 0;
+
+        const gradeLevel = "Université / Supérieur";
+        const streamName = chapter.lesson?.module?.educationalStream?.name || "Supérieur";
+        const title = `${chapter.lesson?.titleFr || 'Leçon'} — Chapitre ${chapter.chapterNumber}: ${chapter.titleFr}`;
+
+        while (retryCount < maxRetries) {
+          try {
+            const systemPrompt = `Tu es un Inspecteur Pédagogique et Enseignant-Chercheur Spécialiste du Système Éducatif Marocain (Niveau Université / Supérieur / CPGE).
+Ta mission est de RÉVISER ET COMPLÉTER intégralement ce chapitre de cours pour qu'il soit d'une rigueur absolue.
+
+CONGESTION ET STRUCTURE DU CONTENU :
+1. Mettre chaque bloc dans son enveloppe Markdown propre :
+   - ### Définition X.Y : Titre de la définition
+   - ### Théorème X.Y : Titre du théorème
+   - ### Proposition X.Y : Titre de la proposition
+   - ### Propriété X.Y : Titre de la propriété
+   - ### Exemple X.Y : Titre de l'exemple
+   - ### Méthode : Titre de la méthode
+   - ### Remarque : / ### Attention :
+
+2. TOUT LE CONTENU DOIT RESTER STRICTEMENT À L'INTÉRIEUR DU BLOC :
+   - Pour les exemples :
+     Exemple 1 : Titre
+     Problème : Énoncé du problème mathématique.
+     Solution :
+     Résolution étape par étape.
+   - Pour les théorèmes/propositions :
+     Énoncé mathématique rigoureux...
+     Démonstration :
+     Preuve formelle.
+
+3. RIGUEUR DU NIVEAU SUPÉRIEUR (UNIVERSITÉ / CPGE) :
+   - Utilise les symboles mathématiques universitaires avancés : \\forall, \\exists, \\mathbb{R}^n, \\mathbb{C}^n, \\varepsilon-\\delta, matrices, espaces vectoriels, normes ||.||, topologie.
+
+4. COMPLÉTION ET LATEX :
+   - Si du texte est incomplet, complète-le entièrement sans laisser de texte tronqué.
+   - Corrige toute erreur de syntaxe LaTeX ($...$ inline, $$...$$ block).
+
+FORMAT JSON DE SORTIE EXCLUSIF :
+{
+  "refinedContent": "Contenu complet révisé en Markdown/LaTeX",
+  "changesReport": ["Changement 1", "Changement 2"]
+}`;
+
+            const client = getRotatedAdminClient(retryCount);
+            const model = client.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+            const promptText = `CONTENU DU CHAPITRE (${title}) :\n\n${chapter.contentFr || ""}\n\nRéviser et corriger le contenu.`;
+            const response = await model.generateContent([systemPrompt, promptText]);
+            const text = response.response.text();
+
+            let cleanText = text.trim();
+            if (cleanText.startsWith("```json")) {
+              cleanText = cleanText.replace(/^```json\s*\n?/, "").replace(/\n?```\s*$/, "");
+            } else if (cleanText.startsWith("```")) {
+              cleanText = cleanText.replace(/^```\s*\n?/, "").replace(/\n?```\s*$/, "");
+            }
+            cleanText = fixLatexJsonEscapes(cleanText);
+
+            const parsed = JSON.parse(cleanText);
+            if (parsed.refinedContent) {
+              await prisma.chapter.update({
+                where: { id: chapter.id },
+                data: { contentFr: parsed.refinedContent }
+              });
+              changesCount = parsed.changesReport?.length || 1;
+              itemSuccess = true;
+              break;
+            }
+          } catch (err: any) {
+            console.error(`Error processing chapter ${chapter.id} (Attempt ${retryCount + 1}):`, err.message);
+            const isQuota = err.status === 429 || err.message?.includes("429") || err.message?.includes("Quota");
+            if (isQuota && retryCount < maxRetries - 1) {
+              console.log("⚠️ Quota hit. Rotating to next API key...");
+              retryCount++;
+              await new Promise(r => setTimeout(r, 1500));
+              continue;
+            }
+            itemError = err.message || "Erreur de traitement";
+            break;
+          }
+        }
+
+        if (itemSuccess) {
+          successful++;
+          results.push({ id: chapter.id, title, type: 'chapter', success: true, changesCount, keyUsedIndex: retryCount });
+        } else {
+          failed++;
+          results.push({ id: chapter.id, title, type: 'chapter', success: false, changesCount: 0, error: itemError });
+        }
+      }
+    } else {
+      // Review Lessons in Collège / Lycée / All
+      const lessonWhere: any = {};
+      if (params.lessonId && params.lessonId !== 'ALL') {
+        lessonWhere.id = params.lessonId;
+      } else {
+        if (params.level && params.level !== 'ALL') {
+          lessonWhere.level = params.level;
+        } else if (params.cycle && params.cycle !== 'ALL') {
+          if (params.cycle === 'COLLEGE') {
+            lessonWhere.level = { in: ['COLLEGE_1AC', 'COLLEGE_2AC', 'COLLEGE_3AC'] };
+          } else if (params.cycle === 'LYCEE') {
+            lessonWhere.level = { in: ['LYCEE_TC', 'LYCEE_1BAC', 'LYCEE_2BAC'] };
+          }
+        }
+        if (params.stream && params.stream !== 'ALL') {
+          lessonWhere.stream = params.stream;
+        }
+        if (params.semester && params.semester !== 'ALL') {
+          lessonWhere.semester = Number(params.semester);
+        }
+        if (params.titleQuery) {
+          lessonWhere.titleFr = { contains: params.titleQuery, mode: 'insensitive' };
+        }
+      }
+
+      const lessons = await prisma.lesson.findMany({
+        where: lessonWhere,
+        take: 100
+      });
+
+      console.log(`📚 Found ${lessons.length} lessons to review.`);
+
+      for (const lesson of lessons) {
+        let retryCount = 0;
+        const maxRetries = getAdminKeyCount() + 1;
+        let itemSuccess = false;
+        let itemError = '';
+        let changesCount = 0;
+
+        const title = lesson.titleFr;
+        const gradeLevel = lesson.level;
+
+        while (retryCount < maxRetries) {
+          try {
+            const systemPrompt = `Tu es un Inspecteur Pédagogique Expert du Ministère de l'Éducation Nationale du Maroc.
+Ta mission est de RÉVISER ET COMPLÉTER cette leçon pour qu'elle soit PARFAITEMENT CONFORME aux Orientations Pédagogiques Officielles du Système Marocain.
+
+CONSTRUCTS DE BLOCS ET TITRES EXPLICITES :
+1. Chaque section de cours doit être dans son bloc Markdown approprié :
+   - ### Définition X.Y : Titre de la définition
+   - ### Théorème X.Y : Titre du théorème
+   - ### Proposition X.Y : Titre de la proposition
+   - ### Propriété X.Y : Titre de la propriété
+   - ### Exemple X.Y : Titre de l'exemple
+   - ### Méthode : Titre de la méthode
+   - ### Remarque : / ### Attention :
+
+2. STRUCTURE INTERNE D'UN EXEMPLE (TOUT LE CONTENU À L'INTÉRIEUR DU BLOC EXEMPLE) :
+   Exemple 1 : Titre explicite
+   Problème : Énoncé du problème.
+   Solution :
+   Résolution détaillée étape par étape.
+
+3. CONFORMITÉ AUX SYMBOLES DU SYSTÈME MAROCAIN (COLLÈGE / LYCÉE) :
+   - Utilise les notations standard marocaines : lim_{x\\to a}, \\mathbb{R}, \\mathbb{N}, \\mathbb{Z}, \\mathbb{Q}, \\mathbb{D}, \\vec{u}, \\vec{v}, vecteurs, intervalles [a, b], tableaux de variations.
+
+4. COMPLÉTION ET LATEX :
+   - Corrige la syntaxe LaTeX ($...$ inline, $$...$$ block).
+   - Si du texte est incomplet, complète-le intégralement.
+
+FORMAT JSON DE SORTIE EXCLUSIF :
+{
+  "refinedContent": "Contenu complet révisé en Markdown/LaTeX",
+  "changesReport": ["Changement 1", "Changement 2"]
+}`;
+
+            const client = getRotatedAdminClient(retryCount);
+            const model = client.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+            const promptText = `LEÇON (${title} - Niveau: ${gradeLevel}) :\n\n${lesson.contentFr || ""}\n\nRéviser et corriger le contenu.`;
+            const response = await model.generateContent([systemPrompt, promptText]);
+            const text = response.response.text();
+
+            let cleanText = text.trim();
+            if (cleanText.startsWith("```json")) {
+              cleanText = cleanText.replace(/^```json\s*\n?/, "").replace(/\n?```\s*$/, "");
+            } else if (cleanText.startsWith("```")) {
+              cleanText = cleanText.replace(/^```\s*\n?/, "").replace(/\n?```\s*$/, "");
+            }
+            cleanText = fixLatexJsonEscapes(cleanText);
+
+            const parsed = JSON.parse(cleanText);
+            if (parsed.refinedContent) {
+              await prisma.lesson.update({
+                where: { id: lesson.id },
+                data: { contentFr: parsed.refinedContent }
+              });
+              changesCount = parsed.changesReport?.length || 1;
+              itemSuccess = true;
+              break;
+            }
+          } catch (err: any) {
+            console.error(`Error processing lesson ${lesson.id} (Attempt ${retryCount + 1}):`, err.message);
+            const isQuota = err.status === 429 || err.message?.includes("429") || err.message?.includes("Quota");
+            if (isQuota && retryCount < maxRetries - 1) {
+              console.log("⚠️ Quota hit. Rotating to next API key...");
+              retryCount++;
+              await new Promise(r => setTimeout(r, 1500));
+              continue;
+            }
+            itemError = err.message || "Erreur de traitement";
+            break;
+          }
+        }
+
+        if (itemSuccess) {
+          successful++;
+          results.push({ id: lesson.id, title, type: 'lesson', success: true, changesCount, keyUsedIndex: retryCount });
+        } else {
+          failed++;
+          results.push({ id: lesson.id, title, type: 'lesson', success: false, changesCount: 0, error: itemError });
+        }
+      }
+    }
+
+    return {
+      success: true,
+      totalItems: results.length,
+      processed: results.length,
+      successful,
+      failed,
+      results
+    };
+  } catch (error: any) {
+    console.error("❌ Batch Review Error:", error);
+    return {
+      success: false,
+      totalItems: 0,
+      processed: 0,
+      successful,
+      failed,
+      results,
+      error: error.message || "Erreur lors du traitement par lot"
+    };
+  }
+}
+
+/**
+ * Batch review all exercise series with multi-key rotation and strict Moroccan curriculum alignment
+ */
+export async function batchReviewSeries(params: BatchReviewFilterParams): Promise<{
+  success: boolean
+  totalItems: number
+  processed: number
+  successful: number
+  failed: number
+  results: BatchItemResult[]
+  error?: string
+}> {
+  const session = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
+  if (!session) {
+    return { success: false, totalItems: 0, processed: 0, successful: 0, failed: 0, results: [], error: "Non autorisé" };
+  }
+
+  console.log("🚀 Starting Batch AI Review for Series with params:", params);
+
+  const results: BatchItemResult[] = [];
+  let successful = 0;
+  let failed = 0;
+
+  try {
+    const seriesWhere: any = {};
+    if (params.lessonId && params.lessonId !== 'ALL') {
+      seriesWhere.lessonId = params.lessonId;
+    } else {
+      if (params.level && params.level !== 'ALL') {
+        seriesWhere.level = params.level;
+      } else if (params.cycle && params.cycle !== 'ALL') {
+        if (params.cycle === 'COLLEGE') {
+          seriesWhere.level = { in: ['COLLEGE_1AC', 'COLLEGE_2AC', 'COLLEGE_3AC'] };
+        } else if (params.cycle === 'LYCEE') {
+          seriesWhere.level = { in: ['LYCEE_TC', 'LYCEE_1BAC', 'LYCEE_2BAC'] };
+        }
+      }
+      if (params.stream && params.stream !== 'ALL') {
+        seriesWhere.stream = params.stream;
+      }
+      if (params.semester && params.semester !== 'ALL') {
+        seriesWhere.semester = Number(params.semester);
+      }
+      if (params.titleQuery) {
+        seriesWhere.title = { contains: params.titleQuery, mode: 'insensitive' };
+      }
+    }
+
+    const seriesList = await prisma.series.findMany({
+      where: seriesWhere,
+      include: {
+        exercises: true
+      },
+      take: 100
+    });
+
+    console.log(`✏️ Found ${seriesList.length} series to review.`);
+
+    for (const series of seriesList) {
+      if (!series.exercises || series.exercises.length === 0) continue;
+
+      let retryCount = 0;
+      const maxRetries = getAdminKeyCount() + 1;
+      let itemSuccess = false;
+      let itemError = '';
+
+      while (retryCount < maxRetries) {
+        try {
+          const result = await reviewSeriesContent({
+            exercises: series.exercises,
+            lessonId: series.lessonId || undefined
+          });
+
+          if (result.success && result.data?.refinedExercises) {
+            // Update exercises
+            for (const ex of result.data.refinedExercises) {
+              if (ex.id) {
+                await prisma.exercise.update({
+                  where: { id: ex.id },
+                  data: {
+                    statement: ex.statement || ex.problemTextFr || '',
+                    solution: ex.solution || ex.solutionFr || '',
+                    hints: ex.hints || []
+                  }
+                });
+              }
+            }
+            itemSuccess = true;
+            break;
+          } else {
+            throw new Error(result.error || "Échec de la révision de la série");
+          }
+        } catch (err: any) {
+          console.error(`Error processing series ${series.id} (Attempt ${retryCount + 1}):`, err.message);
+          const isQuota = err.status === 429 || err.message?.includes("429") || err.message?.includes("Quota");
+          if (isQuota && retryCount < maxRetries - 1) {
+            console.log("⚠️ Quota hit. Rotating to next API key...");
+            retryCount++;
+            await new Promise(r => setTimeout(r, 1500));
+            continue;
+          }
+          itemError = err.message || "Erreur de traitement";
+          break;
+        }
+      }
+
+      if (itemSuccess) {
+        successful++;
+        results.push({ id: series.id, title: series.title, type: 'series', success: true, changesCount: series.exercises.length, keyUsedIndex: retryCount });
+      } else {
+        failed++;
+        results.push({ id: series.id, title: series.title, type: 'series', success: false, changesCount: 0, error: itemError });
+      }
+    }
+
+    return {
+      success: true,
+      totalItems: results.length,
+      processed: results.length,
+      successful,
+      failed,
+      results
+    };
+  } catch (error: any) {
+    console.error("❌ Batch Series Review Error:", error);
+    return {
+      success: false,
+      totalItems: 0,
+      processed: 0,
+      successful,
+      failed,
+      results,
+      error: error.message || "Erreur lors du traitement des séries"
+    };
+  }
+}
+
