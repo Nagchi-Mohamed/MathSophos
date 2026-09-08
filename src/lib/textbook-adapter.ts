@@ -196,7 +196,7 @@ function parseSectionBlocks(sectionBody: string, sectionNumber: number): Content
         continue;
       } else {
         // Attach to previous theorem if valid
-        const lastBlock = blocks[blocks.length - 1];
+        const lastBlock = blocks[blocks.length - 1] as any;
         if (lastBlock && ['theorem', 'proposition', 'lemma', 'corollary'].includes(lastBlock.type) && !lastBlock.proof) {
           lastBlock.proof = proofMarker[1] || '';
           currentBlock = lastBlock;
