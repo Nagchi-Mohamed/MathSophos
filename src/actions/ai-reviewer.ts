@@ -771,8 +771,8 @@ export async function batchReviewSeries(params: BatchReviewFilterParams): Promis
                 await prisma.exercise.update({
                   where: { id: ex.id },
                   data: {
-                    statement: ex.statement || ex.problemTextFr || '',
-                    solution: ex.solution || ex.solutionFr || '',
+                    problemTextFr: ex.problemTextFr || ex.statement || '',
+                    solutionFr: ex.solutionFr || ex.solution || '',
                     hints: ex.hints || []
                   }
                 });
