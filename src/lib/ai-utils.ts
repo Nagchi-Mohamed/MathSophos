@@ -61,8 +61,8 @@ FAILURE TO FOLLOW THESE RULES WILL CAUSE RENDERING ERRORS.
 
 /**
  * Improves raw AI response text by fixing common LaTeX vs JSON escaping issues.
- * Specifically handles LaTeX commands that start with characters that JSON considers escape sequences (\n, \r, \t, \b, \f).
- * Also sanitizes unescaped control characters (newlines, tabs) INSIDE string literals, which causes "Bad control character" errors.
+ * Handles ALL invalid JSON escape sequences generically by double-escaping lone backslashes.
+ * Also sanitizes unescaped control characters (newlines, tabs) INSIDE string literals.
  */
 export function fixLatexJsonEscapes(jsonString: string): string {
   if (!jsonString) return jsonString;
@@ -70,102 +70,59 @@ export function fixLatexJsonEscapes(jsonString: string): string {
   let out = "";
   let i = 0;
   let inString = false;
-  let len = jsonString.length;
+  const len = jsonString.length;
 
   while (i < len) {
     const char = jsonString[i];
 
     // Handle quotes to toggle string state
     if (char === '"') {
-      // Check if it's an escaped quote
+      // Count preceding backslashes to determine if quote is escaped
       let backslashCount = 0;
       let j = i - 1;
-      while (j >= 0 && jsonString[j] === '\\') {
-        backslashCount++;
-        j--;
-      }
-      // If even number of backslashes, the quote is real (not escaped)
-      if (backslashCount % 2 === 0) {
-        inString = !inString;
-      }
+      while (j >= 0 && jsonString[j] === '\\') { backslashCount++; j--; }
+      // Even number of backslashes = real unescaped quote
+      if (backslashCount % 2 === 0) inString = !inString;
       out += char;
       i++;
       continue;
     }
 
-    // If we are inside a string, we need to handle control characters and specific LaTeX patterns
     if (inString) {
-      // 0. Handle double backslashes (already escaped)
-      // If we encounter \\, it means a literal backslash in the final string.
-      // We should preserve it as \\ and skip the next character (which is the second slash).
-      if (char === '\\' && i + 1 < len && jsonString[i + 1] === '\\') {
-        out += '\\\\';
-        i += 2;
-        continue;
-      }
+      // Escape raw control characters that are invalid inside JSON strings
+      if (char === '\n') { out += '\\n'; i++; continue; }
+      if (char === '\r') { out += '\\r'; i++; continue; }
+      if (char === '\t') { out += '\\t'; i++; continue; }
+      if (char === '\b') { out += '\\b'; i++; continue; }
+      if (char === '\f') { out += '\\f'; i++; continue; }
 
-      // 1. Handle actual control characters (newlines, tabs, etc.)
-      // These are invalid in standard JSON strings and must be escaped
-      if (char === '\n') {
-        out += '\\n';
-        i++;
-        continue;
-      }
-      if (char === '\r') {
-        // Just ignore CR or start a newline? Usually ignore if followed by \n
-        // But let's just escape it to be safe
-        out += '\\r';
-        i++;
-        continue;
-      }
-      if (char === '\t') {
-        out += '\\t';
-        i++;
-        continue;
-      }
-
-      // 2. Handle LaTeX command collisions (e.g. \neq -> \n + eq)
-      // Check for backslash followed by specific chars
-      if (char === '\\') {
-        // Look ahead
-        if (i + 1 < len) {
-          const remaining = jsonString.slice(i);
-          let matched = false;
-
-          // List of problematic LaTeX commands that start with chars colliding with JSON escapes:
-          // \b (backspace): \beta, \bar, \begin, \binom, \bigcap, \bigcup, \mathbf, \mathbb
-          // \f (form feed): \frac, \forall
-          // \n (newline): \neq, \nabla, \notin, \nexists
-          // \r (carriage return): \rho, \right, \rightarrow, \Re
-          // \t (tab): \tan, \tau, \theta, \times, \text, \to, \top, \triangle
-
-          // We check longest matches first to avoid prefix issues (though rare here)
-          const commands = [
-            '\\rightarrow', '\\triangle', '\\mathbf', '\\mathbb', '\\bigcap', '\\bigcup',
-            '\\right', '\\frac', '\\prod', '\\perp', // \prod starts with \p (not escape), but \perp too. Wait \p is invalid escape.
-            // Focusing on collisions (\b, \f, \n, \r, \t)
-            '\\begin', '\\binom', '\\beta', '\\bar',
-            '\\frac', '\\forall',
-            '\\neq', '\\nabla', '\\notin',
-            '\\rho', '\\right',
-            '\\times', '\\text', '\\theta', '\\tan', '\\tau', '\\top'
-          ];
-
-          for (const cmd of commands) {
-            if (remaining.startsWith(cmd)) {
-              out += '\\' + cmd; // double escape: \\frac
-              i += cmd.length;
-              matched = true;
-              break;
-            }
-          }
-
-          if (matched) continue;
+      // Handle backslashes: valid JSON escapes pass through; everything else gets double-escaped
+      if (char === '\\' && i + 1 < len) {
+        const next = jsonString[i + 1];
+        // Valid JSON escape characters: " \ / b f n r t u
+        if ('"\\\/bfnrtu'.includes(next)) {
+          // Valid — copy both chars and advance
+          out += char + next;
+          i += 2;
+          continue;
+        } else {
+          // Invalid JSON escape (LaTeX commands: \frac, \lim, \sum, \alpha, \cdot, etc.)
+          // Double-escape the backslash so it becomes a literal backslash in the parsed string
+          out += '\\\\';
+          i++;
+          continue;
         }
+      }
+
+      // Trailing backslash at end of string
+      if (char === '\\' && i + 1 === len) {
+        out += '\\\\';
+        i++;
+        continue;
       }
     }
 
-    // Default: just copy char
+    // Default: copy char as-is
     out += char;
     i++;
   }
