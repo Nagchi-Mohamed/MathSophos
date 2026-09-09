@@ -1,10 +1,13 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fixLatexJsonEscapes } from "@/lib/ai-utils";
-import { getRotatedAdminClient, getAdminKeyCount } from "@/lib/google-ai";
+import { getRotatedAdminClient, getAdminKeyCount, parseGoogleAIError } from "@/lib/google-ai";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
+
+// Candidate models for fallback if one model hits quota limits
+const CANDIDATE_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
 
 // Helper to build SSE message
 function sseMessage(event: string, data: object): string {
@@ -18,8 +21,9 @@ async function processLesson(lesson: any): Promise<{
   error?: string;
   keyUsedIndex: number;
 }> {
-  const maxRetries = getAdminKeyCount() + 1;
-  let retryCount = 0;
+  const maxKeyRetries = getAdminKeyCount();
+  const totalAttempts = maxKeyRetries * CANDIDATE_MODELS.length;
+  let attempt = 0;
   let lastError: any = null;
 
   const systemPrompt = `Tu es un Inspecteur Pédagogique Expert du Ministère de l'Éducation Nationale du Maroc.
@@ -54,10 +58,14 @@ FORMAT JSON DE SORTIE EXCLUSIF :
   "changesReport": ["Changement 1", "Changement 2"]
 }`;
 
-  while (retryCount < maxRetries) {
+  while (attempt < totalAttempts) {
+    const keyIndex = attempt % maxKeyRetries;
+    const modelIndex = Math.floor(attempt / maxKeyRetries) % CANDIDATE_MODELS.length;
+    const modelName = CANDIDATE_MODELS[modelIndex];
+
     try {
-      const client = getRotatedAdminClient(retryCount);
-      const model = client.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const client = getRotatedAdminClient(keyIndex);
+      const model = client.getGenerativeModel({ model: modelName });
 
       const promptText = `LEÇON (${lesson.titleFr} - Niveau: ${lesson.level}) :\n\n${lesson.contentFr || ""}\n\nRéviser et corriger le contenu.`;
       const response = await model.generateContent([systemPrompt, promptText]);
@@ -80,7 +88,7 @@ FORMAT JSON DE SORTIE EXCLUSIF :
         return {
           success: true,
           changesCount: parsed.changesReport?.length || 1,
-          keyUsedIndex: retryCount,
+          keyUsedIndex: keyIndex,
         };
       }
       throw new Error("refinedContent manquant dans la réponse IA");
@@ -90,9 +98,10 @@ FORMAT JSON DE SORTIE EXCLUSIF :
         err.status === 429 ||
         err.message?.includes("429") ||
         err.message?.includes("Quota");
-      if (isQuota && retryCount < maxRetries - 1) {
-        retryCount++;
-        await new Promise((r) => setTimeout(r, 1500));
+
+      if (isQuota && attempt < totalAttempts - 1) {
+        attempt++;
+        await new Promise((r) => setTimeout(r, 1000));
         continue;
       }
       break;
@@ -102,8 +111,8 @@ FORMAT JSON DE SORTIE EXCLUSIF :
   return {
     success: false,
     changesCount: 0,
-    error: lastError?.message || "Erreur inconnue",
-    keyUsedIndex: retryCount,
+    error: parseGoogleAIError(lastError),
+    keyUsedIndex: attempt % maxKeyRetries,
   };
 }
 
@@ -114,8 +123,9 @@ async function processChapter(chapter: any): Promise<{
   error?: string;
   keyUsedIndex: number;
 }> {
-  const maxRetries = getAdminKeyCount() + 1;
-  let retryCount = 0;
+  const maxKeyRetries = getAdminKeyCount();
+  const totalAttempts = maxKeyRetries * CANDIDATE_MODELS.length;
+  let attempt = 0;
   let lastError: any = null;
 
   const systemPrompt = `Tu es un Inspecteur Pédagogique et Enseignant-Chercheur Spécialiste du Système Éducatif Marocain (Niveau Université / Supérieur / CPGE).
@@ -144,10 +154,14 @@ FORMAT JSON DE SORTIE EXCLUSIF :
 
   const title = `${chapter.lesson?.titleFr || "Leçon"} — Ch.${chapter.chapterNumber}: ${chapter.titleFr}`;
 
-  while (retryCount < maxRetries) {
+  while (attempt < totalAttempts) {
+    const keyIndex = attempt % maxKeyRetries;
+    const modelIndex = Math.floor(attempt / maxKeyRetries) % CANDIDATE_MODELS.length;
+    const modelName = CANDIDATE_MODELS[modelIndex];
+
     try {
-      const client = getRotatedAdminClient(retryCount);
-      const model = client.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const client = getRotatedAdminClient(keyIndex);
+      const model = client.getGenerativeModel({ model: modelName });
 
       const promptText = `CONTENU DU CHAPITRE (${title}) :\n\n${chapter.contentFr || ""}\n\nRéviser et corriger le contenu.`;
       const response = await model.generateContent([systemPrompt, promptText]);
@@ -170,7 +184,7 @@ FORMAT JSON DE SORTIE EXCLUSIF :
         return {
           success: true,
           changesCount: parsed.changesReport?.length || 1,
-          keyUsedIndex: retryCount,
+          keyUsedIndex: keyIndex,
         };
       }
       throw new Error("refinedContent manquant dans la réponse IA");
@@ -180,9 +194,10 @@ FORMAT JSON DE SORTIE EXCLUSIF :
         err.status === 429 ||
         err.message?.includes("429") ||
         err.message?.includes("Quota");
-      if (isQuota && retryCount < maxRetries - 1) {
-        retryCount++;
-        await new Promise((r) => setTimeout(r, 1500));
+
+      if (isQuota && attempt < totalAttempts - 1) {
+        attempt++;
+        await new Promise((r) => setTimeout(r, 1000));
         continue;
       }
       break;
@@ -192,8 +207,8 @@ FORMAT JSON DE SORTIE EXCLUSIF :
   return {
     success: false,
     changesCount: 0,
-    error: lastError?.message || "Erreur inconnue",
-    keyUsedIndex: retryCount,
+    error: parseGoogleAIError(lastError),
+    keyUsedIndex: attempt % maxKeyRetries,
   };
 }
 
