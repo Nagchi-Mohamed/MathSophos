@@ -6,8 +6,8 @@ import { getNextAdminClient, getRotatedAdminClient, getAdminKeyCount, parseGoogl
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
-// Candidate models for fallback: gemini-2.0-flash and 1.5-flash have 1,500 free requests/day (vs 20 for 2.5-flash)
-const CANDIDATE_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"];
+// Candidate models for fallback: gemini-1.5-flash has 1,500 free requests/day (15 RPM)
+const CANDIDATE_MODELS = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.5-flash"];
 
 // Helper to build SSE message
 function sseMessage(event: string, data: object): string {
@@ -107,14 +107,10 @@ FORMAT JSON DE SORTIE EXCLUSIF :
       throw new Error("refinedContent manquant dans la réponse IA");
     } catch (err: any) {
       lastError = err;
-      const isQuota =
-        err.status === 429 ||
-        err.message?.includes("429") ||
-        err.message?.includes("Quota");
-
-      if (isQuota && attempt < totalAttempts - 1) {
+      if (attempt < totalAttempts - 1) {
         attempt++;
-        const waitMs = getRetryDelayMs(err);
+        const isQuota = err.status === 429 || err.message?.includes("429") || err.message?.includes("Quota");
+        const waitMs = isQuota ? getRetryDelayMs(err) : 300;
         await new Promise((r) => setTimeout(r, waitMs));
         continue;
       }
@@ -204,14 +200,10 @@ FORMAT JSON DE SORTIE EXCLUSIF :
       throw new Error("refinedContent manquant dans la réponse IA");
     } catch (err: any) {
       lastError = err;
-      const isQuota =
-        err.status === 429 ||
-        err.message?.includes("429") ||
-        err.message?.includes("Quota");
-
-      if (isQuota && attempt < totalAttempts - 1) {
+      if (attempt < totalAttempts - 1) {
         attempt++;
-        const waitMs = getRetryDelayMs(err);
+        const isQuota = err.status === 429 || err.message?.includes("429") || err.message?.includes("Quota");
+        const waitMs = isQuota ? getRetryDelayMs(err) : 300;
         await new Promise((r) => setTimeout(r, waitMs));
         continue;
       }
