@@ -38,6 +38,9 @@ import {
   Layers,
   AlertTriangle,
   ChevronRight,
+  Copy,
+  Check,
+  FileText,
 } from "lucide-react";
 import { getLessonsListForSelector, BatchReviewFilterParams } from "@/actions/ai-reviewer";
 import { EDUCATION_SYSTEM } from "@/lib/education-system";
@@ -127,11 +130,62 @@ export function BatchReviewLessonsDialog({
     total: 0,
   });
 
+  // Copy report state
+  const [copied, setCopied] = useState(false);
+
   // Resume state
   const [savedProgress, setSavedProgress] = useState<SavedProgress | null>(null);
   const filterHashRef = useRef<string>("");
   const eventSourceRef = useRef<EventSource | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Helper to generate full report text for copying
+  const handleCopyReport = useCallback(() => {
+    const lines: string[] = [];
+    lines.push(`=== RAPPORT DE RÉVISION IA (MATHSPHERE) ===`);
+    lines.push(`Date : ${new Date().toLocaleString("fr-FR")}`);
+    lines.push(`Portée : ${getScopeSummaryLabel()}`);
+    lines.push(`-------------------------------------------`);
+
+    if (summary) {
+      lines.push(`TOTAL RÉVISÉS  : ${summary.total}`);
+      lines.push(`SUCCÈS         : ${summary.successful}`);
+      lines.push(`ÉCHECS         : ${summary.failed}`);
+      lines.push(`TAUX DE SUCCÈS : ${Math.round((summary.successful / (summary.total || 1)) * 100)}%`);
+    } else {
+      lines.push(`TOTAL TRAITÉS  : ${results.length}`);
+    }
+    lines.push(``);
+
+    const failedItems = results.filter((r) => !r.success);
+    if (failedItems.length > 0) {
+      lines.push(`❌ LEÇONS / CHAPITRES NON CORRIGÉS (${failedItems.length}) :`);
+      failedItems.forEach((item, i) => {
+        const meta = [item.level, item.stream, item.semester].filter(Boolean).join(" • ");
+        lines.push(`  ${i + 1}. [${item.type.toUpperCase()}] ${item.title}${meta ? ` (${meta})` : ""}`);
+        lines.push(`     --> RAISON DE L'ÉCHEC : ${item.error || "Raison non spécifiée"}`);
+      });
+      lines.push(``);
+    } else if (results.length > 0) {
+      lines.push(`✅ Toutes les leçons révisées ont été corrigées avec succès ! Aucun échec.`);
+      lines.push(``);
+    }
+
+    const successItems = results.filter((r) => r.success);
+    if (successItems.length > 0) {
+      lines.push(`✅ LEÇONS CORRIGÉES AVEC SUCCÈS (${successItems.length}) :`);
+      successItems.forEach((item, i) => {
+        const meta = [item.level, item.stream, item.semester].filter(Boolean).join(" • ");
+        lines.push(`  ${i + 1}. ${item.title}${meta ? ` (${meta})` : ""} - ${item.changesCount} correction(s)`);
+      });
+    }
+
+    const text = lines.join("\n");
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success("Rapport copié dans le presse-papier !");
+    setTimeout(() => setCopied(false), 2500);
+  }, [summary, results]);
 
   // Load lessons for selector
   useEffect(() => {
@@ -253,14 +307,24 @@ export function BatchReviewLessonsDialog({
   }, []);
 
   const startReview = useCallback(
-    (resumeFrom?: SavedProgress) => {
+    (resumeFrom?: SavedProgress, forceFresh: boolean = false) => {
       // Close any existing connection
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
       }
 
-      const initialResults: LiveResult[] = resumeFrom?.results || [];
-      const skipIds = resumeFrom?.processedIds || [];
+      // Auto-resume from savedProgress if available and not explicitly starting fresh
+      let targetResume = resumeFrom;
+      if (!targetResume && !forceFresh && savedProgress && savedProgress.processedIds.length > 0) {
+        targetResume = savedProgress;
+      }
+
+      if (forceFresh) {
+        clearSavedProgress();
+      }
+
+      const initialResults: LiveResult[] = targetResume?.results || [];
+      const skipIds = targetResume?.processedIds || [];
 
       setPhase("processing");
       setResults(initialResults);
@@ -346,7 +410,6 @@ export function BatchReviewLessonsDialog({
 
         // Save progress so far
         saveProgressToStorage(localResults, processedIds);
-        // Update savedProgress state so resume button shows
         setSavedProgress({
           processedIds,
           results: localResults,
@@ -370,7 +433,7 @@ export function BatchReviewLessonsDialog({
         }
       };
     },
-    [cycle, level, stream, semester, selectedLessonId, titleQuery, saveProgressToStorage, clearSavedProgress, router, phase]
+    [cycle, level, stream, semester, selectedLessonId, titleQuery, savedProgress, saveProgressToStorage, clearSavedProgress, router, phase]
   );
 
   // Cleanup on unmount
@@ -637,29 +700,46 @@ export function BatchReviewLessonsDialog({
           {/* ── Live Processing Log ── */}
           {showLiveLog && (
             <div className="space-y-3">
-              {/* Progress bar */}
+              {/* Vibrant Green Progress bar (0% - 100%) */}
               {progress.total > 0 && (
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>
-                      {phase === "processing" && currentItem
-                        ? `Traitement en cours : ${currentItem.title}`
-                        : phase === "done"
-                        ? "Révision terminée !"
-                        : "En pause"}
+                <div className="space-y-2 p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/60">
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                      {phase === "processing" && currentItem ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 text-emerald-600 animate-spin shrink-0" />
+                          <span className="truncate">En cours : {currentItem.title}</span>
+                        </>
+                      ) : phase === "done" ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span>Révision 100% terminée !</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span>Traitement interrompu / en pause</span>
+                        </>
+                      )}
                     </span>
-                    <span className="font-mono font-semibold">
+                    <span className="font-mono text-emerald-800 dark:text-emerald-300 font-extrabold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-700 shrink-0">
                       {progress.index}/{progress.total} ({progressPercent}%)
                     </span>
                   </div>
-                  <Progress
-                    value={progressPercent}
-                    className="h-2"
-                  />
+
+                  {/* Green Progress bar line */}
+                  <div className="w-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 rounded-full h-3.5 overflow-hidden p-0.5 shadow-inner">
+                    <div
+                      className="bg-emerald-500 hover:bg-emerald-600 h-full rounded-full transition-all duration-500 ease-out shadow-xs flex items-center justify-end pr-1 text-[9px] font-black text-white"
+                      style={{ width: `${Math.max(progressPercent, 3)}%` }}
+                    >
+                      {progressPercent >= 10 && `${progressPercent}%`}
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* Summary stats (shown when done) */}
+              {/* Summary stats (shown when done or interrupted with results) */}
               {summary && (
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div className="p-3 bg-muted/50 rounded-lg border">
@@ -678,7 +758,7 @@ export function BatchReviewLessonsDialog({
                   </div>
                   <div className="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-lg border border-rose-200 dark:border-rose-900">
                     <p className="text-xs text-rose-700 dark:text-rose-400 uppercase font-semibold">
-                      Échecs
+                      Échecs / Non corrigés
                     </p>
                     <p className="text-2xl font-extrabold text-rose-600 dark:text-rose-400">
                       {summary.failed}
@@ -687,11 +767,69 @@ export function BatchReviewLessonsDialog({
                 </div>
               )}
 
-              {/* Live log */}
+              {/* ── Failed Lessons Report Section ── */}
+              {results.filter((r) => !r.success).length > 0 && (
+                <div className="p-3.5 bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-rose-800 dark:text-rose-300 font-bold text-xs">
+                      <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>
+                        {results.filter((r) => !r.success).length} leçon(s) / chapitre(s) non corrigé(s)
+                      </span>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-800"
+                    >
+                      Détails des échecs
+                    </Badge>
+                  </div>
+                  <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                    {results
+                      .filter((r) => !r.success)
+                      .map((item, idx) => (
+                        <div
+                          key={`failed-${item.id}-${idx}`}
+                          className="p-2 rounded bg-background/90 dark:bg-zinc-900 border border-rose-200 dark:border-rose-900/60 text-xs space-y-1"
+                        >
+                          <div className="flex items-center justify-between gap-2 font-semibold text-rose-950 dark:text-rose-200">
+                            <span className="truncate">{idx + 1}. {item.title}</span>
+                            <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
+                              {[item.level, item.stream, item.semester].filter(Boolean).join(" • ")}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-rose-700 dark:text-rose-300 font-mono bg-rose-100/60 dark:bg-rose-950/60 px-2 py-1 rounded border border-rose-200 dark:border-rose-900">
+                            ⚠️ Raison : {item.error || "Réponse non conforme de l'IA"}
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Live log header with Copy button */}
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
-                  Rapport en temps réel
-                </p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Rapport détaillé en temps réel
+                  </p>
+                  {results.length > 0 && (
+                    <Button
+                      onClick={handleCopyReport}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-xs font-semibold gap-1.5"
+                    >
+                      {copied ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5 text-purple-600" />
+                      )}
+                      <span>{copied ? "Copié !" : "Copier le rapport"}</span>
+                    </Button>
+                  )}
+                </div>
+
                 <div
                   ref={scrollRef}
                   className="h-64 overflow-y-auto rounded-lg border bg-muted/20 p-2 space-y-1.5 scroll-smooth"
@@ -703,7 +841,7 @@ export function BatchReviewLessonsDialog({
                       <span>
                         {savedProgress.processedIds.length} élément
                         {savedProgress.processedIds.length > 1 ? "s" : ""} déjà traité
-                        {savedProgress.processedIds.length > 1 ? "s" : ""} (reprise)
+                        {savedProgress.processedIds.length > 1 ? "s" : ""} (reprise automatique)
                       </span>
                     </div>
                   )}
@@ -743,10 +881,26 @@ export function BatchReviewLessonsDialog({
 
         {/* ── Footer actions ── */}
         <DialogFooter className="gap-2 sm:gap-2 shrink-0 pt-2 border-t flex-wrap">
-          {/* Launch (fresh start) */}
+          {/* Copy report button in footer if results exist */}
+          {results.length > 0 && (
+            <Button
+              onClick={handleCopyReport}
+              variant="outline"
+              className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 text-xs font-semibold gap-1.5"
+            >
+              {copied ? (
+                <Check className="w-4 h-4 text-emerald-600" />
+              ) : (
+                <Copy className="w-4 h-4 text-emerald-600" />
+              )}
+              <span>{copied ? "Rapport copié !" : "Copier le rapport"}</span>
+            </Button>
+          )}
+
+          {/* Launch / Start */}
           {(phase === "idle" || phase === "interrupted") && (
             <Button
-              onClick={() => startReview()}
+              onClick={() => startReview(undefined, true)}
               disabled={isRunning}
               className="bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-md gap-2"
             >
@@ -757,8 +911,8 @@ export function BatchReviewLessonsDialog({
               )}
               <span>
                 {phase === "interrupted"
-                  ? "Recommencer depuis le début"
-                  : `Lancer la révision (${getScopeSummaryLabel().substring(0, 28)}${getScopeSummaryLabel().length > 28 ? "…" : ""})`}
+                  ? "Recommencer du début"
+                  : `Lancer la révision (${getScopeSummaryLabel().substring(0, 24)}${getScopeSummaryLabel().length > 24 ? "…" : ""})`}
               </span>
             </Button>
           )}
@@ -773,7 +927,7 @@ export function BatchReviewLessonsDialog({
                 variant="outline"
                 className="border-amber-400 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/30 font-semibold gap-2"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-4 h-4 text-amber-600" />
                 <span>
                   Reprendre ({savedProgress.processedIds.length}/{progress.total || "?"}{" "}
                   traités)
