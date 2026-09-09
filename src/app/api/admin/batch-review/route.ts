@@ -1,17 +1,30 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fixLatexJsonEscapes } from "@/lib/ai-utils";
-import { getRotatedAdminClient, getAdminKeyCount, parseGoogleAIError } from "@/lib/google-ai";
+import { getNextAdminClient, getRotatedAdminClient, getAdminKeyCount, parseGoogleAIError } from "@/lib/google-ai";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
-// Candidate models for fallback if one model hits quota limits
-const CANDIDATE_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+// Candidate models for fallback: gemini-2.0-flash and 1.5-flash have 1,500 free requests/day (vs 20 for 2.5-flash)
+const CANDIDATE_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"];
 
 // Helper to build SSE message
 function sseMessage(event: string, data: object): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+// Helper to extract retry delay from 429 error
+function getRetryDelayMs(err: any): number {
+  if (!err) return 1500;
+  const match = err.message?.match(/retry in ([\d.]+)s/i) || err.message?.match(/retryDelay["\s:]+([\d.]+)/i);
+  if (match) {
+    const sec = parseFloat(match[1]);
+    if (!isNaN(sec) && sec > 0) {
+      return Math.min(Math.ceil(sec * 1000), 8000); // cap max retry delay to 8s to stay inside request limits
+    }
+  }
+  return 1500;
 }
 
 // Process a single lesson with AI and return result
@@ -101,7 +114,8 @@ FORMAT JSON DE SORTIE EXCLUSIF :
 
       if (isQuota && attempt < totalAttempts - 1) {
         attempt++;
-        await new Promise((r) => setTimeout(r, 1000));
+        const waitMs = getRetryDelayMs(err);
+        await new Promise((r) => setTimeout(r, waitMs));
         continue;
       }
       break;
@@ -197,7 +211,8 @@ FORMAT JSON DE SORTIE EXCLUSIF :
 
       if (isQuota && attempt < totalAttempts - 1) {
         attempt++;
-        await new Promise((r) => setTimeout(r, 1000));
+        const waitMs = getRetryDelayMs(err);
+        await new Promise((r) => setTimeout(r, waitMs));
         continue;
       }
       break;
@@ -333,6 +348,9 @@ export async function GET(req: NextRequest) {
               successful,
               failed,
             });
+
+            // 2s pause between items to stay well below the 15 requests/min free tier rate limit
+            await new Promise((r) => setTimeout(r, 2000));
           }
 
           send("done", {
@@ -428,6 +446,9 @@ export async function GET(req: NextRequest) {
               successful,
               failed,
             });
+
+            // 2s pause between items to stay well below the 15 requests/min free tier rate limit
+            await new Promise((r) => setTimeout(r, 2000));
           }
 
           send("done", {
