@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FileText, Calendar, School, Trash2, Filter, Eye, Edit, Download, Printer, BookOpen, Loader2, Globe, Lock, Copy } from "lucide-react"
+import { FileText, Calendar, School, Trash2, Filter, Eye, Edit, Download, Printer, BookOpen, Loader2, Globe, Lock, Copy, Code } from "lucide-react"
 import { toast } from "sonner"
 import { InlineLatex } from "@/components/inline-latex"
+import { generateLatexForFiche } from "@/lib/latex-generator"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -314,22 +315,31 @@ export function FichesList({ initialFiches, isAdmin = false, isPublicView = fals
               <FileText className="w-5 h-5 text-primary" />
               <InlineLatex content={selectedPdfFiche?.lessonTitle || ""} />
             </DialogTitle>
-            <div className="flex gap-2">
-              {/* Direct Download Button approach: Link to print view with download hint? 
-                        Or just use window.print() on the iframe context? 
-                        The user asked for "Download as PDF". 
-                        Reliable client-side download usually requires generating a Blob or using the browser's print-to-pdf.
-                        We'll offer a button that opens the print view in a new tab which triggers printing, the most robust way without backend PDF gen.
-                    */}
+            <div className="flex gap-2 items-center">
+              <Button variant="outline" size="sm" onClick={() => {
+                if (selectedPdfFiche) {
+                  const texContent = generateLatexForFiche(selectedPdfFiche)
+                  const blob = new Blob([texContent], { type: "text/x-tex;charset=utf-8" })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement("a")
+                  a.href = url
+                  a.download = `fiche-${selectedPdfFiche.id}.tex`
+                  a.click()
+                  URL.revokeObjectURL(url)
+                  toast.success("Fichier LaTeX (.tex) téléchargé")
+                }
+              }}>
+                <Code className="w-4 h-4 mr-2" /> Code LaTeX (.tex)
+              </Button>
               <Button variant="outline" size="sm" onClick={() => {
                 const iframe = document.getElementById('pdf-preview-iframe') as HTMLIFrameElement;
                 iframe?.contentWindow?.print();
               }}>
                 <Printer className="w-4 h-4 mr-2" /> Imprimer / PDF
               </Button>
-              <Link href={`/print/fiche/${selectedPdfFiche?.id}`} target="_blank" download>
+              <Link href={`/print/fiche/${selectedPdfFiche?.id}`} target="_blank">
                 <Button size="sm">
-                  <Download className="w-4 h-4 mr-2" /> Ouvrir / Télécharger
+                  <Download className="w-4 h-4 mr-2" /> Télécharger PDF
                 </Button>
               </Link>
             </div>

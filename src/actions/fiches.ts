@@ -14,19 +14,37 @@ export type FicheContentStep = {
   observations?: string
 }
 
+export type FicheSession = {
+  id: string
+  title: string // e.g. "Séance 1 — Ensemble N et Parité"
+  duration: string // e.g. "2 h"
+  demarche: string // Démarche & Activités (HTML/LaTeX)
+  traceEcrite: string // Trace écrite / Contenu du cours (HTML/LaTeX)
+  evaluation: string // Évaluation / Application (HTML/LaTeX)
+}
+
 export type CreateFicheInput = {
   teacherName: string
   schoolName: string
   gradeLevel: EducationalLevel
   stream?: string
+  subject?: string
+  schoolYear?: string
+  textbook?: string
   semester?: number
   lessonTitle?: string
   duration: string
+  capacities?: string
+  programContents?: string
   pedagogicalGuidelines?: string
   prerequisites?: string
   extensions?: string
   didacticTools?: string
-  content: FicheContentStep[]
+  bilanSequence?: string
+  difficultiesObserved?: string
+  remediationProposed?: string
+  observations?: string
+  content: FicheSession[] | FicheContentStep[] | any
 }
 
 export async function createFiche(data: CreateFicheInput) {
@@ -42,14 +60,23 @@ export async function createFiche(data: CreateFicheInput) {
       schoolName: data.schoolName,
       gradeLevel: data.gradeLevel,
       stream: data.stream,
+      subject: data.subject || "Mathématiques",
+      schoolYear: data.schoolYear || "2025 – 2026",
+      textbook: data.textbook || "Najah",
       semester: data.semester || 1,
       lessonTitle: data.lessonTitle,
       duration: data.duration,
+      capacities: data.capacities,
+      programContents: data.programContents,
       pedagogicalGuidelines: data.pedagogicalGuidelines,
       prerequisites: data.prerequisites,
       extensions: data.extensions,
       didacticTools: data.didacticTools,
-      content: JSON.stringify(data.content), // Store as stringified JSON if needed, or straight valid JSON
+      bilanSequence: data.bilanSequence,
+      difficultiesObserved: data.difficultiesObserved,
+      remediationProposed: data.remediationProposed,
+      observations: data.observations,
+      content: JSON.stringify(data.content),
       status: "DRAFT",
     },
   })
@@ -81,13 +108,22 @@ export async function updateFiche(id: string, data: Partial<CreateFicheInput>) {
       schoolName: data.schoolName,
       gradeLevel: data.gradeLevel,
       stream: data.stream,
+      subject: data.subject,
+      schoolYear: data.schoolYear,
+      textbook: data.textbook,
       semester: data.semester,
       duration: data.duration,
       lessonTitle: data.lessonTitle,
+      capacities: data.capacities,
+      programContents: data.programContents,
       pedagogicalGuidelines: data.pedagogicalGuidelines,
       prerequisites: data.prerequisites,
       extensions: data.extensions,
       didacticTools: data.didacticTools,
+      bilanSequence: data.bilanSequence,
+      difficultiesObserved: data.difficultiesObserved,
+      remediationProposed: data.remediationProposed,
+      observations: data.observations,
       content: data.content ? JSON.stringify(data.content) : undefined,
     },
   })
@@ -116,20 +152,29 @@ export async function duplicateFiche(id: string) {
   const newFiche = await prisma.pedagogicalSheet.create({
     data: {
       userId: session.user.id,
-      teacherName: session.user.name || sourceFiche.teacherName, // Default to current user's name
-      schoolName: sourceFiche.schoolName, // Keep source school or leave blank? User asked to "edit and put his name", keeping school seems convenient for now.
+      teacherName: session.user.name || sourceFiche.teacherName,
+      schoolName: sourceFiche.schoolName,
       gradeLevel: sourceFiche.gradeLevel,
       stream: sourceFiche.stream,
+      subject: sourceFiche.subject,
+      schoolYear: sourceFiche.schoolYear,
+      textbook: sourceFiche.textbook,
       semester: sourceFiche.semester,
       lessonTitle: newTitle,
       duration: sourceFiche.duration,
+      capacities: sourceFiche.capacities,
+      programContents: sourceFiche.programContents,
       pedagogicalGuidelines: sourceFiche.pedagogicalGuidelines,
       prerequisites: sourceFiche.prerequisites,
       extensions: sourceFiche.extensions,
       didacticTools: sourceFiche.didacticTools,
-      content: sourceFiche.content as any, // Copy the JSON content
+      bilanSequence: sourceFiche.bilanSequence,
+      difficultiesObserved: sourceFiche.difficultiesObserved,
+      remediationProposed: sourceFiche.remediationProposed,
+      observations: sourceFiche.observations,
+      content: sourceFiche.content as any,
       status: "DRAFT",
-      isPublic: false, // Private copy
+      isPublic: false,
     },
   })
 

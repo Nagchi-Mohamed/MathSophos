@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { CreateFicheInput, createFiche, updateFiche, FicheContentStep } from "@/actions/fiches"
+import { useSession } from "next-auth/react"
+import { CreateFicheInput, createFiche, updateFiche, FicheSession } from "@/actions/fiches"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MetadataForm } from "./metadata-form"
@@ -10,93 +11,113 @@ import { ContentEntryForm } from "./content-entry-form"
 import { FichePreview } from "./fiche-preview"
 import { FicheJsonEditor } from "./fiche-json-editor"
 import { toast } from "sonner"
-import { ArrowLeft, Save, FileText, List, Eye, FileJson } from "lucide-react"
+import { ArrowLeft, Save, FileText, List, Eye, FileJson, Sparkles } from "lucide-react"
 import Link from "next/link"
 import type { PedagogicalSheet } from "@prisma/client"
 import { EducationalLevel } from "@/lib/enums"
+import { AiGeneratorModal } from "./ai-generator-modal"
 
-// Default example content for new fiches
-const DEFAULT_EXAMPLE_CONTENT: FicheContentStep[] = [
+// Default example 4-column sessions matching the LaTeX specimen
+const DEFAULT_EXAMPLE_SESSIONS: FicheSession[] = [
   {
-    "id": "526c7d14-b10c-43a9-8c47-512ae1f021ff",
-    "type": "Activité",
-    "duration": "20 min",
-    "content": "<h3>Activité d'initiation : Introduction à l'ensemble \\(\\mathbb{N}\\)</h3><p>Parmi les nombres suivants : \\(0\\) ; \\(8\\) ; \\(\\sqrt{25}\\) ; \\(\\sqrt{34}\\) ; \\(12,5\\) ; \\(\\frac{12}{3}\\). Préciser ceux qui sont des entiers naturels.</p>",
-    "observations": "Permettre aux élèves de manipuler les nombres et de différencier les entiers naturels des autres types de nombres."
+    "id": "session-1",
+    "title": "Séance 1 --- Ensemble ℕ et Parité",
+    "duration": "2 h",
+    "demarche": "<strong>Activité 1</strong> --- Parmi les nombres : 0 ; 8 ; √25 ; √34 ; 12.5 ; 12/3, préciser ceux qui sont des entiers naturels.<br><br><strong>Activité 2</strong> --- Soit a ∈ ℕ. Écrire sa forme générale s'il est pair, puis s'il est impair.<br><br><strong>Démonstration guidée</strong> --- Montrer que si a et b sont pairs alors a+b est pair.",
+    "traceEcrite": "<strong>Définition.</strong> Les entiers naturels forment l'ensemble ℕ = {0, 1, 2, 3, ...}. On note ℕ* = {1, 2, 3, ...} l'ensemble des entiers naturels non nuls.<br><br><strong>Définition (parité).</strong> Soit a ∈ ℕ.<br>• a est <strong>pair</strong> s'il existe k ∈ ℕ tel que a = 2k.<br>• a est <strong>impair</strong> s'il existe k ∈ ℕ tel que a = 2k+1.<br><br><strong>Théorème.</strong> Le produit de deux entiers naturels consécutifs est toujours pair.",
+    "evaluation": "<strong>Application 1</strong> --- Étudier la parité de : 1359 + 59321 ; 978² - 65² ; 732 × 753<br><br><strong>Application 2</strong> --- Soit n ∈ ℕ. Étudier la parité de 2n + 3 et 4n² + 2n + 5."
   },
   {
-    "id": "f6a4126d-3a7c-4124-893b-49e43544abba",
-    "type": "Définition",
-    "duration": "10 min",
-    "content": "<h3>Définition 1 : Ensemble \\(\\mathbb{N}\\) et \\(\\mathbb{N}^*\\)</h3><p>• Les nombres entiers naturels forment un ensemble noté \\(\\mathbb{N}\\) : \\(\\mathbb{N} = \\{0, 1, 2, 3, 4, 5, \\dots\\}\\).<br>• Les nombres entiers naturels non nuls forment un ensemble noté \\(\\mathbb{N}^*\\) : \\(\\mathbb{N}^* = \\{1, 2, 3, 4, 5, \\dots\\}\\).<br><br><strong>Exemples :</strong><br>• \\(3 \\in \\mathbb{N}\\),<br>• \\(-5 \\notin \\mathbb{N}\\),<br>• \\(4 \\in \\mathbb{N}^*\\).</p>",
-    "observations": "Insister sur les symboles \\(\\in\\) et \\(\\notin\\)."
+    "id": "session-2",
+    "title": "Séance 2 --- Multiples, Diviseurs et Critères de divisibilité",
+    "duration": "1 h 30",
+    "demarche": "<strong>Activité</strong> --- Déterminer les diviseurs de 36 et de 82 ; puis les multiples de 3 inférieurs ou égaux à 50.<br><br><strong>Investigation</strong> --- Chercher des règles rapides pour reconnaître un multiple de 2, 3, 4, 5 ou 9.",
+    "traceEcrite": "<strong>Définition.</strong> Soient a, b ∈ ℕ. S'il existe k ∈ ℕ tel que a = kb, alors :<br>• a est un <strong>multiple</strong> de b ;<br>• b est un <strong>diviseur</strong> de a.<br><br><strong>Critères de divisibilité.</strong> Soit n ∈ ℕ.<br>• par 2 : chiffre des unités ∈ {0, 2, 4, 6, 8} ;<br>• par 5 : chiffre des unités ∈ {0, 5} ;<br>• par 3 (resp. 9) : somme des chiffres multiple de 3 (resp. 9).",
+    "evaluation": "<strong>Application</strong> --- Étudier la divisibilité de 3611790 par 2, 3, 4, 5 et 9."
   },
   {
-    "id": "new-003",
-    "type": "Propriété",
-    "duration": "20 min",
-    "content": "<h3>Propriété : Opérations sur les nombres pairs et impairs</h3><p>Soient \\(a, b \\in \\mathbb{N}\\).</p><p>$$\\begin{array}{|c|c|c|c|c|}\\hline a &amp; b &amp; a+b &amp; a-b \\; (a &gt; b) &amp; a \\times b \\\\\\hline\\hline \\text{Pair} &amp; \\text{Pair} &amp; \\text{Pair} &amp; \\text{Pair} &amp; \\text{Pair} \\\\\\hline \\text{Pair} &amp; \\text{Impair} &amp; \\text{Impair} &amp; \\text{Impair} &amp; \\text{Pair} \\\\\\hline \\text{Impair} &amp; \\text{Pair} &amp; \\text{Impair} &amp; \\text{Impair} &amp; \\text{Pair} \\\\\\hline \\text{Impair} &amp; \\text{Impair} &amp; \\text{Pair} &amp; \\text{Pair} &amp; \\text{Impair} \\\\\\hline \\end{array}$$</p>",
-    "observations": "Encourager la démonstration pour quelques cas."
+    "id": "session-3",
+    "title": "Séance 3 --- Nombres Premiers et Décomposition",
+    "duration": "2 h",
+    "demarche": "<strong>Activité</strong> --- Déterminer les diviseurs de 2, 3, 5 et 17. Que remarque-t-on ?<br><br><strong>Méthode</strong> --- Comment tester la primalité d'un entier n ? Critère p ≤ √n.",
+    "traceEcrite": "<strong>Définition.</strong> Un entier n ≥ 2 est <strong>premier</strong> s'il admet exactement deux diviseurs : 1 et lui-même.<br><br><strong>Théorème.</strong> Tout entier n ≥ 2 admet une décomposition en produit de facteurs premiers.",
+    "evaluation": "<strong>Application 1</strong> --- Étudier la primalité de 101, 137 et 1563.<br><br><strong>Application 2</strong> --- Décomposer en produit de facteurs premiers : 48, 612, 1530."
   }
 ]
 
 import { VideoPlayerTrigger } from "@/components/content/video-player-trigger"
 import { VideoUploadManager } from "@/components/admin/video-upload-manager"
 import { Video } from "lucide-react"
-import dynamic from "next/dynamic"
-
-const AIPromptGenerator = dynamic(
-  () => import("@/components/exercises/ai-prompt-generator").then(mod => ({ default: mod.AIPromptGenerator })),
-  { ssr: false }
-)
 
 interface FicheBuilderProps {
   initialData?: PedagogicalSheet
   isEditing?: boolean
   userRole?: string
-  helpVideo?: any // PlatformVideo type
+  helpVideo?: any
 }
 
 export function FicheBuilder({ initialData, isEditing = false, userRole, helpVideo }: FicheBuilderProps) {
   const router = useRouter()
+  const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState("metadata")
   const [isSaving, setIsSaving] = useState(false)
   const [isJsonValid, setIsJsonValid] = useState(true)
+  const [showAiModal, setShowAiModal] = useState(false)
 
-  // Parse initial content safely - use example for new fiches
+  // Initial content
   const initialSteps = initialData?.content
-    ? (typeof initialData.content === 'string' ? JSON.parse(initialData.content) : initialData.content) as FicheContentStep[]
-    : DEFAULT_EXAMPLE_CONTENT
+    ? (typeof initialData.content === 'string' ? JSON.parse(initialData.content) : initialData.content)
+    : DEFAULT_EXAMPLE_SESSIONS
 
-  // Track if we're showing example content (only for new fiches)
   const [isExampleContent, setIsExampleContent] = useState(!initialData)
 
-  // State
   const [metadata, setMetadata] = useState<Omit<CreateFicheInput, "content">>({
-    teacherName: initialData?.teacherName || "",
-    schoolName: initialData?.schoolName || "",
-    gradeLevel: initialData?.gradeLevel || "LYCEE_2BAC" as EducationalLevel,
-    stream: initialData?.stream || "",
+    teacherName: initialData?.teacherName || (session?.user?.name || "Mohamed Nagchi"),
+    schoolName: initialData?.schoolName || "Lycée Hassan I",
+    gradeLevel: initialData?.gradeLevel || ("LYCEE_TC" as EducationalLevel),
+    stream: initialData?.stream || "Tronc Commun Scientifique et Technique (TCSF)",
+    subject: (initialData as any)?.subject || "Mathématiques",
+    schoolYear: (initialData as any)?.schoolYear || "2025 – 2026",
+    textbook: (initialData as any)?.textbook || "Najah",
     semester: initialData?.semester || 1,
-    lessonTitle: initialData?.lessonTitle || "",
-    duration: initialData?.duration || "2 heures",
-    pedagogicalGuidelines: initialData?.pedagogicalGuidelines || "",
-    prerequisites: initialData?.prerequisites || "",
+    lessonTitle: initialData?.lessonTitle || "Arithmétique dans ℕ",
+    duration: initialData?.duration || "7 heures",
+    capacities: (initialData as any)?.capacities || "• Utiliser la parité et la décomposition en produit de facteurs premiers pour résoudre des problèmes simples portant sur les entiers naturels.\n• Maîtriser les notions de multiple, diviseur, PGCD et PPMC.\n• Initier l'élève à la démonstration mathématique (disjonction des cas).",
+    programContents: (initialData as any)?.programContents || "• Les nombres pairs et les nombres impairs.\n• Multiples d'un nombre, le plus petit multiple commun de deux nombres (PPMC).\n• Diviseurs d'un nombre, le plus grand diviseur commun de deux nombres (PGCD).\n• Nombres premiers, décomposition d'un nombre en produit de facteurs premiers.",
+    pedagogicalGuidelines: initialData?.pedagogicalGuidelines || "Introduire progressivement les symboles ∈, ∉, ⊂, ∩, ∪ ; privilégier l'initiation à la démonstration à travers la parité, sans excès de technicité.",
+    prerequisites: initialData?.prerequisites || "Opérations dans ℕ ; notion élémentaire de divisibilité ; carré parfait.",
     extensions: initialData?.extensions || "",
-    didacticTools: initialData?.didacticTools || "",
+    didacticTools: initialData?.didacticTools || "Tableau, craie, manuel scolaire (Najah), fiches d'activités, sites électroniques.",
+    bilanSequence: (initialData as any)?.bilanSequence || "",
+    difficultiesObserved: (initialData as any)?.difficultiesObserved || "",
+    remediationProposed: (initialData as any)?.remediationProposed || "",
+    observations: (initialData as any)?.observations || ""
   })
 
-  const [steps, setSteps] = useState<FicheContentStep[]>(initialSteps)
+  useEffect(() => {
+    if (!initialData && session?.user?.name && !metadata.teacherName) {
+      setMetadata(prev => ({ ...prev, teacherName: session.user.name || prev.teacherName }))
+    }
+  }, [session, initialData, metadata.teacherName])
 
-  // Auto-clear example content on first edit
-  const handleStepsChange = (newSteps: FicheContentStep[]) => {
+  const [steps, setSteps] = useState<any[]>(initialSteps)
+
+  const handleStepsChange = (newSteps: any[]) => {
     if (isExampleContent) {
       setIsExampleContent(false)
-      // Clear to empty array on first edit
-      setSteps([])
+      setSteps(newSteps)
     } else {
       setSteps(newSteps)
     }
+  }
+
+  const handleAiGenerated = (result: { metadata: Partial<Omit<CreateFicheInput, "content">>; sessions: any[] }) => {
+    setMetadata(prev => ({ ...prev, ...result.metadata }))
+    if (result.sessions && result.sessions.length > 0) {
+      setSteps(result.sessions)
+      setIsExampleContent(false)
+    }
+    toast.success("Fiche Pédagogique générée et chargée dans l'éditeur !")
   }
 
   const handleSave = async () => {
@@ -106,7 +127,7 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
     }
 
     if (!metadata.teacherName || !metadata.schoolName) {
-      toast.error("Veuillez remplir les informations obligatoires (Nom, Ecole)")
+      toast.error("Veuillez remplir les informations obligatoires (Nom, École)")
       return
     }
 
@@ -137,10 +158,9 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
 
   return (
     <div className="container mx-auto py-8 space-y-8 max-w-5xl">
-      {/* Help Video Section - Centered and Prominent */}
+      {/* Help Video Section */}
       {(helpVideo || userRole === 'ADMIN') && (
         <div className="flex flex-col items-center justify-center w-full space-y-4">
-          {/* Helper Text */}
           <div className="text-center space-y-1">
             <h3 className="text-sm font-medium text-primary flex items-center justify-center gap-2">
               <Video className="h-4 w-4" />
@@ -159,7 +179,6 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
             </div>
           ) : null}
 
-          {/* Admin Controls for Video */}
           {userRole === 'ADMIN' && (
             <VideoUploadManager
               entityType="system-help"
@@ -171,7 +190,6 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
                 </Button>
               }
               onInsert={() => {
-                // Refresh page to show new video
                 router.refresh()
                 toast.success("Vidéo d'aide mise à jour")
               }}
@@ -181,7 +199,7 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link href="/teacher/fiches">
             <Button variant="ghost" size="icon">
@@ -191,11 +209,19 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
           <div>
             <h1 className="text-3xl font-bold">{isEditing ? "Modifier la Fiche" : "Créer une Fiche Pédagogique"}</h1>
             <p className="text-muted-foreground">
-              {isEditing ? "Modifiez les informations et le scénario." : "Remplissez les informations et construisez votre scénario."}
+              {isEditing ? "Modifiez les informations et le scénario." : "Saisissez les informations ou utilisez le générateur IA pour transformer votre document."}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => setShowAiModal(true)}
+            variant="outline"
+            className="border-purple-500/40 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40"
+          >
+            <Sparkles className="mr-2 h-4 w-4 text-purple-600" />
+            Générer avec IA / Document
+          </Button>
           <Button onClick={handleSave} disabled={isSaving || (activeTab === 'json' && !isJsonValid)}>
             {isSaving ? "Sauvegarde..." : (
               <>
@@ -220,23 +246,6 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
         </TabsContent>
 
         <TabsContent value="content" className="mt-6">
-          <div className="mb-6">
-            <AIPromptGenerator
-              contentType="fiche"
-              context={{
-                cycle: "LYCEE",
-                level: metadata.gradeLevel,
-                stream: metadata.stream,
-                semester: metadata.semester?.toString() ?? "1"
-              }}
-              lesson={{
-                id: "fiche",
-                titleFr: metadata.lessonTitle || "Nouvelle Fiche",
-                contentFr: metadata.pedagogicalGuidelines
-              }}
-            />
-          </div>
-
           <ContentEntryForm
             steps={steps}
             setSteps={handleStepsChange}
@@ -256,6 +265,13 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
           <FichePreview metadata={metadata} steps={steps} />
         </TabsContent>
       </Tabs>
+
+      <AiGeneratorModal
+        open={showAiModal}
+        onOpenChange={setShowAiModal}
+        onGenerated={handleAiGenerated}
+        metadata={metadata}
+      />
     </div>
   )
 }

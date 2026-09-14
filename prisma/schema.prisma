@@ -488,14 +488,25 @@ model PedagogicalSheet {
   gradeLevel            EducationalLevel
   stream                String?
   lessonTitle           String?
+  subject               String?          @default("Mathématiques")
+  schoolYear            String?          @default("2025 – 2026")
+  textbook              String?          @default("Najah")
   duration              String
+  capacities            String?          @db.Text
+  programContents       String?          @db.Text
   pedagogicalGuidelines String?          @db.Text
   prerequisites         String?          @db.Text
   extensions            String?          @db.Text
   didacticTools         String?          @db.Text
 
-  // Content
-  content Json // Array of steps: { type, duration, content, observations }
+  // Content (Array of 4-column sequence sessions or legacy steps)
+  content Json
+
+  // Sequence Bilan
+  bilanSequence         String?          @db.Text
+  difficultiesObserved  String?          @db.Text
+  remediationProposed   String?          @db.Text
+  observations          String?          @db.Text
 
   semester Int          @default(1)
   status   LessonStatus @default(DRAFT)

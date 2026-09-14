@@ -8,17 +8,17 @@ interface FichePrintContentProps {
   fiche: any
 }
 
-// Component to render title with LaTeX support
-function TitleWithLatex({ title }: { title: string }) {
-  const titleRef = useRef<HTMLHeadingElement>(null)
+// Component to render text with LaTeX math support
+function LatexText({ content, className }: { content: string; className?: string }) {
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && titleRef.current && title) {
+    if (typeof window !== 'undefined' && containerRef.current && content) {
       const renderMath = async () => {
         try {
           const renderMathInElement = (await import('katex/dist/contrib/auto-render.min.js')).default
-          if (titleRef.current) {
-            renderMathInElement(titleRef.current, {
+          if (containerRef.current) {
+            renderMathInElement(containerRef.current, {
               delimiters: [
                 { left: '$$', right: '$$', display: true },
                 { left: '$', right: '$', display: false },
@@ -30,221 +30,317 @@ function TitleWithLatex({ title }: { title: string }) {
             })
           }
         } catch (error) {
-          console.error('Error rendering title LaTeX:', error)
+          console.error('Error rendering LaTeX math:', error)
         }
       }
 
-      setTimeout(renderMath, 100)
+      setTimeout(renderMath, 50)
     }
-  }, [title])
+  }, [content])
+
+  if (!content) return null
 
   return (
-    <h1
-      ref={titleRef}
-      className="text-4xl font-bold uppercase text-gray-900 tracking-tight leading-tight"
-      dangerouslySetInnerHTML={{ __html: title || '' }}
+    <div
+      ref={containerRef}
+      className={className}
+      dangerouslySetInnerHTML={{ __html: content }}
     />
   )
 }
 
+function BulletList({ text }: { text: string }) {
+  if (!text) return <span className="text-gray-400 italic">Non spécifié</span>
+  const items = text.split('\n').map(item => item.trim()).filter(Boolean)
+
+  return (
+    <ul className="list-disc list-inside space-y-1 text-sm text-gray-800">
+      {items.map((item, idx) => (
+        <li key={idx}>
+          <LatexText content={item.replace(/^[•\-\*]\s*/, '')} className="inline" />
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 export function FichePrintContent({ fiche }: FichePrintContentProps) {
-  const [steps, setSteps] = useState<any[]>([])
+  const [items, setItems] = useState<any[]>([])
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    // Parse content if it's stringified JSON
     try {
       if (typeof fiche.content === 'string') {
-        setSteps(JSON.parse(fiche.content))
+        setItems(JSON.parse(fiche.content))
       } else if (Array.isArray(fiche.content)) {
-        setSteps(fiche.content)
+        setItems(fiche.content)
       }
     } catch (e) {
-      console.error("Error parsing content", e)
+      console.error("Error parsing fiche content", e)
     }
   }, [fiche.content])
 
   if (!mounted) return null
 
-  return (
-    <div className="bg-white text-black min-h-screen font-serif relative">
-      {/* Global borders are handled by PrintLayout (red @ 2.5mm, black @ 5mm) which wraps this page. */}
-      {/* Global layout.tsx already sets body padding: 7.5mm for page 1 */}
+  // Check if items are 4-column sessions or legacy 3-column steps
+  const isFourColumnFormat = items.length > 0 && ('demarche' in items[0] || 'traceEcrite' in items[0])
 
+  return (
+    <div className="bg-white text-gray-900 min-h-screen font-serif relative p-6 print:p-0 text-sm">
       <style>{`
         @media print {
-          /* Add spacing at top of each page fragment when table breaks */
-          .scenario-table-wrapper {
-            box-decoration-break: clone;
-            -webkit-box-decoration-break: clone;
-            padding-top: 7.5mm;
+          @page {
+            size: A4;
+            margin: 1.5cm 1.4cm 1.5cm 1.4cm;
+          }
+          body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .page-break {
+            page-break-before: always;
           }
         }
         
-        /* Show borders on screen preview to match PDF */
-        @media screen {
-          .preview-border-red {
-            position: fixed;
-            top: 2.5mm;
-            left: 2.5mm;
-            right: 2.5mm;
-            bottom: 2.5mm;
-            border: 1px solid red;
-            pointer-events: none;
-            z-index: 9999;
-          }
-          
-          .preview-border-black {
-            position: fixed;
-            top: 5mm;
-            left: 5mm;
-            right: 5mm;
-            bottom: 5mm;
-            border: 1px solid black;
-            pointer-events: none;
-            z-index: 9998;
-          }
+        .pedabox-container {
+          background-color: #F4F6F8;
+          border: 1px solid #C9D2DC;
+          border-radius: 6px;
+          position: relative;
+          padding: 16px 14px 12px 14px;
+          margin-bottom: 16px;
         }
 
-        /* Override markdown renderer dark theme for print */
-        .fiche-step-content .markdown-content {
-          color: black !important;
-        }
-        
-        .fiche-step-content section {
-          background: transparent !important;
-          border-color: #333 !important;
-        }
-        
-        .fiche-step-content h2,
-        .fiche-step-content p,
-        .fiche-step-content li,
-        .fiche-step-content td,
-        .fiche-step-content th,
-        .fiche-step-content strong {
-          color: black !important;
+        .pedabox-title {
+          position: absolute;
+          top: -12px;
+          left: 12px;
+          background-color: #1B3A5C;
+          color: white;
+          font-family: sans-serif;
+          font-weight: bold;
+          font-size: 13px;
+          padding: 2px 12px;
+          border-radius: 4px;
         }
       `}</style>
 
-      {/* Border overlays for screen preview */}
-      <div className="preview-border-red hidden md:block"></div>
-      <div className="preview-border-black hidden md:block"></div>
-
-
-
-      {/* Container matches screen preview structure */}
-      <div className="bg-white min-h-screen relative">
-
-        {/* --- PAGE 1: Fiche Technique --- */}
-        <div className="break-after-page-always print-page-one-header p-8 print:p-0">
-
-          {/* Ministry / Header Placeholder */}
-          <div className="flex justify-between items-start text-xs text-gray-600 uppercase mb-8 border-b-2 border-primary/20 pb-4">
-            <div className="text-left">
-              <div>Royaume du Maroc</div>
-              <div>Ministère de l'Éducation Nationale</div>
-              <div>{fiche.schoolName}</div>
-            </div>
-            <div className="text-right">
-              <div>Année Scolaire: {new Date().getFullYear()}-{new Date().getFullYear() + 1}</div>
-              <div>Professeur: {fiche.teacherName}</div>
-            </div>
-          </div>
-
-          {/* Main Title Area */}
-          <div className="text-center mb-10">
-            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-2">Fiche Pédagogique</h2>
-            <div className="inline-block border-y-4 border-double border-gray-800 py-3 px-12">
-              <TitleWithLatex title={fiche.lessonTitle || "Titre de la leçon"} />
-            </div>
-            <div className="mt-4 flex justify-center gap-4 text-sm font-semibold text-gray-700">
-              <span className="bg-gray-100 px-3 py-1 rounded-full border border-gray-200">{fiche.gradeLevel}</span>
-              <span className="bg-gray-100 px-3 py-1 rounded-full border border-gray-200">{fiche.stream || "Tronc Commun"} {fiche.semester ? `- S${fiche.semester}` : ''}</span>
-              <span className="bg-gray-100 px-3 py-1 rounded-full border border-gray-200">{fiche.duration}</span>
-            </div>
-          </div>
-
-          {/* Info Grid */}
-          <div className="grid grid-cols-1 gap-6 mb-8">
-            <section>
-              <h3 className="text-sm font-black uppercase text-gray-800 border-b border-gray-400 mb-3 pb-1">1. Orientations Pédagogiques</h3>
-              <div className="bg-gray-50 p-4 border border-gray-200 rounded text-sm leading-relaxed text-justify whitespace-pre-wrap shadow-sm">
-                {fiche.pedagogicalGuidelines || "Aucune directive spécifiée."}
-              </div>
-            </section>
-
-            <div className="grid grid-cols-2 gap-6">
-              <section>
-                <h3 className="text-sm font-black uppercase text-gray-800 border-b border-gray-400 mb-3 pb-1">2. Pré-requis</h3>
-                <div className="bg-white p-4 border border-gray-300 rounded text-sm shadow-sm h-full">
-                  <ul className="list-disc list-inside space-y-1">
-                    {fiche.prerequisites?.split('\n').map((item: string, i: number) => item && <li key={i}>{item}</li>)}
-                    {!fiche.prerequisites && <li className="text-gray-400 italic">Aucun pré-requis</li>}
-                  </ul>
-                </div>
-              </section>
-              <section>
-                <h3 className="text-sm font-black uppercase text-gray-800 border-b border-gray-400 mb-3 pb-1">3. Extensions</h3>
-                <div className="bg-white p-4 border border-gray-300 rounded text-sm shadow-sm h-full">
-                  <ul className="list-disc list-inside space-y-1">
-                    {fiche.extensions?.split('\n').map((item: string, i: number) => item && <li key={i}>{item}</li>)}
-                    {!fiche.extensions && <li className="text-gray-400 italic">Aucune extension</li>}
-                  </ul>
-                </div>
-              </section>
-            </div>
-
-            <section>
-              <h3 className="text-sm font-black uppercase text-gray-800 border-b border-gray-400 mb-3 pb-1">4. Outils Didactiques</h3>
-              <div className="bg-gray-50/50 p-3 border border-gray-200 rounded text-sm font-medium text-gray-700 italic">
-                {fiche.didacticTools || "Tableau, Manuel scolaire, Calculatrice..."}
-              </div>
-            </section>
-          </div>
+      {/* Header rule matching LaTeX fancyhdr */}
+      <div className="flex justify-between items-center text-xs font-sans text-[#1B3A5C] pb-1 mb-4 border-b-2 border-[#1B3A5C]">
+        <div className="font-bold">
+          {fiche.subject || "Mathématiques"} --- {fiche.stream || fiche.gradeLevel || "TCSF"}
         </div>
+        <div>
+          Fiche pédagogique --- {fiche.lessonTitle || "Arithmétique dans ℕ"}
+        </div>
+        <div>
+          M. {fiche.teacherName || "Mohamed Nagchi"}
+        </div>
+      </div>
 
-        {/* --- PAGE 2+: Scénario / Déroulement --- */}
-        <div className="scenario-table-wrapper">
-          <div className="flex items-center gap-4 mb-[14mm]">
-            <div className="flex-1 h-px bg-gray-300"></div>
-            <h2 className="text-xl font-bold uppercase text-gray-800 tracking-wider">Scénario Didactique</h2>
-            <div className="flex-1 h-px bg-gray-300"></div>
-          </div>
+      {/* 1. BANNIÈRE DE TITRE */}
+      <div className="bg-[#1B3A5C] text-white rounded-lg p-4 text-center mb-6 shadow-sm">
+        <h1 className="text-xl font-bold tracking-wide uppercase font-sans mb-1">
+          FICHE PÉDAGOGIQUE
+        </h1>
+        <div className="text-lg font-medium font-serif mb-2">
+          <LatexText content={fiche.lessonTitle || "Titre du chapitre"} />
+        </div>
+        <div className="text-xs font-sans text-blue-100">
+          {fiche.stream || fiche.gradeLevel || "Tronc Commun Scientifique et Technique (TCSF)"} &nbsp;•&nbsp; Durée globale : {fiche.duration || "7 heures"}
+        </div>
+      </div>
 
-          <table className="w-full border-collapse mb-8 table-fixed text-sm">
+      {/* 2. FICHE TECHNIQUE */}
+      <div className="pedabox-container">
+        <div className="pedabox-title">Fiche technique</div>
+        <table className="w-full text-xs font-sans border-collapse">
+          <tbody>
+            <tr className="border-b border-[#C9D2DC]">
+              <td className="py-2 font-bold text-[#1B3A5C] w-1/4">Professeur</td>
+              <td className="py-2 w-1/4">{fiche.teacherName || "Mohamed Nagchi"}</td>
+              <td className="py-2 font-bold text-[#1B3A5C] w-1/4">Établissement</td>
+              <td className="py-2 w-1/4">{fiche.schoolName || "Lycée Hassan I"}</td>
+            </tr>
+            <tr className="border-b border-[#C9D2DC]">
+              <td className="py-2 font-bold text-[#1B3A5C]">Niveau</td>
+              <td className="py-2">{fiche.stream || fiche.gradeLevel || "Tronc Commun"}</td>
+              <td className="py-2 font-bold text-[#1B3A5C]">Durée globale</td>
+              <td className="py-2">{fiche.duration || "7 heures"}</td>
+            </tr>
+            <tr className="border-b border-[#C9D2DC]">
+              <td className="py-2 font-bold text-[#1B3A5C]">Matière</td>
+              <td className="py-2">{fiche.subject || "Mathématiques"}</td>
+              <td className="py-2 font-bold text-[#1B3A5C]">Année scolaire</td>
+              <td className="py-2">{fiche.schoolYear || "2025 – 2026"}</td>
+            </tr>
+            <tr>
+              <td className="py-2 font-bold text-[#1B3A5C]">Chapitre</td>
+              <td className="py-2"><LatexText content={fiche.lessonTitle || ""} /></td>
+              <td className="py-2 font-bold text-[#1B3A5C]">Manuel</td>
+              <td className="py-2">{fiche.textbook || "Najah"}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* 3. CADRE PÉDAGOGIQUE */}
+      <div className="pedabox-container">
+        <div className="pedabox-title">Cadre pédagogique</div>
+        <table className="w-full text-xs font-sans border-collapse">
+          <tbody>
+            <tr className="border-b border-[#C9D2DC]">
+              <td className="py-2 font-bold text-[#1B3A5C] w-1/4 align-top">Capacités attendues</td>
+              <td className="py-2">
+                <BulletList text={fiche.capacities} />
+              </td>
+            </tr>
+            <tr className="border-b border-[#C9D2DC]">
+              <td className="py-2 font-bold text-[#1B3A5C] align-top">Contenus du programme</td>
+              <td className="py-2">
+                <BulletList text={fiche.programContents} />
+              </td>
+            </tr>
+            <tr className="border-b border-[#C9D2DC]">
+              <td className="py-2 font-bold text-[#1B3A5C] align-top">Recommandations</td>
+              <td className="py-2">
+                <LatexText content={fiche.pedagogicalGuidelines || "Introduire progressivement les symboles mathématiques."} />
+              </td>
+            </tr>
+            <tr className="border-b border-[#C9D2DC]">
+              <td className="py-2 font-bold text-[#1B3A5C] align-top">Prérequis</td>
+              <td className="py-2">
+                <LatexText content={fiche.prerequisites || "Opérations élémentaires dans ℕ."} />
+              </td>
+            </tr>
+            <tr>
+              <td className="py-2 font-bold text-[#1B3A5C] align-top">Outils didactiques</td>
+              <td className="py-2">
+                <LatexText content={fiche.didacticTools || "Tableau, craie, manuel scolaire, fiches d'activités."} />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* 4. DÉROULEMENT ET PLAN DE LA SÉQUENCE */}
+      <div className="my-6">
+        <h2 className="text-center font-sans font-bold text-base text-[#1B3A5C] mb-3 uppercase tracking-wide">
+          Déroulement et plan de la séquence
+        </h2>
+
+        {isFourColumnFormat ? (
+          <table className="w-full border-collapse border border-[#C9D2DC] text-xs font-serif">
             <thead>
-              <tr>
-                <th className="border border-black p-2 w-[15%] text-center bg-gray-100 font-bold uppercase">Étape</th>
-                <th className="border border-black p-2 w-[65%] bg-gray-100 font-bold uppercase">Activités & Contenu</th>
-                <th className="border border-black p-2 w-[20%] bg-gray-100 font-bold uppercase">Observations / Rôle du prof</th>
+              <tr className="bg-[#1B3A5C] text-white font-sans font-bold text-center">
+                <th className="p-2 border border-[#C9D2DC] w-[13%]">Séance & Durée</th>
+                <th className="p-2 border border-[#C9D2DC] w-[27%]">Démarche & Activités</th>
+                <th className="p-2 border border-[#C9D2DC] w-[45%]">Trace écrite (Contenu du cours)</th>
+                <th className="p-2 border border-[#C9D2DC] w-[15%]">Évaluation</th>
               </tr>
             </thead>
             <tbody>
-              {steps.map((step, idx) => {
-                // Count occurrences of each type up to current index for numbering
-                const typeCount = steps.slice(0, idx + 1).filter(s => s.type === step.type).length;
-                const displayLabel = `${step.type} ${typeCount}`;
+              {items.map((session: any, idx: number) => {
+                const sessionNum = idx + 1
+                const sessionTitle = session.title || session.type || `Séance ${sessionNum}`
+                const sessionDur = session.duration || ""
 
                 return (
                   <tr key={idx} className="break-inside-avoid">
-                    <td className="border border-black p-2 text-center bg-gray-50/30 font-medium align-top">
-                      <div className="text-purple-900 font-bold uppercase text-xs mb-1">{displayLabel}</div>
-                      {step.duration && <div className="text-[10px] text-gray-500 font-mono py-1 px-2 rounded bg-gray-100 inline-block border">{step.duration}</div>}
-                    </td>
-                    <td className="border border-black p-2 align-top">
-                      <FicheContentRenderer content={step.content} />
-                    </td>
-                    <td className="border border-black p-2 italic text-gray-600 bg-gray-50/20 text-xs leading-relaxed align-top">
-                      {step.observations}
+                    {/* Full session header if specified */}
+                    <td colSpan={4} className="p-0 border border-[#C9D2DC]">
+                      <div className="bg-[#EEF3F7] text-[#1B3A5C] font-sans font-bold px-3 py-1.5 border-b border-[#C9D2DC] flex justify-between items-center">
+                        <span>{sessionTitle}</span>
+                        <span className="font-normal italic text-xs">{sessionDur}</span>
+                      </div>
+                      <div className="grid grid-cols-12 text-xs">
+                        <div className="col-span-2 p-2 border-r border-[#C9D2DC] font-sans">
+                          <strong className="text-[#1B3A5C]">Séance {sessionNum}</strong>
+                          {sessionDur && <div className="italic text-gray-600 mt-1">{sessionDur}</div>}
+                        </div>
+                        <div className="col-span-3 p-2 border-r border-[#C9D2DC] align-top">
+                          <FicheContentRenderer content={session.demarche || session.content || ""} />
+                        </div>
+                        <div className="col-span-5 p-2 border-r border-[#C9D2DC] align-top">
+                          <FicheContentRenderer content={session.traceEcrite || session.content || ""} />
+                        </div>
+                        <div className="col-span-2 p-2 align-top">
+                          <FicheContentRenderer content={session.evaluation || session.observations || ""} />
+                        </div>
+                      </div>
                     </td>
                   </tr>
-                );
+                )
               })}
             </tbody>
           </table>
+        ) : (
+          /* Legacy 3-column steps fallback */
+          <table className="w-full border-collapse border border-[#C9D2DC] text-xs font-serif">
+            <thead>
+              <tr className="bg-[#1B3A5C] text-white font-sans font-bold uppercase text-center">
+                <th className="p-2 border border-[#C9D2DC] w-[15%]">Étape</th>
+                <th className="p-2 border border-[#C9D2DC] w-[65%]">Activités & Contenu</th>
+                <th className="p-2 border border-[#C9D2DC] w-[20%]">Observations</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((step: any, idx: number) => (
+                <tr key={idx} className="break-inside-avoid border-b border-[#C9D2DC]">
+                  <td className="p-2 border-r border-[#C9D2DC] text-center font-sans font-medium align-top bg-gray-50/50">
+                    <div className="text-[#1B3A5C] font-bold uppercase">{step.type} {idx + 1}</div>
+                    {step.duration && <div className="text-[10px] text-gray-500 mt-1">{step.duration}</div>}
+                  </td>
+                  <td className="p-2 border-r border-[#C9D2DC] align-top">
+                    <FicheContentRenderer content={step.content} />
+                  </td>
+                  <td className="p-2 italic text-gray-600 align-top text-xs">
+                    {step.observations}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
-        </div>
+      {/* 5. BILAN DE LA SÉQUENCE */}
+      <div className="pedabox-container mt-6">
+        <div className="pedabox-title">Bilan de la séquence</div>
+        <table className="w-full text-xs font-sans border-collapse">
+          <tbody>
+            <tr className="border-b border-[#C9D2DC]">
+              <td className="py-2.5 font-bold text-[#1B3A5C] w-1/4 align-top">Bilan de la séquence</td>
+              <td className="py-2.5 min-h-[30px]">
+                <LatexText content={fiche.bilanSequence || ""} />
+              </td>
+            </tr>
+            <tr className="border-b border-[#C9D2DC]">
+              <td className="py-2.5 font-bold text-[#1B3A5C] align-top">Difficultés constatées</td>
+              <td className="py-2.5 min-h-[30px]">
+                <LatexText content={fiche.difficultiesObserved || ""} />
+              </td>
+            </tr>
+            <tr className="border-b border-[#C9D2DC]">
+              <td className="py-2.5 font-bold text-[#1B3A5C] align-top">Remédiation proposée</td>
+              <td className="py-2.5 min-h-[30px]">
+                <LatexText content={fiche.remediationProposed || ""} />
+              </td>
+            </tr>
+            <tr>
+              <td className="py-2.5 font-bold text-[#1B3A5C] align-top">Observations</td>
+              <td className="py-2.5 min-h-[30px]">
+                <LatexText content={fiche.observations || ""} />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Bottom Footer Rule */}
+      <div className="mt-8 pt-2 border-t border-[#C9D2DC] flex justify-center text-xs font-sans text-[#1B3A5C]">
+        <span>1 / 3</span>
       </div>
     </div>
   )
