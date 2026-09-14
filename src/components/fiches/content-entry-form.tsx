@@ -129,8 +129,10 @@ export function ContentEntryForm({ steps, setSteps, metadata }: ContentEntryForm
     setSteps(newSteps)
   }
 
-  const handleAiGenerated = (newSteps: FicheContentStep[]) => {
-    setSteps([...steps, ...newSteps])
+  const handleAiGenerated = (result: { metadata: Partial<Omit<CreateFicheInput, "content">>; sessions: any[] }) => {
+    if (result.sessions && result.sessions.length > 0) {
+      setSteps([...steps, ...result.sessions])
+    }
     setShowAiModal(false)
   }
 
