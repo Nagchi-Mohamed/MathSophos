@@ -186,7 +186,6 @@ export async function getFiche(id: string) {
   const session = await auth()
   if (!session?.user?.id) {
     // Public fiches could be allowed? For now, restrict.
-    // Allow if public?
   }
 
   const fiche = await prisma.pedagogicalSheet.findUnique({
@@ -194,7 +193,7 @@ export async function getFiche(id: string) {
     include: { user: { select: { name: true, email: true } } }
   })
 
-  return fiche
+  return fiche ? JSON.parse(JSON.stringify(fiche)) : null
 }
 
 export async function getUserFiches() {
@@ -210,15 +209,16 @@ export async function getUserFiches() {
 
   // Admins and Editors see ALL fiches
   if (user.role === 'ADMIN' || user.role === 'EDITOR') {
-    return await prisma.pedagogicalSheet.findMany({
+    const list = await prisma.pedagogicalSheet.findMany({
       orderBy: { createdAt: 'desc' },
       include: { user: { select: { name: true, email: true, role: true } } }
     })
+    return JSON.parse(JSON.stringify(list))
   }
 
   // Teachers see: their own fiches + public fiches (published by admin)
   if (user.role === 'TEACHER') {
-    return await prisma.pedagogicalSheet.findMany({
+    const list = await prisma.pedagogicalSheet.findMany({
       where: {
         OR: [
           { userId: session.user.id }, // Own fiches
@@ -228,6 +228,7 @@ export async function getUserFiches() {
       orderBy: { createdAt: 'desc' },
       include: { user: { select: { name: true, email: true, role: true } } }
     })
+    return JSON.parse(JSON.stringify(list))
   }
 
   // Students should not access fiches at all
@@ -238,10 +239,11 @@ export async function getAllFiches() {
   const session = await auth()
   if (session?.user?.role !== "ADMIN") throw new Error("Unauthorized")
 
-  return await prisma.pedagogicalSheet.findMany({
+  const list = await prisma.pedagogicalSheet.findMany({
     orderBy: { createdAt: "desc" },
     include: { user: true }
   })
+  return JSON.parse(JSON.stringify(list))
 }
 
 export async function deleteFiche(id: string) {
@@ -283,9 +285,10 @@ export async function toggleFichePublish(id: string) {
 }
 
 export async function getPublicFiches() {
-  return await prisma.pedagogicalSheet.findMany({
+  const list = await prisma.pedagogicalSheet.findMany({
     where: { isPublic: true },
     orderBy: { createdAt: "desc" },
     include: { user: { select: { name: true } } }
   })
+  return JSON.parse(JSON.stringify(list))
 }

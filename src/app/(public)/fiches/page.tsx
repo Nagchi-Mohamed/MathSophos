@@ -9,8 +9,12 @@ import { Plus } from "lucide-react"
 export default async function PublicFichesPage() {
   const session = await auth()
 
+  if (!session) {
+    redirect("/auth/login?callbackUrl=/fiches")
+  }
+
   // Only TEACHER, EDITOR, and ADMIN can access Fiches Pédagogiques
-  if (!session?.user?.role || !['TEACHER', 'EDITOR', 'ADMIN'].includes(session.user.role)) {
+  if (!session.user?.role || !['TEACHER', 'EDITOR', 'ADMIN'].includes(session.user.role)) {
     redirect('/')
   }
 
