@@ -148,29 +148,31 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
 
     setIsSaving(true)
     try {
-      const data = {
+      const payload = {
         ...metadata,
         content: steps,
+        ...(isEditing && initialData?.id ? { id: initialData.id } : {})
       }
 
-      let res: any
-      if (isEditing && initialData?.id) {
-        res = await updateFiche(initialData.id, data)
-      } else {
-        res = await createFiche(data)
-      }
+      const response = await fetch('/api/fiches', {
+        method: isEditing ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
 
-      if (!res || !res.success) {
-        toast.error(res?.error || "Erreur lors de la sauvegarde de la fiche")
+      const res = await response.json().catch(() => null)
+
+      if (!response.ok || !res || !res.success) {
+        toast.error(res?.error || `Erreur (${response.status}) lors de la sauvegarde`)
         return
       }
 
       toast.success(isEditing ? "Fiche mise à jour avec succès" : "Fiche créée avec succès")
       router.push("/teacher/fiches")
       router.refresh()
-    } catch (error) {
-      console.error(error)
-      toast.error("Erreur lors de la sauvegarde")
+    } catch (error: any) {
+      console.error("[handleSave Error]:", error)
+      toast.error(error?.message || "Erreur de connexion lors de la sauvegarde")
     } finally {
       setIsSaving(false)
     }

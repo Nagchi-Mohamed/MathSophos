@@ -40,10 +40,12 @@ export default async function EditFichePage({ params }: PageProps) {
     }
   }).catch(() => null);
 
+  const safeHelpVideo = helpVideo ? JSON.parse(JSON.stringify(helpVideo)) : null;
+
   return <FicheBuilder
     initialData={fiche}
     isEditing={true}
-    userRole={session.user.role}
-    helpVideo={helpVideo}
+    userRole={session.user?.role}
+    helpVideo={safeHelpVideo}
   />
 }

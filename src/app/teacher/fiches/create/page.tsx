@@ -23,5 +23,7 @@ export default async function CreateFichePage() {
     }
   }).catch(() => null);
 
-  return <FicheBuilder userRole={session.user.role} helpVideo={helpVideo} />
+  const safeHelpVideo = helpVideo ? JSON.parse(JSON.stringify(helpVideo)) : null;
+
+  return <FicheBuilder userRole={session.user?.role} helpVideo={safeHelpVideo} />
 }
