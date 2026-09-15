@@ -3,10 +3,10 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google"
 import { z } from "zod"
 import { LATEX_FORMATTING_SYSTEM_PROMPT } from "@/lib/ai-utils"
 import { getRotatedApiKey, getAdminKeyCount, parseGoogleAIError } from "@/lib/google-ai"
-import { PDFParse } from "pdf-parse"
-// @ts-ignore
-import mammoth from "mammoth"
 import { NextResponse } from "next/server"
+
+// Vercel function timeout
+export const maxDuration = 60
 
 // Schema for the AI response matching Moroccan LaTeX Fiche Pédagogique standard
 const FicheSchema = z.object({
@@ -31,81 +31,97 @@ const FicheSchema = z.object({
   observations: z.string().optional().describe("Observations de l'enseignant")
 })
 
-// Priority: Gemini 2.5 Flash -> Gemini 2.5 Pro -> Gemini 2.0 Flash (No 1.5)
-const CANDIDATE_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash']
+// Model priority: 2.5 Flash first, fallback to 2.5 Pro, then 2.0 Flash
+// Using exact model IDs supported by @ai-sdk/google
+const CANDIDATE_MODELS = [
+  'gemini-2.5-flash-preview-05-20',
+  'gemini-2.5-pro-preview-05-06',
+  'gemini-2.0-flash',
+]
 
-export const maxDuration = 60 // 60 seconds timeout for AI generation
+async function extractTextFromFile(fileData: string, mimeType: string): Promise<string> {
+  if (mimeType === 'application/pdf') {
+    try {
+      // Dynamic import to avoid cold-start crash
+      const { PDFParse } = await import('pdf-parse')
+      const buffer = Buffer.from(fileData, 'base64')
+      const parser = new PDFParse({ data: buffer })
+      const data = await parser.getText()
+      await parser.destroy()
+      return (data.text || "").substring(0, 20000)
+    } catch (e) {
+      console.error("Error parsing PDF", e)
+      throw new Error("Erreur lors de la lecture du fichier PDF")
+    }
+  }
+
+  if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+    try {
+      // Dynamic import to avoid cold-start crash
+      const mammoth = await import('mammoth')
+      const buffer = Buffer.from(fileData, 'base64')
+      const result = await mammoth.extractRawText({ buffer })
+      return (result.value || "").substring(0, 20000)
+    } catch (e) {
+      console.error("Error parsing DOCX", e)
+      throw new Error("Erreur lors de la lecture du fichier Word")
+    }
+  }
+
+  return ""
+}
 
 export async function POST(req: Request) {
   try {
     const body = await req.json()
     let { prompt, context, fileData, mimeType } = body
 
-    // Handle File Content
-    if (fileData && mimeType) {
-      if (mimeType === 'application/pdf') {
-        try {
-          const buffer = Buffer.from(fileData, 'base64')
-          const parser = new PDFParse({ data: buffer })
-          const data = await parser.getText()
-          await parser.destroy()
-          context = (context || "") + `\n\nCONTENU DU FICHIER PDF UPLOADÉ :\n${(data.text || "").substring(0, 20000)}`
-        } catch (e) {
-          console.error("Error parsing PDF", e)
-          return NextResponse.json({ success: false, error: "Erreur lors de la lecture du fichier PDF" }, { status: 400 })
-        }
-      } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        try {
-          const buffer = Buffer.from(fileData, 'base64')
-          const result = await mammoth.extractRawText({ buffer: buffer })
-          context = (context || "") + `\n\nCONTENU DU FICHIER DOCX UPLOADÉ :\n${(result.value || "").substring(0, 20000)}`
-        } catch (e) {
-          console.error("Error parsing DOCX", e)
-          return NextResponse.json({ success: false, error: "Erreur lors de la lecture du fichier Word" }, { status: 400 })
-        }
+    // Extract text from uploaded file if any
+    if (fileData && mimeType && !mimeType.startsWith('image/')) {
+      const extractedText = await extractTextFromFile(fileData, mimeType)
+      if (extractedText) {
+        const label = mimeType === 'application/pdf' ? 'PDF' : 'DOCX'
+        context = (context || "") + `\n\nCONTENU DU FICHIER ${label} UPLOADÉ :\n${extractedText}`
       }
     }
 
     const systemPrompt = `${LATEX_FORMATTING_SYSTEM_PROMPT}
-      
-      You are an expert mathematics pedagogue in the Moroccan educational system.
-      Your task is to transform any given document or prompt into a professional, highly structured "Fiche Pédagogique" (Lesson Plan) matching the official Moroccan LaTeX standard.
-      
-      Input Context:
-      ${context || "No extra context"}
-      
-      Output requirements:
-      - Strictly follow the structure defined in the schema.
-      - Language: French.
-      - Structure the sequence into discrete Sessions ("Séances") with:
-        1. Title & Duration
-        2. Démarche & Activités
-        3. Trace écrite (Contenu du cours with rigorous definitions, theorems, LaTeX formulas using $ for inline and $$ for block math)
-        4. Évaluation & Applications
-      - Include complete pedagogical framework: Capacités attendues (bulleted list), Contenus du programme (bulleted list), Recommandations, Prérequis, Outils didactiques.
-      - Ensure mathematical accuracy and clarity.
-      `
 
-    const messages = [
-      {
-        role: 'system',
-        content: systemPrompt
-      },
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text: prompt || "Générer une fiche pédagogique complète conforme au standard marocain." },
-          ...(fileData && mimeType && mimeType.startsWith('image/') ? [{ type: 'image', image: fileData }] : [])
-        ] as any
-      }
+You are an expert mathematics pedagogue in the Moroccan educational system.
+Your task is to transform any given document or prompt into a professional, highly structured "Fiche Pédagogique" (Lesson Plan) matching the official Moroccan LaTeX standard.
+
+Input Context:
+${context || "No extra context"}
+
+Output requirements:
+- Strictly follow the structure defined in the schema.
+- Language: French.
+- Structure the sequence into discrete Sessions ("Séances") with:
+  1. Title & Duration
+  2. Démarche & Activités
+  3. Trace écrite (Contenu du cours with rigorous definitions, theorems, LaTeX formulas using $ for inline and $$ for block math)
+  4. Évaluation & Applications
+- Include complete pedagogical framework: Capacités attendues (bulleted list), Contenus du programme (bulleted list), Recommandations, Prérequis, Outils didactiques.
+- Ensure mathematical accuracy and clarity.`
+
+    const messages: any[] = [
+      { role: 'user', content: prompt || "Générer une fiche pédagogique complète conforme au standard marocain." }
     ]
+
+    // Append image inline if it's an image file
+    if (fileData && mimeType && mimeType.startsWith('image/')) {
+      messages[0].content = [
+        { type: 'text', text: prompt || "Génère une fiche pédagogique à partir de cette image." },
+        { type: 'image', image: `data:${mimeType};base64,${fileData}` }
+      ]
+    }
 
     let lastError: any = null
     const keyCount = Math.max(1, getAdminKeyCount())
 
-    // Iterate through Gemini 2.5 models and rotated keys
+    // Try each model, cycling through rotated keys
     for (const modelName of CANDIDATE_MODELS) {
-      for (let k = 0; k <= keyCount; k++) {
+      for (let k = 0; k < keyCount; k++) {
         try {
           const apiKey = getRotatedApiKey(k)
           if (!apiKey) continue
@@ -115,27 +131,29 @@ export async function POST(req: Request) {
 
           const { object } = await generateObject({
             model,
-            messages: messages as any,
+            system: systemPrompt,
+            messages,
             schema: FicheSchema,
             temperature: 0.7,
           })
 
-          console.log(`[AI Fiche] Generated successfully using model: ${modelName} with key index ${k}`)
+          console.log(`[AI Fiche] ✅ Generated with model: ${modelName}, key index: ${k}`)
           return NextResponse.json({ success: true, data: object })
         } catch (err: any) {
           lastError = err
-          console.warn(`[AI Fiche] Attempt with model ${modelName} (key ${k}) failed: ${err?.message || err}`)
+          console.warn(`[AI Fiche] ⚠️ Failed with model ${modelName} (key ${k}): ${err?.message || err}`)
         }
       }
     }
 
-    const parsedError = parseGoogleAIError(lastError)
-    return NextResponse.json({ success: false, error: parsedError }, { status: 500 })
+    const errMsg = parseGoogleAIError(lastError)
+    console.error("[AI Fiche] All models/keys exhausted:", errMsg)
+    return NextResponse.json({ success: false, error: errMsg }, { status: 500 })
   } catch (error: any) {
-    console.error("[POST /api/fiches/generate Error]:", error)
-    return NextResponse.json({ 
-      success: false, 
-      error: error?.message || "Erreur lors de la génération de la fiche pédagogique" 
+    console.error("[POST /api/fiches/generate]:", error)
+    return NextResponse.json({
+      success: false,
+      error: error?.message || "Erreur lors de la génération de la fiche pédagogique"
     }, { status: 500 })
   }
 }
