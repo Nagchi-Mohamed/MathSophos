@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+import { latexPreprocessor } from "@/lib/latex-preprocessor"
 import 'katex/dist/katex.min.css'
 
 interface InlineLatexProps {
@@ -10,9 +11,10 @@ interface InlineLatexProps {
 
 export function InlineLatex({ content, className }: InlineLatexProps) {
   const containerRef = useRef<HTMLSpanElement>(null)
+  const normalized = content ? latexPreprocessor.normalizeLatex(content) : ""
 
   useEffect(() => {
-    if (!containerRef.current || !content) return
+    if (!containerRef.current || !normalized) return
 
     const renderMath = async () => {
       try {
@@ -21,7 +23,7 @@ export function InlineLatex({ content, className }: InlineLatexProps) {
         if (containerRef.current) {
           renderMathInElement(containerRef.current, {
             delimiters: [
-              { left: '$$', right: '$$', display: false }, // Force inline for titles mostly
+              { left: '$$', right: '$$', display: false },
               { left: '$', right: '$', display: false },
               { left: '\\[', right: '\\]', display: false },
               { left: '\\(', right: '\\)', display: false }
@@ -36,13 +38,13 @@ export function InlineLatex({ content, className }: InlineLatexProps) {
     }
 
     renderMath()
-  }, [content])
+  }, [normalized])
 
   return (
     <span
       ref={containerRef}
       className={className}
-      dangerouslySetInnerHTML={{ __html: content }}
+      dangerouslySetInnerHTML={{ __html: normalized }}
     />
   )
 }
