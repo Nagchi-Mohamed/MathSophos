@@ -10,5 +10,5 @@ export default async function FichePrintPage({ params }: { params: Promise<{ id:
     notFound()
   }
 
-  return <FichePrintContent fiche={fiche} />
+  return <FichePrintContent fiche={fiche} isPrintView={true} />
 }

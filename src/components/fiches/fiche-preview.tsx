@@ -30,11 +30,9 @@ export function FichePreview({ metadata, steps }: FichePreviewProps) {
         </AlertDescription>
       </Alert>
 
-      {/* Render the actual print content component scaled down slightly if needed, or full width */}
-      <div className="border shadow-lg mx-auto bg-gray-100 p-8 overflow-auto max-h-[800px]">
-        <div className="bg-white mx-auto shadow-sm origin-top transform scale-100" style={{ width: '210mm', minHeight: '297mm' }}>
-          <FichePrintContent fiche={previewFiche} />
-        </div>
+      {/* Render the actual print content component as discrete A4 sheets */}
+      <div className="border shadow-inner mx-auto bg-slate-200/90 dark:bg-slate-900/80 p-4 md:p-8 overflow-auto max-h-[850px] rounded-xl flex flex-col items-center">
+        <FichePrintContent fiche={previewFiche} />
       </div>
     </div>
   )
