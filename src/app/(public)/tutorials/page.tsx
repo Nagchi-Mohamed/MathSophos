@@ -21,7 +21,7 @@ export default async function TutorialsPage() {
     orderBy: {
       createdAt: 'desc'
     }
-  });
+  }).catch(() => []);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between bg-black">

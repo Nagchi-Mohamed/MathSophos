@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { CreateFicheInput, createFiche, updateFiche, FicheSession } from "@/actions/fiches"
@@ -63,6 +63,7 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
   const [isSaving, setIsSaving] = useState(false)
   const [isJsonValid, setIsJsonValid] = useState(true)
   const [showAiModal, setShowAiModal] = useState(false)
+  const [, startTransition] = useTransition()
 
   // Parse and normalize initial content
   const getInitialSteps = () => {
@@ -234,7 +235,7 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
         </div>
         <div className="flex items-center gap-3">
           <Button
-            onClick={() => setShowAiModal(true)}
+            onClick={() => startTransition(() => setShowAiModal(true))}
             variant="outline"
             className="border-primary/40 text-primary hover:bg-primary/5"
           >

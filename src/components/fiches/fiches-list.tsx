@@ -102,7 +102,11 @@ export function FichesList({ initialFiches, isAdmin = false, isPublicView = fals
   const handleDelete = async (id: string) => {
     setIsDeleting(true)
     try {
-      await deleteFiche(id)
+      const res = await deleteFiche(id)
+      if (res && !res.success) {
+        toast.error(res.error || "Erreur lors de la suppression")
+        return
+      }
       setFiches(fiches.filter(f => f.id !== id))
       toast.success("Fiche supprimée")
     } catch (error) {

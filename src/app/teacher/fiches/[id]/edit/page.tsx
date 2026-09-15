@@ -29,7 +29,7 @@ export default async function EditFichePage({ params }: PageProps) {
     redirect("/teacher/fiches")
   }
 
-  // Fetch help video (same as create page)
+  // Fetch help video (same as create page) — safe catch in case table is missing/empty
   const helpVideo = await prisma.platformVideo.findFirst({
     where: {
       entityType: "system-help",
@@ -38,7 +38,7 @@ export default async function EditFichePage({ params }: PageProps) {
     orderBy: {
       createdAt: 'desc'
     }
-  });
+  }).catch(() => null);
 
   return <FicheBuilder
     initialData={fiche}

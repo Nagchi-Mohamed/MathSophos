@@ -12,7 +12,7 @@ export default async function CreateFichePage() {
   // Optionally check for "TEACHER" or "ADMIN" role
   // if (session.user.role === "STUDENT") redirect("/")
 
-  // Fetch help video
+  // Fetch help video — wrapped in catch so a missing table never 500s the whole page
   const helpVideo = await prisma.platformVideo.findFirst({
     where: {
       entityType: "system-help",
@@ -21,7 +21,7 @@ export default async function CreateFichePage() {
     orderBy: {
       createdAt: 'desc'
     }
-  });
+  }).catch(() => null);
 
   return <FicheBuilder userRole={session.user.role} helpVideo={helpVideo} />
 }

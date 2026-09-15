@@ -278,41 +278,53 @@ export async function getAllFiches() {
 }
 
 export async function deleteFiche(id: string) {
-  const session = await auth()
-  if (!session?.user?.id) throw new Error("Unauthorized")
+  try {
+    const session = await auth()
+    if (!session?.user?.id) return { success: false, error: "Non autorisé" }
 
-  const existing = await prisma.pedagogicalSheet.findUnique({
-    where: { id },
-  })
+    const existing = await prisma.pedagogicalSheet.findUnique({
+      where: { id },
+    })
 
-  if (!existing) throw new Error("Not found")
-  if (existing.userId !== session.user.id && session.user.role !== "ADMIN") {
-    throw new Error("Unauthorized")
+    if (!existing) return { success: false, error: "Fiche introuvable" }
+    if (existing.userId !== session.user.id && session.user.role !== "ADMIN") {
+      return { success: false, error: "Non autorisé à supprimer cette fiche" }
+    }
+
+    await prisma.pedagogicalSheet.delete({
+      where: { id },
+    })
+
+    revalidatePath("/teacher/fiches")
+    revalidatePath("/admin/fiches")
+    return { success: true }
+  } catch (error: any) {
+    console.error("[deleteFiche Error]:", error)
+    return { success: false, error: error.message || "Erreur lors de la suppression" }
   }
-
-  await prisma.pedagogicalSheet.delete({
-    where: { id },
-  })
-
-  revalidatePath("/teacher/fiches")
-  revalidatePath("/admin/fiches")
 }
 
 export async function toggleFichePublish(id: string) {
-  const session = await auth()
-  if (session?.user?.role !== "ADMIN") throw new Error("Unauthorized")
+  try {
+    const session = await auth()
+    if (session?.user?.role !== "ADMIN") return { success: false, error: "Non autorisé" }
 
-  const fiche = await prisma.pedagogicalSheet.findUnique({ where: { id } })
-  if (!fiche) throw new Error("Not found")
+    const fiche = await prisma.pedagogicalSheet.findUnique({ where: { id } })
+    if (!fiche) return { success: false, error: "Fiche introuvable" }
 
-  await prisma.pedagogicalSheet.update({
-    where: { id },
-    data: { isPublic: !fiche.isPublic }
-  })
+    await prisma.pedagogicalSheet.update({
+      where: { id },
+      data: { isPublic: !fiche.isPublic }
+    })
 
-  revalidatePath("/admin/fiches")
-  revalidatePath("/fiches")
-  revalidatePath("/teacher/fiches")
+    revalidatePath("/admin/fiches")
+    revalidatePath("/fiches")
+    revalidatePath("/teacher/fiches")
+    return { success: true }
+  } catch (error: any) {
+    console.error("[toggleFichePublish Error]:", error)
+    return { success: false, error: error.message || "Erreur lors de la mise à jour de la publication" }
+  }
 }
 
 export async function getPublicFiches() {
