@@ -99,9 +99,9 @@ export async function POST(request: Request) {
     else if (entityType === "series" || entityType === "exercise") folderType = "exercises";
     else if (entityType === "exam" || entityType === "control") folderType = "exams";
 
-    const safeEntityId = entityId.replace(/[^a-zA-Z0-9-_]/g, "");
+    const safeEntityId = entityId ? entityId.replace(/[^a-zA-Z0-9-_]/g, "") : crypto.randomUUID();
 
-    if (!safeEntityId || safeEntityId === "temp") {
+    if (!safeEntityId) {
       return NextResponse.json(
         { error: "Invalid entity ID" },
         { status: 400 }
