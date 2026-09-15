@@ -121,7 +121,7 @@ CONSIGNES STRICTES DE FORMATAGE (POUR UN RENDU WEB & PDF PARFAIT) :
 
 3. ACCENTS ET TYPOGRAPHIE FRANÇAISE :
    - Écris les vrais caractères accentués en UTF-8 : é, è, à, ê, î, ô, ç, É, À.
-   - Ne JAMAIS écrire les vieilles séquences TeX : \\'E, \\'e, \\`a, \\^e.
+   - Ne JAMAIS écrire les vieilles séquences TeX comme \'E, \'e ou accents échappés.
 
 4. TABLEAUX DE VALEURS / OPÉRATIONS :
    - Si tu as besoin d'un tableau (ex: table de parité addition/multiplication), utilise un tableau HTML propre :
