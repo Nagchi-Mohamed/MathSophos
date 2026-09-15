@@ -5,8 +5,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google"
 import { z } from "zod"
 import { LATEX_FORMATTING_SYSTEM_PROMPT } from "@/lib/ai-utils"
 import { getRotatedApiKey, getAdminKeyCount, parseGoogleAIError } from "@/lib/google-ai"
-// @ts-ignore
-import pdf from "pdf-parse"
+import { PDFParse } from "pdf-parse"
 // @ts-ignore
 import mammoth from "mammoth"
 
@@ -53,7 +52,9 @@ export async function generateFicheInternal(prompt: string, context?: string, fi
         if (mimeType === 'application/pdf') {
           try {
             const buffer = Buffer.from(fileData, 'base64');
-            const data = await pdf(buffer);
+            const parser = new PDFParse({ data: buffer });
+            const data = await parser.getText();
+            await parser.destroy();
             context = (context || "") + `\n\nCONTENU DU FICHIER PDF UPLOADÉ :\n${(data.text || "").substring(0, 20000)}`;
           } catch (e) {
             console.error("Error parsing PDF", e);
