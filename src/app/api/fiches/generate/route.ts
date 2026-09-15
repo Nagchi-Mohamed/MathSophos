@@ -1,48 +1,15 @@
-import { generateObject } from "ai"
-import { createGoogleGenerativeAI } from "@ai-sdk/google"
-import { z } from "zod"
-import { LATEX_FORMATTING_SYSTEM_PROMPT } from "@/lib/ai-utils"
-import { getRotatedApiKey, getAdminKeyCount, parseGoogleAIError } from "@/lib/google-ai"
 import { NextResponse } from "next/server"
+import { LATEX_FORMATTING_SYSTEM_PROMPT, fixLatexJsonEscapes } from "@/lib/ai-utils"
+import { getRotatedAdminClient, googleGenAIAdmin, getAdminKeyCount, parseGoogleAIError } from "@/lib/google-ai"
 
-// Vercel function timeout
 export const maxDuration = 60
 
-// Schema for the AI response matching Moroccan LaTeX Fiche Pédagogique standard
-const FicheSchema = z.object({
-  lessonTitle: z.string().describe("Titre du chapitre / leçon (ex: 'Arithmétique dans $\\mathbb{N}$')"),
-  duration: z.string().describe("Durée globale (ex: '7 heures')"),
-  capacities: z.string().describe("Capacités attendues sous forme de liste à puces (• Utiliser la parité...)"),
-  programContents: z.string().describe("Contenus du programme sous forme de liste à puces (• Les nombres pairs...)"),
-  pedagogicalGuidelines: z.string().describe("Recommandations et orientations pédagogiques"),
-  prerequisites: z.string().describe("Prérequis nécessaires pour cette leçon"),
-  extensions: z.string().optional().describe("Extensions et activités complémentaires"),
-  didacticTools: z.string().describe("Outils didactiques (Tableau, craie, manuel scolaire Najah, GeoGebra...)"),
-  content: z.array(z.object({
-    title: z.string().describe("Titre de la séance (ex: 'Séance 1 --- Ensemble $\\mathbb{N}$ et Parité')"),
-    duration: z.string().describe("Durée de la séance (ex: '2 h' ou '1 h 30')"),
-    demarche: z.string().describe("Démarche & Activités (ex: Activités d'initiation, questions guidées, investigations)"),
-    traceEcrite: z.string().describe("Trace écrite (Contenu du cours: Définitions, Théorèmes, Propriétés, Exemples avec LaTeX math $...$ et $$...$$)"),
-    evaluation: z.string().describe("Évaluation / Applications (Exercices d'application directe)")
-  })).describe("Liste des séances de déroulement du plan de séquence"),
-  bilanSequence: z.string().optional().describe("Bilan de la séquence"),
-  difficultiesObserved: z.string().optional().describe("Difficultés constatées"),
-  remediationProposed: z.string().optional().describe("Remédiation proposée"),
-  observations: z.string().optional().describe("Observations de l'enseignant")
-})
-
-// Model priority: 2.5 Flash first, fallback to 2.5 Pro, then 2.0 Flash
-// Using exact model IDs supported by @ai-sdk/google
-const CANDIDATE_MODELS = [
-  'gemini-2.5-flash-preview-05-20',
-  'gemini-2.5-pro-preview-05-06',
-  'gemini-2.0-flash',
-]
+// Strictly Gemini 2.5 models as requested (no 1.5, no deprecated 2.0)
+const CANDIDATE_MODELS = ["gemini-2.5-flash", "gemini-2.5-pro"]
 
 async function extractTextFromFile(fileData: string, mimeType: string): Promise<string> {
   if (mimeType === 'application/pdf') {
     try {
-      // Dynamic import to avoid cold-start crash
       const { PDFParse } = await import('pdf-parse')
       const buffer = Buffer.from(fileData, 'base64')
       const parser = new PDFParse({ data: buffer })
@@ -57,7 +24,6 @@ async function extractTextFromFile(fileData: string, mimeType: string): Promise<
 
   if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
     try {
-      // Dynamic import to avoid cold-start crash
       const mammoth = await import('mammoth')
       const buffer = Buffer.from(fileData, 'base64')
       const result = await mammoth.extractRawText({ buffer })
@@ -71,12 +37,36 @@ async function extractTextFromFile(fileData: string, mimeType: string): Promise<
   return ""
 }
 
+function parseFicheJson(rawText: string): any {
+  // Strategy 1: Direct parse after fixing LaTeX escapes
+  try {
+    const safeText = fixLatexJsonEscapes(rawText)
+    return JSON.parse(safeText)
+  } catch {}
+
+  // Strategy 2: Strip markdown codeblocks
+  try {
+    const cleanText = rawText.replace(/```json\n?/gi, "").replace(/```\n?/g, "").trim()
+    const safeClean = fixLatexJsonEscapes(cleanText)
+    return JSON.parse(safeClean)
+  } catch {}
+
+  // Strategy 3: Regex extract JSON object
+  const jsonMatch = rawText.match(/\{[\s\S]*\}/)
+  if (jsonMatch) {
+    const safeMatch = fixLatexJsonEscapes(jsonMatch[0])
+    return JSON.parse(safeMatch)
+  }
+
+  throw new Error("Format JSON non valide reçu de l'IA")
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json()
     let { prompt, context, fileData, mimeType } = body
 
-    // Extract text from uploaded file if any
+    // Extract text from uploaded document (PDF or DOCX)
     if (fileData && mimeType && !mimeType.startsWith('image/')) {
       const extractedText = await extractTextFromFile(fileData, mimeType)
       if (extractedText) {
@@ -85,72 +75,97 @@ export async function POST(req: Request) {
       }
     }
 
-    const systemPrompt = `${LATEX_FORMATTING_SYSTEM_PROMPT}
+    const fullPrompt = `${LATEX_FORMATTING_SYSTEM_PROMPT}
 
-You are an expert mathematics pedagogue in the Moroccan educational system.
-Your task is to transform any given document or prompt into a professional, highly structured "Fiche Pédagogique" (Lesson Plan) matching the official Moroccan LaTeX standard.
+Tu es un inspecteur et pédagogue expert en mathématiques dans le système éducatif marocain.
+Ta mission est de transformer tout document source ou consigne en une "Fiche Pédagogique" (Plan de séquence / Scénario pédagogique) conforme au modèle officiel marocain (4 colonnes de déroulement).
 
-Input Context:
-${context || "No extra context"}
+Contexte de la fiche :
+${context || "Aucun contexte additionnel"}
 
-Output requirements:
-- Strictly follow the structure defined in the schema.
-- Language: French.
-- Structure the sequence into discrete Sessions ("Séances") with:
-  1. Title & Duration
-  2. Démarche & Activités
-  3. Trace écrite (Contenu du cours with rigorous definitions, theorems, LaTeX formulas using $ for inline and $$ for block math)
-  4. Évaluation & Applications
-- Include complete pedagogical framework: Capacités attendues (bulleted list), Contenus du programme (bulleted list), Recommandations, Prérequis, Outils didactiques.
-- Ensure mathematical accuracy and clarity.`
+Instruction de l'enseignant :
+${prompt || "Générer une fiche pédagogique complète conforme au standard marocain."}
 
-    const messages: any[] = [
-      { role: 'user', content: prompt || "Générer une fiche pédagogique complète conforme au standard marocain." }
-    ]
+IMPORTANT : Tu dois répondre UNIQUEMENT avec un objet JSON valide respectant STRICTEMENT la structure suivante :
+{
+  "lessonTitle": "Titre du chapitre / leçon (ex: Arithmétique dans $\\mathbb{N}$)",
+  "duration": "Durée globale (ex: 7 heures)",
+  "capacities": "Capacités attendues sous forme de liste à puces (• Utiliser la parité...)",
+  "programContents": "Contenus du programme sous forme de liste à puces (• Les nombres pairs...)",
+  "pedagogicalGuidelines": "Recommandations et orientations pédagogiques",
+  "prerequisites": "Prérequis nécessaires",
+  "extensions": "Extensions et perspectives",
+  "didacticTools": "Outils didactiques (Tableau, craie, manuel scolaire Najah...)",
+  "content": [
+    {
+      "title": "Séance 1 --- Titre de la séance",
+      "duration": "2 h",
+      "demarche": "Démarche & Activités (Activités d'initiation, questions guidées avec LaTeX math)",
+      "traceEcrite": "Trace écrite (Définitions, Théorèmes, Propriétés, Exemples avec LaTeX math $...$ et $$...$$)",
+      "evaluation": "Évaluation / Applications (Exercices d'application directe)"
+    }
+  ],
+  "bilanSequence": "Bilan global de la séquence",
+  "difficultiesObserved": "Difficultés constatées chez les élèves",
+  "remediationProposed": "Remédiation proposée",
+  "observations": "Observations de l'enseignant"
+}
 
-    // Append image inline if it's an image file
+Règles impératives :
+1. Rédige en français soigné.
+2. Formules mathématiques en LaTeX standard : $ pour inline et $$ pour bloc.
+3. Ne mets aucun texte en dehors du JSON.`
+
+    const parts: any[] = [fullPrompt]
+
+    // Attach image if uploaded
     if (fileData && mimeType && mimeType.startsWith('image/')) {
-      messages[0].content = [
-        { type: 'text', text: prompt || "Génère une fiche pédagogique à partir de cette image." },
-        { type: 'image', image: `data:${mimeType};base64,${fileData}` }
-      ]
+      parts.push({
+        inlineData: {
+          data: fileData,
+          mimeType: mimeType
+        }
+      })
     }
 
     let lastError: any = null
     const keyCount = Math.max(1, getAdminKeyCount())
 
-    // Try each model, cycling through rotated keys
+    // Iterate through Gemini 2.5 models and rotated keys
     for (const modelName of CANDIDATE_MODELS) {
-      for (let k = 0; k < keyCount; k++) {
+      for (let k = 0; k <= keyCount; k++) {
         try {
-          const apiKey = getRotatedApiKey(k)
-          if (!apiKey) continue
-
-          const googleProvider = createGoogleGenerativeAI({ apiKey })
-          const model = googleProvider(modelName)
-
-          const { object } = await generateObject({
-            model,
-            system: systemPrompt,
-            messages,
-            schema: FicheSchema,
-            temperature: 0.7,
+          const client = k === 0 ? googleGenAIAdmin : getRotatedAdminClient(k)
+          const model = client.getGenerativeModel({
+            model: modelName,
+            generationConfig: {
+              responseMimeType: "application/json",
+              temperature: 0.7,
+            }
           })
 
-          console.log(`[AI Fiche] ✅ Generated with model: ${modelName}, key index: ${k}`)
-          return NextResponse.json({ success: true, data: object })
+          console.log(`[AI Fiche] Attempting generation with ${modelName} (key index ${k})...`)
+          const result = await model.generateContent(parts)
+          const response = await result.response
+          const text = response.text()
+
+          if (!text) throw new Error("Réponse vide reçue de l'IA")
+
+          const parsedData = parseFicheJson(text)
+          console.log(`[AI Fiche] ✅ Generation successful with ${modelName} (key index ${k}), sessions: ${parsedData.content?.length || 0}`)
+          return NextResponse.json({ success: true, data: parsedData })
         } catch (err: any) {
           lastError = err
-          console.warn(`[AI Fiche] ⚠️ Failed with model ${modelName} (key ${k}): ${err?.message || err}`)
+          console.warn(`[AI Fiche] ⚠️ ${modelName} (key ${k}) failed:`, err?.message || err)
         }
       }
     }
 
-    const errMsg = parseGoogleAIError(lastError)
-    console.error("[AI Fiche] All models/keys exhausted:", errMsg)
-    return NextResponse.json({ success: false, error: errMsg }, { status: 500 })
+    const parsedError = parseGoogleAIError(lastError)
+    console.error("[AI Fiche] All 2.5 attempts exhausted:", parsedError)
+    return NextResponse.json({ success: false, error: parsedError }, { status: 500 })
   } catch (error: any) {
-    console.error("[POST /api/fiches/generate]:", error)
+    console.error("[POST /api/fiches/generate Error]:", error)
     return NextResponse.json({
       success: false,
       error: error?.message || "Erreur lors de la génération de la fiche pédagogique"
