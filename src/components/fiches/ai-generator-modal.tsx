@@ -114,7 +114,11 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
       const filePrompt = `Transforme le contenu du fichier uploadé en une Fiche Pédagogique complète conforme au standard du Ministère du Maroc.`
 
       const response = await generateFicheAction(filePrompt, context, base64Data, uploadedFile.type)
-      processAiResponse(response)
+      if (!response.success || !response.data) {
+        toast.error(response.error || "Erreur lors de la génération")
+        return
+      }
+      processAiResponse(response.data)
     } catch (error: any) {
       console.error(error)
       toast.error(error.message || "Erreur lors de la génération")
@@ -139,7 +143,11 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
       `
 
       const response = await generateFicheAction(prompt, context)
-      processAiResponse(response)
+      if (!response.success || !response.data) {
+        toast.error(response.error || "Erreur lors de la génération")
+        return
+      }
+      processAiResponse(response.data)
     } catch (error: any) {
       console.error(error)
       toast.error(error.message || "Erreur lors de la génération")
