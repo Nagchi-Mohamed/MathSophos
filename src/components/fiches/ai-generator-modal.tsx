@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { generateFicheAction } from "@/actions/ai-fiche"
 import { toast } from "sonner"
 import { Loader2, FileText, Upload, X } from "lucide-react"
 import { MathSophosIcon, MathSophosAiBadge } from "@/components/ui/math-sophos-logo"
@@ -113,9 +112,20 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
 
       const filePrompt = `Transforme le contenu du fichier uploadé en une Fiche Pédagogique complète conforme au standard du Ministère du Maroc.`
 
-      const response = await generateFicheAction(filePrompt, context, base64Data, uploadedFile.type)
-      if (!response.success || !response.data) {
-        toast.error(response.error || "Erreur lors de la génération")
+      const res = await fetch('/api/fiches/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: filePrompt,
+          context,
+          fileData: base64Data,
+          mimeType: uploadedFile.type
+        })
+      })
+
+      const response = await res.json().catch(() => null)
+      if (!res.ok || !response?.success || !response?.data) {
+        toast.error(response?.error || `Erreur (${res.status}) lors de la génération`)
         return
       }
       processAiResponse(response.data)
@@ -142,9 +152,18 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
         Titre de la leçon: ${metadata.lessonTitle || "Algèbre et Analyse"}
       `
 
-      const response = await generateFicheAction(prompt, context)
-      if (!response.success || !response.data) {
-        toast.error(response.error || "Erreur lors de la génération")
+      const res = await fetch('/api/fiches/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          context
+        })
+      })
+
+      const response = await res.json().catch(() => null)
+      if (!res.ok || !response?.success || !response?.data) {
+        toast.error(response?.error || `Erreur (${res.status}) lors de la génération`)
         return
       }
       processAiResponse(response.data)
@@ -158,13 +177,13 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col p-0 overflow-hidden border shadow-2xl">
+      <DialogContent aria-describedby="ai-generator-modal-description" className="sm:max-w-xl max-h-[90vh] flex flex-col p-0 overflow-hidden border shadow-2xl">
         <DialogHeader className="p-5 pb-3 border-b bg-muted/20">
           <DialogTitle className="flex items-center gap-2 text-xl font-bold text-primary">
             <MathSophosAiBadge size="sm" animate={false} />
             Assistant Fiche Pédagogique MathSophos
           </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground mt-1">
+          <DialogDescription id="ai-generator-modal-description" className="text-xs text-muted-foreground mt-1">
             Uploadez un document source (PDF, Word, Image) ou saisissez vos instructions/code LaTeX. L'assistant transformera le tout au format officiel.
           </DialogDescription>
         </DialogHeader>
