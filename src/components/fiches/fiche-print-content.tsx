@@ -13,7 +13,17 @@ interface FichePrintContentProps {
 function LatexText({ content, className }: { content: string; className?: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const normalized = content ? latexPreprocessor.normalizeLatex(content) : ""
+  const clean = content
+    ? content
+        .replace(/\\'[Ee]/g, 'é')
+        .replace(/\\`[Ee]/g, 'è')
+        .replace(/\\'[Aa]/g, 'á')
+        .replace(/\\`[Aa]/g, 'à')
+        .replace(/\\\^[Ee]/g, 'ê')
+        .replace(/\\textbf\{([^}]+)\}/g, '<strong>$1</strong>')
+    : ""
+
+  const normalized = clean ? latexPreprocessor.normalizeLatex(clean) : ""
 
   useEffect(() => {
     if (typeof window !== 'undefined' && containerRef.current && normalized) {

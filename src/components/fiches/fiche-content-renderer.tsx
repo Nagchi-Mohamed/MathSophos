@@ -11,8 +11,52 @@ interface FicheContentRendererProps {
 export function FicheContentRenderer({ content }: FicheContentRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Preprocess LaTeX math commands and normalize delimiters
-  const rawContent = content ? latexPreprocessor.normalizeLatex(content) : '';
+  const cleanText = (content || "")
+    // French TeX accents
+    .replace(/\\'[Ee]/g, 'é')
+    .replace(/\\`[Ee]/g, 'è')
+    .replace(/\\\^[Ee]/g, 'ê')
+    .replace(/\\'[Aa]/g, 'á')
+    .replace(/\\`[Aa]/g, 'à')
+    .replace(/\\\^[Aa]/g, 'â')
+    .replace(/\\\^[Ii]/g, 'î')
+    .replace(/\\\^[Oo]/g, 'ô')
+    .replace(/\\`[Uu]/g, 'ù')
+    .replace(/\\\^[Uu]/g, 'û')
+    .replace(/\\c\{c\}/gi, 'ç')
+    // Common custom macros in Moroccan fiches
+    .replace(/\\heading\{([^}]+)\}/g, '<strong class="text-blue-900 dark:text-blue-400 font-bold block mt-3 mb-1 text-sm uppercase tracking-wide">$1</strong>')
+    .replace(/\\sub\{([^}]+)\}/g, '<strong class="text-primary font-bold inline-block mt-2 mb-1 mr-1">$1</strong>')
+    .replace(/\\appli\{([^}]*)\}/g, '<strong class="text-emerald-700 dark:text-emerald-400 font-bold block mt-3 mb-1">Application $1</strong>')
+    // Text formatting
+    .replace(/\\textbf\{([^}]+)\}/g, '<strong>$1</strong>')
+    .replace(/\\textit\{([^}]+)\}/g, '<em>$1</em>')
+    .replace(/\\underline\{([^}]+)\}/g, '<u>$1</u>')
+    // Spacing
+    .replace(/\\(smallskip|medskip|bigskip)/g, '<br>')
+    .replace(/\\quad/g, '&nbsp;&nbsp;')
+    .replace(/\\qquad/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
+    // Center environment
+    .replace(/\\begin\{center\}([\s\S]*?)\\end\{center\}/g, '<div class="text-center my-2">$1</div>')
+    // Itemize & Enumerate environments
+    .replace(/\\begin\{itemize\}(?:\[[^\]]*\])?([\s\S]*?)\\end\{itemize\}/g, (match, items) => {
+      const lis = items.split('\\item').filter((s: string) => s.trim()).map((s: string) => `<li>${s.trim()}</li>`).join('')
+      return `<ul class="list-disc pl-5 my-2 space-y-1">${lis}</ul>`
+    })
+    .replace(/\\begin\{enumerate\}(?:\[[^\]]*\])?([\s\S]*?)\\end\{enumerate\}/g, (match, items) => {
+      const lis = items.split('\\item').filter((s: string) => s.trim()).map((s: string) => `<li>${s.trim()}</li>`).join('')
+      return `<ol class="list-decimal pl-5 my-2 space-y-1">${lis}</ol>`
+    })
+    .replace(/\\item\s+/g, '<br>• ')
+    // Fix mismatched delimiters like $$formula$ or $formula$$
+    .replace(/\$\$([^$\n]+)\$/g, '$$$1$$')
+    .replace(/\$([^$\n]+)\$\$/g, '$$$1$$')
+    // Remove unwanted TeX document commands
+    .replace(/\\(noindent|leavevmode)/g, '')
+    // Fix linebreaks
+    .replace(/\n\n+/g, '<br><br>')
+
+  const rawContent = cleanText ? latexPreprocessor.normalizeLatex(cleanText) : '';
 
   const processedContent = rawContent
     ? rawContent
