@@ -68,9 +68,13 @@ export function FichesList({ initialFiches, isAdmin = false, isPublicView = fals
 
     setIsDuplicating(id)
     try {
-      const newId = await duplicateFiche(id)
+      const res = await duplicateFiche(id)
+      if (!res || !res.success || !res.id) {
+        toast.error(res?.error || "Erreur lors de la duplication")
+        return
+      }
       toast.success("Fiche copiée dans votre espace")
-      router.push(`/teacher/fiches/${newId}/edit`)
+      router.push(`/teacher/fiches/${res.id}/edit`)
     } catch (error) {
       toast.error("Erreur lors de la duplication")
       console.error(error)

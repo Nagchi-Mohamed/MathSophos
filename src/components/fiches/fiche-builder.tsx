@@ -152,14 +152,19 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
         content: steps,
       }
 
+      let res: any
       if (isEditing && initialData?.id) {
-        await updateFiche(initialData.id, data)
-        toast.success("Fiche mise à jour avec succès")
+        res = await updateFiche(initialData.id, data)
       } else {
-        await createFiche(data)
-        toast.success("Fiche créée avec succès")
+        res = await createFiche(data)
       }
 
+      if (!res || !res.success) {
+        toast.error(res?.error || "Erreur lors de la sauvegarde de la fiche")
+        return
+      }
+
+      toast.success(isEditing ? "Fiche mise à jour avec succès" : "Fiche créée avec succès")
       router.push("/teacher/fiches")
       router.refresh()
     } catch (error) {
