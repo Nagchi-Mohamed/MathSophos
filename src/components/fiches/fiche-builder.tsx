@@ -11,7 +11,8 @@ import { ContentEntryForm } from "./content-entry-form"
 import { FichePreview } from "./fiche-preview"
 import { FicheJsonEditor } from "./fiche-json-editor"
 import { toast } from "sonner"
-import { ArrowLeft, Save, FileText, List, Eye, FileJson, Sparkles } from "lucide-react"
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo"
+import { ArrowLeft, Save, FileText, List, Eye, FileJson } from "lucide-react"
 import Link from "next/link"
 import type { PedagogicalSheet } from "@prisma/client"
 import { EducationalLevel } from "@/lib/enums"
@@ -230,9 +231,9 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
           <Button
             onClick={() => setShowAiModal(true)}
             variant="outline"
-            className="border-purple-500/40 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40"
+            className="border-primary/40 text-primary hover:bg-primary/5"
           >
-            <Sparkles className="mr-2 h-4 w-4 text-purple-600" />
+            <MathSophosIcon size={18} className="mr-2" />
             Générer avec IA / Document
           </Button>
           <Button onClick={handleSave} disabled={isSaving || (activeTab === 'json' && !isJsonValid)}>

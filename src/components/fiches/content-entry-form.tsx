@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { TiptapEditor } from "@/components/admin/tiptap-editor"
 import { LatexHelper } from "./latex-helper"
-import { Trash2, MoveUp, MoveDown, Plus, Wand2, Edit, Save, FileSpreadsheet } from "lucide-react"
+import { MathSophosIcon } from "@/components/ui/math-sophos-logo"
+import { Trash2, MoveUp, MoveDown, Plus, Edit, Save, FileSpreadsheet } from "lucide-react"
 import { AiGeneratorModal } from "./ai-generator-modal"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -143,8 +144,8 @@ export function ContentEntryForm({ steps, setSteps, metadata }: ContentEntryForm
                   <span>Nouvelle Séance (Scénario à 4 colonnes)</span>
                 )}
               </span>
-              <Button variant="outline" size="sm" onClick={() => setShowAiModal(true)} className="gap-2 bg-gradient-to-r from-purple-500 to-blue-600 text-white border-0 hover:from-purple-600 hover:to-blue-700">
-                <Wand2 className="h-4 w-4" />
+              <Button variant="outline" size="sm" onClick={() => setShowAiModal(true)} className="gap-2 border-primary/30 text-primary hover:bg-primary/10">
+                <MathSophosIcon size={16} />
                 Générer avec IA
               </Button>
             </CardTitle>

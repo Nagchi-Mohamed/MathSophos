@@ -7,8 +7,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { generateFicheAction } from "@/actions/ai-fiche"
 import { toast } from "sonner"
-import { Loader2, FileText, Upload, Sparkles } from "lucide-react"
-import { MathSophosIcon } from "@/components/ui/math-sophos-logo"
+import { Loader2, FileText, Upload, X } from "lucide-react"
+import { MathSophosIcon, MathSophosAiBadge } from "@/components/ui/math-sophos-logo"
 import { CreateFicheInput } from "@/actions/fiches"
 
 interface AiGeneratorModalProps {
@@ -22,6 +22,7 @@ interface AiGeneratorModalProps {
 }
 
 export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: AiGeneratorModalProps) {
+  const [activeTab, setActiveTab] = useState<"file" | "prompt">("file")
   const [prompt, setPrompt] = useState("")
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -29,18 +30,26 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      if (file.size > 8 * 1024 * 1024) { // 8MB limit
-        toast.error("Fichier trop volumineux (Max 8MB)")
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        toast.error("Fichier trop volumineux (Max 10MB)")
         return
       }
       setUploadedFile(file)
-      toast.success(`Fichier "${file.name}" prêt`)
+      toast.success(`Fichier "${file.name}" prêt pour analyse`)
+    }
+  }
+
+  const triggerFileInput = () => {
+    const input = document.getElementById('fiche-file-upload') as HTMLInputElement
+    if (input) {
+      input.value = ''
+      input.click()
     }
   }
 
   const processAiResponse = (response: any) => {
     if (!response) {
-      toast.error("Aucune réponse générée")
+      toast.error("Aucune réponse générée par l'IA")
       return
     }
 
@@ -69,7 +78,7 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
     }))
 
     onGenerated({ metadata: updatedMetadata, sessions })
-    toast.success("Fiche Pédagogique générée avec succès !")
+    toast.success("Fiche Pédagogique générée et chargée avec succès !")
     onOpenChange(false)
   }
 
@@ -141,81 +150,96 @@ export function AiGeneratorModal({ open, onOpenChange, onGenerated, metadata }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <Sparkles className="h-5 w-5 text-purple-600" />
-            Générateur de Fiche Pédagogique IA
+      <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col p-0 overflow-hidden border shadow-2xl">
+        <DialogHeader className="p-5 pb-3 border-b bg-muted/20">
+          <DialogTitle className="flex items-center gap-2 text-xl font-bold text-primary">
+            <MathSophosAiBadge size="sm" animate={false} />
+            Assistant Fiche Pédagogique MathSophos
           </DialogTitle>
-          <DialogDescription>
-            Uploadez un document source (PDF, Word, Image) ou décrivez votre sujet. L'IA transformera le tout au format LaTeX officiel.
+          <DialogDescription className="text-xs text-muted-foreground mt-1">
+            Uploadez un document source (PDF, Word, Image) ou saisissez vos instructions/code LaTeX. L'assistant transformera le tout au format officiel.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="file">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="file">Uploader un Document</TabsTrigger>
-            <TabsTrigger value="prompt">Instruction Textuelle</TabsTrigger>
-          </TabsList>
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 max-h-[calc(90vh-140px)]">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="file" className="text-xs font-semibold">Uploader un Document</TabsTrigger>
+              <TabsTrigger value="prompt" className="text-xs font-semibold">Instruction / Code LaTeX</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="file" className="space-y-4">
-            <div
-              className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-xl text-muted-foreground bg-muted/40 hover:bg-muted/70 transition-colors cursor-pointer border-purple-500/30"
-              onClick={() => document.getElementById('fiche-file-upload')?.click()}
-            >
-              <Upload className="h-10 w-10 text-purple-600 mb-2" />
-              <p className="text-sm font-semibold text-foreground text-center">Cliquez pour importer un document</p>
-              <p className="text-xs text-muted-foreground text-center mt-1">PDF, Word (.docx), Image (.png, .jpg)</p>
-              <input
-                id="fiche-file-upload"
-                type="file"
-                accept=".pdf, .docx, .jpg, .jpeg, .png, .webp"
-                className="hidden"
-                onChange={handleFileUpload}
-              />
-            </div>
-
-            {uploadedFile && (
-              <div className="p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-lg flex items-center justify-between">
-                <div className="flex items-center gap-2 overflow-hidden">
-                  <FileText className="h-4 w-4 text-purple-600 flex-shrink-0" />
-                  <span className="text-sm font-medium truncate">{uploadedFile.name}</span>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setUploadedFile(null)}>
-                  ×
-                </Button>
+            <TabsContent value="file" className="space-y-4 mt-0">
+              <div
+                className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl text-muted-foreground bg-muted/30 hover:bg-muted/60 transition-all cursor-pointer border-blue-500/30 hover:border-blue-500/60"
+                onClick={triggerFileInput}
+              >
+                <Upload className="h-9 w-9 text-blue-600 mb-2" />
+                <p className="text-sm font-semibold text-foreground text-center">Cliquez pour importer un document</p>
+                <p className="text-xs text-muted-foreground text-center mt-1">PDF, Word (.docx), Image (.png, .jpg, .webp)</p>
+                <input
+                  id="fiche-file-upload"
+                  type="file"
+                  accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
               </div>
-            )}
 
+              {uploadedFile && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 overflow-hidden">
+                    <FileText className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                    <span className="text-xs font-medium truncate text-foreground">{uploadedFile.name}</span>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => setUploadedFile(null)}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="prompt" className="space-y-3 mt-0">
+              <label className="text-xs font-semibold text-muted-foreground block">
+                Instructions ou Code LaTeX brut :
+              </label>
+              <Textarea
+                placeholder="Ex: Génère une fiche pédagogique complète sur l'Arithmétique dans ℕ ou collez un code LaTeX brut..."
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                className="min-h-[160px] max-h-[300px] overflow-y-auto font-mono text-xs p-3 leading-relaxed border-muted-foreground/20"
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Sticky Action Footer Bar */}
+        <div className="p-4 border-t bg-muted/40 flex justify-end items-center gap-3">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            Annuler
+          </Button>
+
+          {activeTab === "file" ? (
             <Button
               onClick={handleGenerateFromFile}
               disabled={isGenerating || !uploadedFile}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md hover:opacity-95"
-              size="lg"
+              className="bg-primary text-white shadow-md hover:bg-primary/90 min-w-[200px]"
+              size="sm"
             >
-              {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-              Transformer en Fiche Pédagogique
+              {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MathSophosIcon size={18} className="mr-2" />}
+              Transformer en Fiche
             </Button>
-          </TabsContent>
-
-          <TabsContent value="prompt" className="space-y-4">
-            <Textarea
-              placeholder="Ex: Génère une fiche pédagogique complète sur l'Arithmétique dans ℕ pour le Tronc Commun Scientifique (durée 7 heures)..."
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              className="min-h-[140px]"
-            />
+          ) : (
             <Button
               onClick={handleGenerateFromPrompt}
               disabled={isGenerating || !prompt.trim()}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md hover:opacity-95"
-              size="lg"
+              className="bg-primary text-white shadow-md hover:bg-primary/90 min-w-[200px]"
+              size="sm"
             >
               {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MathSophosIcon size={18} className="mr-2" />}
-              Générer la Fiche Pédagogique
+              Générer la Fiche
             </Button>
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   )
