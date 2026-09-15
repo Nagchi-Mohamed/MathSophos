@@ -16,6 +16,9 @@ import Link from "next/link"
 import type { PedagogicalSheet } from "@prisma/client"
 import { EducationalLevel } from "@/lib/enums"
 import { AiGeneratorModal } from "./ai-generator-modal"
+import { VideoPlayerTrigger } from "@/components/content/video-player-trigger"
+import { VideoUploadManager } from "@/components/admin/video-upload-manager"
+import { Video } from "lucide-react"
 
 // Default example 4-column sessions matching the LaTeX specimen
 const DEFAULT_EXAMPLE_SESSIONS: FicheSession[] = [
@@ -23,31 +26,27 @@ const DEFAULT_EXAMPLE_SESSIONS: FicheSession[] = [
     "id": "session-1",
     "title": "Séance 1 --- Ensemble ℕ et Parité",
     "duration": "2 h",
-    "demarche": "<strong>Activité 1</strong> --- Parmi les nombres : 0 ; 8 ; √25 ; √34 ; 12.5 ; 12/3, préciser ceux qui sont des entiers naturels.<br><br><strong>Activité 2</strong> --- Soit a ∈ ℕ. Écrire sa forme générale s'il est pair, puis s'il est impair.<br><br><strong>Démonstration guidée</strong> --- Montrer que si a et b sont pairs alors a+b est pair.",
-    "traceEcrite": "<strong>Définition.</strong> Les entiers naturels forment l'ensemble ℕ = {0, 1, 2, 3, ...}. On note ℕ* = {1, 2, 3, ...} l'ensemble des entiers naturels non nuls.<br><br><strong>Définition (parité).</strong> Soit a ∈ ℕ.<br>• a est <strong>pair</strong> s'il existe k ∈ ℕ tel que a = 2k.<br>• a est <strong>impair</strong> s'il existe k ∈ ℕ tel que a = 2k+1.<br><br><strong>Théorème.</strong> Le produit de deux entiers naturels consécutifs est toujours pair.",
-    "evaluation": "<strong>Application 1</strong> --- Étudier la parité de : 1359 + 59321 ; 978² - 65² ; 732 × 753<br><br><strong>Application 2</strong> --- Soit n ∈ ℕ. Étudier la parité de 2n + 3 et 4n² + 2n + 5."
+    "demarche": "<strong>Activité 1</strong> --- Parmi les nombres : 0 ; 8 ; $\\sqrt{25}$ ; $\\sqrt{34}$ ; 12.5 ; $\\frac{12}{3}$, préciser ceux qui sont des entiers naturels.<br><br><strong>Activité 2</strong> --- Soit $a \\in \\mathbb{N}$. Écrire sa forme générale s'il est pair, puis s'il est impair.<br><br><strong>Démonstration guidée</strong> --- Montrer que si $a$ et $b$ sont pairs alors $a+b$ est pair.",
+    "traceEcrite": "<strong>Définition.</strong> Les entiers naturels forment l'ensemble $\\mathbb{N} = \\{0, 1, 2, 3, \\dots\\}$. On note $\\mathbb{N}^* = \\{1, 2, 3, \\dots\\}$ l'ensemble des entiers naturels non nuls.<br><br><strong>Définition (parité).</strong> Soit $a \\in \\mathbb{N}$.<br>• $a$ est <strong>pair</strong> s'il existe $k \\in \\mathbb{N}$ tel que $a = 2k$.<br>• $a$ est <strong>impair</strong> s'il existe $k \\in \\mathbb{N}$ tel que $a = 2k+1$.<br><br><strong>Théorème.</strong> Le produit de deux entiers naturels consécutifs est toujours pair.",
+    "evaluation": "<strong>Application 1</strong> --- Étudier la parité de : 1359 + 59321 ; $978^2 - 65^2$ ; $732 \\times 753$<br><br><strong>Application 2</strong> --- Soit $n \\in \\mathbb{N}$. Étudier la parité de $2n + 3$ et $4n^2 + 2n + 5$."
   },
   {
     "id": "session-2",
     "title": "Séance 2 --- Multiples, Diviseurs et Critères de divisibilité",
     "duration": "1 h 30",
     "demarche": "<strong>Activité</strong> --- Déterminer les diviseurs de 36 et de 82 ; puis les multiples de 3 inférieurs ou égaux à 50.<br><br><strong>Investigation</strong> --- Chercher des règles rapides pour reconnaître un multiple de 2, 3, 4, 5 ou 9.",
-    "traceEcrite": "<strong>Définition.</strong> Soient a, b ∈ ℕ. S'il existe k ∈ ℕ tel que a = kb, alors :<br>• a est un <strong>multiple</strong> de b ;<br>• b est un <strong>diviseur</strong> de a.<br><br><strong>Critères de divisibilité.</strong> Soit n ∈ ℕ.<br>• par 2 : chiffre des unités ∈ {0, 2, 4, 6, 8} ;<br>• par 5 : chiffre des unités ∈ {0, 5} ;<br>• par 3 (resp. 9) : somme des chiffres multiple de 3 (resp. 9).",
+    "traceEcrite": "<strong>Définition.</strong> Soient $a, b \\in \\mathbb{N}$. S'il existe $k \\in \\mathbb{N}$ tel que $a = kb$, alors :<br>• $a$ est un <strong>multiple</strong> de $b$ ;<br>• $b$ est un <strong>diviseur</strong> de $a$.<br><br><strong>Critères de divisibilité.</strong> Soit $n \\in \\mathbb{N}$.<br>• par 2 : chiffre des unités $\\in \\{0, 2, 4, 6, 8\\}$ ;<br>• par 5 : chiffre des unités $\\in \\{0, 5\\}$ ;<br>• par 3 (resp. 9) : somme des chiffres multiple de 3 (resp. 9).",
     "evaluation": "<strong>Application</strong> --- Étudier la divisibilité de 3611790 par 2, 3, 4, 5 et 9."
   },
   {
     "id": "session-3",
     "title": "Séance 3 --- Nombres Premiers et Décomposition",
     "duration": "2 h",
-    "demarche": "<strong>Activité</strong> --- Déterminer les diviseurs de 2, 3, 5 et 17. Que remarque-t-on ?<br><br><strong>Méthode</strong> --- Comment tester la primalité d'un entier n ? Critère p ≤ √n.",
-    "traceEcrite": "<strong>Définition.</strong> Un entier n ≥ 2 est <strong>premier</strong> s'il admet exactement deux diviseurs : 1 et lui-même.<br><br><strong>Théorème.</strong> Tout entier n ≥ 2 admet une décomposition en produit de facteurs premiers.",
+    "demarche": "<strong>Activité</strong> --- Déterminer les diviseurs de 2, 3, 5 et 17. Que remarque-t-on ?<br><br><strong>Méthode</strong> --- Comment tester la primalité d'un entier $n$ ? Critère $p \\le \\sqrt{n}$.",
+    "traceEcrite": "<strong>Définition.</strong> Un entier $n \\ge 2$ est <strong>premier</strong> s'il admet exactement deux diviseurs : 1 et lui-même.<br><br><strong>Théorème.</strong> Tout entier $n \\ge 2$ admet une décomposition en produit de facteurs premiers.",
     "evaluation": "<strong>Application 1</strong> --- Étudier la primalité de 101, 137 et 1563.<br><br><strong>Application 2</strong> --- Décomposer en produit de facteurs premiers : 48, 612, 1530."
   }
 ]
-
-import { VideoPlayerTrigger } from "@/components/content/video-player-trigger"
-import { VideoUploadManager } from "@/components/admin/video-upload-manager"
-import { Video } from "lucide-react"
 
 interface FicheBuilderProps {
   initialData?: PedagogicalSheet
@@ -64,10 +63,24 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
   const [isJsonValid, setIsJsonValid] = useState(true)
   const [showAiModal, setShowAiModal] = useState(false)
 
-  // Initial content
-  const initialSteps = initialData?.content
-    ? (typeof initialData.content === 'string' ? JSON.parse(initialData.content) : initialData.content)
-    : DEFAULT_EXAMPLE_SESSIONS
+  // Parse and normalize initial content
+  const getInitialSteps = () => {
+    if (!initialData?.content) return DEFAULT_EXAMPLE_SESSIONS
+    try {
+      const parsed = typeof initialData.content === 'string' ? JSON.parse(initialData.content) : initialData.content
+      if (!Array.isArray(parsed)) return DEFAULT_EXAMPLE_SESSIONS
+      return parsed.map((item: any, idx: number) => ({
+        id: item.id || `session-${idx + 1}`,
+        title: item.title || item.type || `Séance ${idx + 1}`,
+        duration: item.duration || "",
+        demarche: item.demarche || item.content || "",
+        traceEcrite: item.traceEcrite || item.content || "",
+        evaluation: item.evaluation || item.observations || ""
+      }))
+    } catch {
+      return DEFAULT_EXAMPLE_SESSIONS
+    }
+  }
 
   const [isExampleContent, setIsExampleContent] = useState(!initialData)
 
@@ -100,7 +113,7 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
     }
   }, [session, initialData, metadata.teacherName])
 
-  const [steps, setSteps] = useState<any[]>(initialSteps)
+  const [steps, setSteps] = useState<any[]>(getInitialSteps())
 
   const handleStepsChange = (newSteps: any[]) => {
     if (isExampleContent) {
@@ -236,7 +249,7 @@ export function FicheBuilder({ initialData, isEditing = false, userRole, helpVid
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="metadata"><FileText className="mr-2 h-4 w-4" /> Fiche Technique</TabsTrigger>
-          <TabsTrigger value="content"><List className="mr-2 h-4 w-4" /> Scénario / Déroulement</TabsTrigger>
+          <TabsTrigger value="content"><List className="mr-2 h-4 w-4" /> Scénario (4 Colonnes)</TabsTrigger>
           <TabsTrigger value="json"><FileJson className="mr-2 h-4 w-4" /> Mode JSON</TabsTrigger>
           <TabsTrigger value="preview"><Eye className="mr-2 h-4 w-4" /> Aperçu PDF</TabsTrigger>
         </TabsList>

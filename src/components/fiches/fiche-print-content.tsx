@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { FicheContentRenderer } from "./fiche-content-renderer"
+import { latexPreprocessor } from "@/lib/latex-preprocessor"
 import 'katex/dist/katex.min.css'
 
 interface FichePrintContentProps {
@@ -12,8 +13,10 @@ interface FichePrintContentProps {
 function LatexText({ content, className }: { content: string; className?: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
+  const normalized = content ? latexPreprocessor.normalizeLatex(content) : ""
+
   useEffect(() => {
-    if (typeof window !== 'undefined' && containerRef.current && content) {
+    if (typeof window !== 'undefined' && containerRef.current && normalized) {
       const renderMath = async () => {
         try {
           const renderMathInElement = (await import('katex/dist/contrib/auto-render.min.js')).default
@@ -34,9 +37,9 @@ function LatexText({ content, className }: { content: string; className?: string
         }
       }
 
-      setTimeout(renderMath, 50)
+      setTimeout(renderMath, 30)
     }
-  }, [content])
+  }, [normalized])
 
   if (!content) return null
 
@@ -44,7 +47,7 @@ function LatexText({ content, className }: { content: string; className?: string
     <div
       ref={containerRef}
       className={className}
-      dangerouslySetInnerHTML={{ __html: content }}
+      dangerouslySetInnerHTML={{ __html: normalized }}
     />
   )
 }
@@ -54,7 +57,7 @@ function BulletList({ text }: { text: string }) {
   const items = text.split('\n').map(item => item.trim()).filter(Boolean)
 
   return (
-    <ul className="list-disc list-inside space-y-1 text-sm text-gray-800">
+    <ul className="list-disc list-inside space-y-1 text-xs text-gray-800">
       {items.map((item, idx) => (
         <li key={idx}>
           <LatexText content={item.replace(/^[•\-\*]\s*/, '')} className="inline" />
@@ -65,17 +68,32 @@ function BulletList({ text }: { text: string }) {
 }
 
 export function FichePrintContent({ fiche }: FichePrintContentProps) {
-  const [items, setItems] = useState<any[]>([])
+  const [sessions, setSessions] = useState<any[]>([])
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
     try {
+      let parsed: any[] = []
       if (typeof fiche.content === 'string') {
-        setItems(JSON.parse(fiche.content))
+        parsed = JSON.parse(fiche.content)
       } else if (Array.isArray(fiche.content)) {
-        setItems(fiche.content)
+        parsed = fiche.content
       }
+
+      // Normalize all items to 4-column structured sessions
+      const normalized = parsed.map((item: any, idx: number) => {
+        return {
+          id: item.id || `session-${idx + 1}`,
+          title: item.title || item.type || `Séance ${idx + 1}`,
+          duration: item.duration || "",
+          demarche: item.demarche || item.content || "",
+          traceEcrite: item.traceEcrite || item.content || "",
+          evaluation: item.evaluation || item.observations || ""
+        }
+      })
+
+      setSessions(normalized)
     } catch (e) {
       console.error("Error parsing fiche content", e)
     }
@@ -83,16 +101,13 @@ export function FichePrintContent({ fiche }: FichePrintContentProps) {
 
   if (!mounted) return null
 
-  // Check if items are 4-column sessions or legacy 3-column steps
-  const isFourColumnFormat = items.length > 0 && ('demarche' in items[0] || 'traceEcrite' in items[0])
-
   return (
-    <div className="bg-white text-gray-900 min-h-screen font-serif relative p-6 print:p-0 text-sm">
+    <div className="bg-white text-gray-900 min-h-screen font-serif relative p-6 print:p-0 text-xs leading-relaxed">
       <style>{`
         @media print {
           @page {
             size: A4;
-            margin: 1.5cm 1.4cm 1.5cm 1.4cm;
+            margin: 1.4cm 1.2cm 1.4cm 1.2cm;
           }
           body {
             -webkit-print-color-adjust: exact !important;
@@ -108,31 +123,31 @@ export function FichePrintContent({ fiche }: FichePrintContentProps) {
           border: 1px solid #C9D2DC;
           border-radius: 6px;
           position: relative;
-          padding: 16px 14px 12px 14px;
-          margin-bottom: 16px;
+          padding: 14px 12px 10px 12px;
+          margin-bottom: 14px;
         }
 
         .pedabox-title {
           position: absolute;
-          top: -12px;
+          top: -11px;
           left: 12px;
           background-color: #1B3A5C;
           color: white;
           font-family: sans-serif;
           font-weight: bold;
-          font-size: 13px;
-          padding: 2px 12px;
+          font-size: 12px;
+          padding: 2px 10px;
           border-radius: 4px;
         }
       `}</style>
 
       {/* Header rule matching LaTeX fancyhdr */}
-      <div className="flex justify-between items-center text-xs font-sans text-[#1B3A5C] pb-1 mb-4 border-b-2 border-[#1B3A5C]">
+      <div className="flex justify-between items-center text-xs font-sans text-[#1B3A5C] pb-1 mb-3 border-b-2 border-[#1B3A5C]">
         <div className="font-bold">
           {fiche.subject || "Mathématiques"} --- {fiche.stream || fiche.gradeLevel || "TCSF"}
         </div>
         <div>
-          Fiche pédagogique --- {fiche.lessonTitle || "Arithmétique dans ℕ"}
+          Fiche pédagogique --- <LatexText content={fiche.lessonTitle || "Arithmétique dans ℕ"} className="inline" />
         </div>
         <div>
           M. {fiche.teacherName || "Mohamed Nagchi"}
@@ -140,11 +155,11 @@ export function FichePrintContent({ fiche }: FichePrintContentProps) {
       </div>
 
       {/* 1. BANNIÈRE DE TITRE */}
-      <div className="bg-[#1B3A5C] text-white rounded-lg p-4 text-center mb-6 shadow-sm">
-        <h1 className="text-xl font-bold tracking-wide uppercase font-sans mb-1">
+      <div className="bg-[#1B3A5C] text-white rounded-lg p-3.5 text-center mb-5 shadow-sm">
+        <h1 className="text-lg font-bold tracking-wide uppercase font-sans mb-0.5">
           FICHE PÉDAGOGIQUE
         </h1>
-        <div className="text-lg font-medium font-serif mb-2">
+        <div className="text-base font-medium font-serif mb-1">
           <LatexText content={fiche.lessonTitle || "Titre du chapitre"} />
         </div>
         <div className="text-xs font-sans text-blue-100">
@@ -158,28 +173,28 @@ export function FichePrintContent({ fiche }: FichePrintContentProps) {
         <table className="w-full text-xs font-sans border-collapse">
           <tbody>
             <tr className="border-b border-[#C9D2DC]">
-              <td className="py-2 font-bold text-[#1B3A5C] w-1/4">Professeur</td>
-              <td className="py-2 w-1/4">{fiche.teacherName || "Mohamed Nagchi"}</td>
-              <td className="py-2 font-bold text-[#1B3A5C] w-1/4">Établissement</td>
-              <td className="py-2 w-1/4">{fiche.schoolName || "Lycée Hassan I"}</td>
+              <td className="py-1.5 font-bold text-[#1B3A5C] w-1/4">Professeur</td>
+              <td className="py-1.5 w-1/4">{fiche.teacherName || "Mohamed Nagchi"}</td>
+              <td className="py-1.5 font-bold text-[#1B3A5C] w-1/4">Établissement</td>
+              <td className="py-1.5 w-1/4">{fiche.schoolName || "Lycée Hassan I"}</td>
             </tr>
             <tr className="border-b border-[#C9D2DC]">
-              <td className="py-2 font-bold text-[#1B3A5C]">Niveau</td>
-              <td className="py-2">{fiche.stream || fiche.gradeLevel || "Tronc Commun"}</td>
-              <td className="py-2 font-bold text-[#1B3A5C]">Durée globale</td>
-              <td className="py-2">{fiche.duration || "7 heures"}</td>
+              <td className="py-1.5 font-bold text-[#1B3A5C]">Niveau</td>
+              <td className="py-1.5">{fiche.stream || fiche.gradeLevel || "Tronc Commun"}</td>
+              <td className="py-1.5 font-bold text-[#1B3A5C]">Durée globale</td>
+              <td className="py-1.5">{fiche.duration || "7 heures"}</td>
             </tr>
             <tr className="border-b border-[#C9D2DC]">
-              <td className="py-2 font-bold text-[#1B3A5C]">Matière</td>
-              <td className="py-2">{fiche.subject || "Mathématiques"}</td>
-              <td className="py-2 font-bold text-[#1B3A5C]">Année scolaire</td>
-              <td className="py-2">{fiche.schoolYear || "2025 – 2026"}</td>
+              <td className="py-1.5 font-bold text-[#1B3A5C]">Matière</td>
+              <td className="py-1.5">{fiche.subject || "Mathématiques"}</td>
+              <td className="py-1.5 font-bold text-[#1B3A5C]">Année scolaire</td>
+              <td className="py-1.5">{fiche.schoolYear || "2025 – 2026"}</td>
             </tr>
             <tr>
-              <td className="py-2 font-bold text-[#1B3A5C]">Chapitre</td>
-              <td className="py-2"><LatexText content={fiche.lessonTitle || ""} /></td>
-              <td className="py-2 font-bold text-[#1B3A5C]">Manuel</td>
-              <td className="py-2">{fiche.textbook || "Najah"}</td>
+              <td className="py-1.5 font-bold text-[#1B3A5C]">Chapitre</td>
+              <td className="py-1.5"><LatexText content={fiche.lessonTitle || ""} /></td>
+              <td className="py-1.5 font-bold text-[#1B3A5C]">Manuel</td>
+              <td className="py-1.5">{fiche.textbook || "Najah"}</td>
             </tr>
           </tbody>
         </table>
@@ -191,32 +206,32 @@ export function FichePrintContent({ fiche }: FichePrintContentProps) {
         <table className="w-full text-xs font-sans border-collapse">
           <tbody>
             <tr className="border-b border-[#C9D2DC]">
-              <td className="py-2 font-bold text-[#1B3A5C] w-1/4 align-top">Capacités attendues</td>
-              <td className="py-2">
+              <td className="py-1.5 font-bold text-[#1B3A5C] w-1/4 align-top">Capacités attendues</td>
+              <td className="py-1.5">
                 <BulletList text={fiche.capacities} />
               </td>
             </tr>
             <tr className="border-b border-[#C9D2DC]">
-              <td className="py-2 font-bold text-[#1B3A5C] align-top">Contenus du programme</td>
-              <td className="py-2">
+              <td className="py-1.5 font-bold text-[#1B3A5C] align-top">Contenus du programme</td>
+              <td className="py-1.5">
                 <BulletList text={fiche.programContents} />
               </td>
             </tr>
             <tr className="border-b border-[#C9D2DC]">
-              <td className="py-2 font-bold text-[#1B3A5C] align-top">Recommandations</td>
-              <td className="py-2">
+              <td className="py-1.5 font-bold text-[#1B3A5C] align-top">Recommandations</td>
+              <td className="py-1.5">
                 <LatexText content={fiche.pedagogicalGuidelines || "Introduire progressivement les symboles mathématiques."} />
               </td>
             </tr>
             <tr className="border-b border-[#C9D2DC]">
-              <td className="py-2 font-bold text-[#1B3A5C] align-top">Prérequis</td>
-              <td className="py-2">
-                <LatexText content={fiche.prerequisites || "Opérations élémentaires dans ℕ."} />
+              <td className="py-1.5 font-bold text-[#1B3A5C] align-top">Prérequis</td>
+              <td className="py-1.5">
+                <LatexText content={fiche.prerequisites || "Opérations dans ℕ ; notion élémentaire de divisibilité."} />
               </td>
             </tr>
             <tr>
-              <td className="py-2 font-bold text-[#1B3A5C] align-top">Outils didactiques</td>
-              <td className="py-2">
+              <td className="py-1.5 font-bold text-[#1B3A5C] align-top">Outils didactiques</td>
+              <td className="py-1.5">
                 <LatexText content={fiche.didacticTools || "Tableau, craie, manuel scolaire, fiches d'activités."} />
               </td>
             </tr>
@@ -224,113 +239,86 @@ export function FichePrintContent({ fiche }: FichePrintContentProps) {
         </table>
       </div>
 
-      {/* 4. DÉROULEMENT ET PLAN DE LA SÉQUENCE */}
-      <div className="my-6">
-        <h2 className="text-center font-sans font-bold text-base text-[#1B3A5C] mb-3 uppercase tracking-wide">
+      {/* 4. DÉROULEMENT ET PLAN DE LA SÉQUENCE (4-COLUMN TABLE SPEC) */}
+      <div className="my-5">
+        <h2 className="text-center font-sans font-bold text-sm text-[#1B3A5C] mb-2 uppercase tracking-wide">
           Déroulement et plan de la séquence
         </h2>
 
-        {isFourColumnFormat ? (
-          <table className="w-full border-collapse border border-[#C9D2DC] text-xs font-serif">
-            <thead>
-              <tr className="bg-[#1B3A5C] text-white font-sans font-bold text-center">
-                <th className="p-2 border border-[#C9D2DC] w-[13%]">Séance & Durée</th>
-                <th className="p-2 border border-[#C9D2DC] w-[27%]">Démarche & Activités</th>
-                <th className="p-2 border border-[#C9D2DC] w-[45%]">Trace écrite (Contenu du cours)</th>
-                <th className="p-2 border border-[#C9D2DC] w-[15%]">Évaluation</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((session: any, idx: number) => {
-                const sessionNum = idx + 1
-                const sessionTitle = session.title || session.type || `Séance ${sessionNum}`
-                const sessionDur = session.duration || ""
+        <table className="w-full border-collapse border border-[#C9D2DC] text-xs font-serif">
+          <thead>
+            <tr className="bg-[#1B3A5C] text-white font-sans font-bold text-center">
+              <th className="p-2 border border-[#C9D2DC] w-[13%]">Séance & Durée</th>
+              <th className="p-2 border border-[#C9D2DC] w-[27%]">Démarche & Activités</th>
+              <th className="p-2 border border-[#C9D2DC] w-[45%]">Trace écrite (Contenu du cours)</th>
+              <th className="p-2 border border-[#C9D2DC] w-[15%]">Évaluation</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sessions.map((session: any, idx: number) => {
+              const sessionNum = idx + 1
+              const sessionTitle = session.title || `Séance ${sessionNum}`
+              const sessionDur = session.duration || ""
 
-                return (
-                  <tr key={idx} className="break-inside-avoid">
-                    {/* Full session header if specified */}
-                    <td colSpan={4} className="p-0 border border-[#C9D2DC]">
-                      <div className="bg-[#EEF3F7] text-[#1B3A5C] font-sans font-bold px-3 py-1.5 border-b border-[#C9D2DC] flex justify-between items-center">
-                        <span>{sessionTitle}</span>
-                        <span className="font-normal italic text-xs">{sessionDur}</span>
+              return (
+                <tr key={idx} className="break-inside-avoid">
+                  <td colSpan={4} className="p-0 border border-[#C9D2DC]">
+                    {/* Session Subheader Banner */}
+                    <div className="bg-[#EEF3F7] text-[#1B3A5C] font-sans font-bold px-3 py-1 border-b border-[#C9D2DC] flex justify-between items-center text-xs">
+                      <LatexText content={sessionTitle} className="inline" />
+                      {sessionDur && <span className="font-normal italic text-[11px] text-gray-700">({sessionDur})</span>}
+                    </div>
+
+                    {/* 4-Column Grid for Session Content */}
+                    <div className="grid grid-cols-12 text-xs divide-x divide-[#C9D2DC]">
+                      <div className="col-span-2 p-2 font-sans align-top bg-gray-50/40">
+                        <strong className="text-[#1B3A5C]">Séance {sessionNum}</strong>
+                        {sessionDur && <div className="italic text-gray-600 mt-1">{sessionDur}</div>}
                       </div>
-                      <div className="grid grid-cols-12 text-xs">
-                        <div className="col-span-2 p-2 border-r border-[#C9D2DC] font-sans">
-                          <strong className="text-[#1B3A5C]">Séance {sessionNum}</strong>
-                          {sessionDur && <div className="italic text-gray-600 mt-1">{sessionDur}</div>}
-                        </div>
-                        <div className="col-span-3 p-2 border-r border-[#C9D2DC] align-top">
-                          <FicheContentRenderer content={session.demarche || session.content || ""} />
-                        </div>
-                        <div className="col-span-5 p-2 border-r border-[#C9D2DC] align-top">
-                          <FicheContentRenderer content={session.traceEcrite || session.content || ""} />
-                        </div>
-                        <div className="col-span-2 p-2 align-top">
-                          <FicheContentRenderer content={session.evaluation || session.observations || ""} />
-                        </div>
+                      <div className="col-span-3 p-2 align-top">
+                        <FicheContentRenderer content={session.demarche || ""} />
                       </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        ) : (
-          /* Legacy 3-column steps fallback */
-          <table className="w-full border-collapse border border-[#C9D2DC] text-xs font-serif">
-            <thead>
-              <tr className="bg-[#1B3A5C] text-white font-sans font-bold uppercase text-center">
-                <th className="p-2 border border-[#C9D2DC] w-[15%]">Étape</th>
-                <th className="p-2 border border-[#C9D2DC] w-[65%]">Activités & Contenu</th>
-                <th className="p-2 border border-[#C9D2DC] w-[20%]">Observations</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((step: any, idx: number) => (
-                <tr key={idx} className="break-inside-avoid border-b border-[#C9D2DC]">
-                  <td className="p-2 border-r border-[#C9D2DC] text-center font-sans font-medium align-top bg-gray-50/50">
-                    <div className="text-[#1B3A5C] font-bold uppercase">{step.type} {idx + 1}</div>
-                    {step.duration && <div className="text-[10px] text-gray-500 mt-1">{step.duration}</div>}
-                  </td>
-                  <td className="p-2 border-r border-[#C9D2DC] align-top">
-                    <FicheContentRenderer content={step.content} />
-                  </td>
-                  <td className="p-2 italic text-gray-600 align-top text-xs">
-                    {step.observations}
+                      <div className="col-span-5 p-2 align-top">
+                        <FicheContentRenderer content={session.traceEcrite || ""} />
+                      </div>
+                      <div className="col-span-2 p-2 align-top bg-amber-50/20">
+                        <FicheContentRenderer content={session.evaluation || ""} />
+                      </div>
+                    </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              )
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* 5. BILAN DE LA SÉQUENCE */}
-      <div className="pedabox-container mt-6">
+      <div className="pedabox-container mt-5">
         <div className="pedabox-title">Bilan de la séquence</div>
         <table className="w-full text-xs font-sans border-collapse">
           <tbody>
             <tr className="border-b border-[#C9D2DC]">
-              <td className="py-2.5 font-bold text-[#1B3A5C] w-1/4 align-top">Bilan de la séquence</td>
-              <td className="py-2.5 min-h-[30px]">
+              <td className="py-2 font-bold text-[#1B3A5C] w-1/4 align-top">Bilan de la séquence</td>
+              <td className="py-2 min-h-[24px]">
                 <LatexText content={fiche.bilanSequence || ""} />
               </td>
             </tr>
             <tr className="border-b border-[#C9D2DC]">
-              <td className="py-2.5 font-bold text-[#1B3A5C] align-top">Difficultés constatées</td>
-              <td className="py-2.5 min-h-[30px]">
+              <td className="py-2 font-bold text-[#1B3A5C] align-top">Difficultés constatées</td>
+              <td className="py-2 min-h-[24px]">
                 <LatexText content={fiche.difficultiesObserved || ""} />
               </td>
             </tr>
             <tr className="border-b border-[#C9D2DC]">
-              <td className="py-2.5 font-bold text-[#1B3A5C] align-top">Remédiation proposée</td>
-              <td className="py-2.5 min-h-[30px]">
+              <td className="py-2 font-bold text-[#1B3A5C] align-top">Remédiation proposée</td>
+              <td className="py-2 min-h-[24px]">
                 <LatexText content={fiche.remediationProposed || ""} />
               </td>
             </tr>
             <tr>
-              <td className="py-2.5 font-bold text-[#1B3A5C] align-top">Observations</td>
-              <td className="py-2.5 min-h-[30px]">
+              <td className="py-2 font-bold text-[#1B3A5C] align-top">Observations</td>
+              <td className="py-2 min-h-[24px]">
                 <LatexText content={fiche.observations || ""} />
               </td>
             </tr>
@@ -339,8 +327,8 @@ export function FichePrintContent({ fiche }: FichePrintContentProps) {
       </div>
 
       {/* Bottom Footer Rule */}
-      <div className="mt-8 pt-2 border-t border-[#C9D2DC] flex justify-center text-xs font-sans text-[#1B3A5C]">
-        <span>1 / 3</span>
+      <div className="mt-6 pt-2 border-t border-[#C9D2DC] flex justify-center text-xs font-sans text-[#1B3A5C]">
+        <span>Page 1 / 3</span>
       </div>
     </div>
   )

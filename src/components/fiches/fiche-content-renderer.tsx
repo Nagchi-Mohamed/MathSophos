@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { latexPreprocessor } from "@/lib/latex-preprocessor";
 import 'katex/dist/katex.min.css';
 
 interface FicheContentRendererProps {
@@ -10,8 +11,11 @@ interface FicheContentRendererProps {
 export function FicheContentRenderer({ content }: FicheContentRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const processedContent = content
-    ? content
+  // Preprocess LaTeX math commands and normalize delimiters
+  const rawContent = content ? latexPreprocessor.normalizeLatex(content) : '';
+
+  const processedContent = rawContent
+    ? rawContent
       // Fix HTML entities
       .replace(/&nbsp;/g, ' ')
       .replace(/&amp;/g, '&')
@@ -19,8 +23,7 @@ export function FicheContentRenderer({ content }: FicheContentRendererProps) {
       .replace(/&gt;/g, '>')
       // Convert LaTeX \includegraphics to HTML img tags
       .replace(/\\includegraphics(?:\[([^\]]*)\])?\{([^}]+)\}/g, (match: string, options: string, imagePath: string) => {
-        // Extract width parameter if present (e.g., width=0.8\linewidth)
-        let widthStyle = 'width: 100%;'; // default
+        let widthStyle = 'width: 100%;';
         if (options) {
           const widthMatch = options.match(/width\s*=\s*([\d.]+)\\linewidth/);
           if (widthMatch) {
@@ -30,34 +33,27 @@ export function FicheContentRenderer({ content }: FicheContentRendererProps) {
         }
         return `<img src="${imagePath}" alt="Image" style="${widthStyle} height: auto; display: block; margin: 15px auto;" />`;
       })
-      // Strip display math wrappers around arrays/tabulars to prevent $$ artifacts
+      // Strip display math wrappers around arrays/tabulars
       .replace(/(?:\$\$|\\\[)\s*(\\begin\{(?:array|tabular)\}[\s\S]*?\\end\{(?:array|tabular)\})\s*(?:\$\$|\\\])/g, '$1')
       // Convert LaTeX arrays/tabulars to HTML tables
       .replace(/\\begin\{(array|tabular)\}(?:\{.*?\})?([\s\S]*?)\\end\{\1\}/g, (match: string, env: string, tableContent: string) => {
-        // Filter out empty rows often caused by trailing \\ or \hline
         const rows = tableContent.split('\\\\').filter((r: string) => r.replace(/\\hline/g, '').trim());
 
         if (rows.length === 0) return match;
 
         const htmlRows = rows.map((row: string) => {
-          // Remove \hline and trim
           let cleanRow = row.replace(/\\hline/g, '').trim();
           if (!cleanRow) return '';
-
-          // Split by & (row separator)
           const cols = cleanRow.split('&');
-
           return '<tr>' + cols.map((col: string) => {
-            const content = col.trim();
-            // If it's an array, wrap in math delimiters (unless empty)
-            const finalContent = (env === 'array' && content) ? `$${content}$` : content;
-            return `<td style="border: 1px solid #000; padding: 8px; text-align: center;">${finalContent}</td>`;
+            const cContent = col.trim();
+            const finalContent = (env === 'array' && cContent) ? `$${cContent}$` : cContent;
+            return `<td style="border: 1px solid #C9D2DC; padding: 6px; text-align: center;">${finalContent}</td>`;
           }).join('') + '</tr>';
         }).join('');
 
-        return `<table style="border-collapse: collapse; margin: 15px auto; width: 100%; border: 1px solid #000;"><tbody>${htmlRows}</tbody></table>`;
+        return `<table style="border-collapse: collapse; margin: 10px auto; width: 100%; border: 1px solid #C9D2DC;"><tbody>${htmlRows}</tbody></table>`;
       })
-
     : '';
 
   useEffect(() => {
@@ -78,7 +74,7 @@ export function FicheContentRenderer({ content }: FicheContentRendererProps) {
             throwOnError: false,
             errorColor: '#cc0000',
             maxExpand: 10000,
-            trust: (context: any) => ['\\htmlId', '\\href', '\\includegraphics', '\\class', '\\style', '\\htmlData'].includes(context.command),
+            trust: true,
             strict: false,
           });
         }
@@ -87,64 +83,14 @@ export function FicheContentRenderer({ content }: FicheContentRendererProps) {
       }
     };
 
-    // Make images resizable
-    const makeImagesResizable = () => {
-      if (!containerRef.current) return;
-
-      const images = containerRef.current.querySelectorAll('img');
-      images.forEach((img: HTMLImageElement) => {
-        // Make images responsive by default
-        img.style.maxWidth = '100%';
-        img.style.height = 'auto';
-        img.style.cursor = 'pointer';
-        img.style.transition = 'transform 0.2s';
-
-        // Add resize on click (cycle through sizes)
-        let currentSize = 1; // 1 = 100%, 2 = 75%, 3 = 50%, 4 = 25%
-        img.onclick = (e) => {
-          e.preventDefault();
-          currentSize = (currentSize % 4) + 1;
-
-          switch (currentSize) {
-            case 1:
-              img.style.width = '100%';
-              break;
-            case 2:
-              img.style.width = '75%';
-              break;
-            case 3:
-              img.style.width = '50%';
-              break;
-            case 4:
-              img.style.width = '25%';
-              break;
-          }
-        };
-
-        // Hover effect
-        img.onmouseenter = () => {
-          img.style.transform = 'scale(1.02)';
-          img.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-        };
-        img.onmouseleave = () => {
-          img.style.transform = 'scale(1)';
-          img.style.boxShadow = 'none';
-        };
-      });
-    };
-
-    const timer = setTimeout(() => {
-      renderMath();
-      makeImagesResizable();
-    }, 50);
-
+    const timer = setTimeout(renderMath, 30);
     return () => clearTimeout(timer);
   }, [processedContent]);
 
   return (
     <div
       ref={containerRef}
-      className="fiche-content text-black [&_*]:text-black [&_img]:rounded-lg [&_img]:border [&_img]:border-gray-300"
+      className="fiche-content text-gray-900 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_img]:rounded-lg [&_img]:border [&_img]:border-gray-300"
       dangerouslySetInnerHTML={{ __html: processedContent }}
     />
   );
