@@ -9,9 +9,10 @@ import { Badge } from '@/components/ui/badge';
 
 interface ExerciseBlockProps {
   block: ExerciseBlockType;
+  children?: React.ReactNode;
 }
 
-export function ExerciseBlock({ block }: ExerciseBlockProps) {
+export function ExerciseBlock({ block, children }: ExerciseBlockProps) {
   const [showHints, setShowHints] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
 
@@ -36,7 +37,8 @@ export function ExerciseBlock({ block }: ExerciseBlockProps) {
         )}
       </div>
 
-      <div className="p-6 text-foreground/90 leading-relaxed font-serif text-base md:text-lg">
+      <div className="p-6 text-foreground/90 leading-relaxed font-serif text-base md:text-lg relative clearfix">
+        {children}
         <MarkdownRenderer content={block.statement} />
       </div>
 

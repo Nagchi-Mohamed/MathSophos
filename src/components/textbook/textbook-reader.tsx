@@ -32,14 +32,14 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
   const [annotations, setAnnotations] = useState<LessonAnnotation[]>([]);
 
   // Currently active cursor / selection spot
-  const [activeCursor, setActiveCursor] = useState<{ blockId: string; position: 'before' | 'after' } | null>(null);
+  const [activeCursor, setActiveCursor] = useState<{ blockId: string; position: 'before' | 'after' | 'inside' } | null>(null);
 
-  // Track the block the mouse is hovering over right now
-  const hoveredBlockRef = useRef<{ blockId: string; position: 'before' | 'after' } | null>(null);
+  // Track the block and position the mouse is hovering over
+  const hoveredTargetRef = useRef<{ blockId: string; position: 'before' | 'after' | 'inside' } | null>(null);
 
   // Hidden file input for double-click to upload
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const fileInputTargetRef = useRef<{ blockId: string; position: 'before' | 'after' } | null>(null);
+  const fileInputTargetRef = useRef<{ blockId: string; position: 'before' | 'after' | 'inside' } | null>(null);
 
   // Flat list of all block IDs in order
   const orderedBlockIds = useMemo(() => {
@@ -69,7 +69,7 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
   const createAnnotation = useCallback(async (
     file: File,
     blockId: string,
-    position: 'before' | 'after'
+    position: 'before' | 'after' | 'inside'
   ) => {
     if (!file.type.startsWith('image/')) return;
     if (file.size > 8 * 1024 * 1024) {
@@ -103,6 +103,8 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
         });
       }
 
+      const defaultFloat = position === 'inside' ? 'right' : 'left';
+
       const annRes = await fetch("/api/lesson-annotations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -112,15 +114,15 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
           imageUrl,
           imageId,
           position,
-          float: "left",
-          widthPct: 40
+          float: defaultFloat,
+          widthPct: position === 'inside' ? 40 : 50
         }),
       });
 
       if (annRes.ok) {
         const ann = await annRes.json();
         setAnnotations(prev => [...prev, ann]);
-        toast.success("Image insérée avec succès !", { id: toastId });
+        toast.success(position === 'inside' ? "Image insérée dans la boîte !" : "Image insérée avec succès !", { id: toastId });
       } else {
         toast.error("Erreur lors de l'enregistrement", { id: toastId });
       }
@@ -140,10 +142,7 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
       if (!file.type.startsWith('image/')) return;
       e.preventDefault();
 
-      // 1. Target = explicitly clicked cursor
-      // 2. Or = currently hovered block
-      // 3. Or = block closest to current scroll viewport
-      const target = activeCursor || hoveredBlockRef.current;
+      const target = activeCursor || hoveredTargetRef.current;
       if (target) {
         createAnnotation(file, target.blockId, target.position);
       } else {
@@ -162,9 +161,9 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
         });
         const fallbackId = closest ? (closest as HTMLElement).dataset.blockId! : orderedBlockIds[0];
         if (fallbackId) {
-          createAnnotation(file, fallbackId, 'before');
+          createAnnotation(file, fallbackId, 'inside');
         } else {
-          toast.info("Cliquez d'abord sur la zone où vous souhaitez coller l'image.");
+          toast.info("Cliquez sur le texte où vous souhaitez coller l'image.");
         }
       }
     };
@@ -199,6 +198,10 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
     if (!ann) return;
 
     if (ann.position === 'after') {
+      handleUpdate(annotationId, { position: 'inside' });
+      return;
+    }
+    if (ann.position.startsWith('inside')) {
       handleUpdate(annotationId, { position: 'before' });
       return;
     }
@@ -207,8 +210,8 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
     const currentIndex = orderedBlockIds.indexOf(ann.blockId);
     if (currentIndex > 0) {
       const prevBlockId = orderedBlockIds[currentIndex - 1];
-      handleUpdate(annotationId, { blockId: prevBlockId, position: 'after' });
-      toast.info("Image déplacée vers le haut");
+      handleUpdate(annotationId, { blockId: prevBlockId, position: 'inside' });
+      toast.info("Image déplacée vers le bloc précédent");
     }
   }, [annotations, orderedBlockIds, handleUpdate]);
 
@@ -217,6 +220,10 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
     if (!ann) return;
 
     if (ann.position === 'before') {
+      handleUpdate(annotationId, { position: 'inside' });
+      return;
+    }
+    if (ann.position.startsWith('inside')) {
       handleUpdate(annotationId, { position: 'after' });
       return;
     }
@@ -225,13 +232,23 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
     const currentIndex = orderedBlockIds.indexOf(ann.blockId);
     if (currentIndex >= 0 && currentIndex < orderedBlockIds.length - 1) {
       const nextBlockId = orderedBlockIds[currentIndex + 1];
-      handleUpdate(annotationId, { blockId: nextBlockId, position: 'before' });
-      toast.info("Image déplacée vers le bas");
+      handleUpdate(annotationId, { blockId: nextBlockId, position: 'inside' });
+      toast.info("Image déplacée vers le bloc suivant");
     }
   }, [annotations, orderedBlockIds, handleUpdate]);
 
+  // ── Toggle Inside / Outside ────────────────────────────────────────────────
+  const handleToggleInside = useCallback((annotationId: string) => {
+    const ann = annotations.find(a => a.id === annotationId);
+    if (!ann) return;
+
+    const newPos = ann.position.startsWith('inside') ? 'before' : 'inside';
+    handleUpdate(annotationId, { position: newPos });
+    toast.info(newPos === 'inside' ? "Image placée dans la boîte du texte !" : "Image placée en dehors de la boîte !");
+  }, [annotations, handleUpdate]);
+
   // ── Move Annotation to another Block (Drag & Drop) ─────────────────────────
-  const handleDropMoveAnnotation = useCallback((annotationId: string, newBlockId: string, newPos: 'before' | 'after') => {
+  const handleDropMoveAnnotation = useCallback((annotationId: string, newBlockId: string, newPos: 'before' | 'after' | 'inside') => {
     handleUpdate(annotationId, { blockId: newBlockId, position: newPos });
     toast.success("Image repositionnée !");
   }, [handleUpdate]);
@@ -255,86 +272,118 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
   // ── Block Zone Component ──────────────────────────────────────────────────
   const BlockZone = useCallback(({ block }: { block: ContentBlock }) => {
     const zoneRef = useRef<HTMLDivElement>(null);
-    const [dragOverHalf, setDragOverHalf] = useState<'before' | 'after' | null>(null);
+    const [dragOverZone, setDragOverZone] = useState<'before' | 'after' | 'inside' | null>(null);
 
-    const getHalf = (e: React.MouseEvent | React.DragEvent): 'before' | 'after' => {
+    const getZone = (e: React.MouseEvent | React.DragEvent): 'before' | 'after' | 'inside' => {
       const el = zoneRef.current;
-      if (!el) return 'before';
+      if (!el) return 'inside';
       const rect = el.getBoundingClientRect();
-      return e.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+      const relativeY = e.clientY - rect.top;
+      const height = rect.height;
+
+      // Top 18% is 'before', bottom 18% is 'after', middle 64% is 'inside' the text/box!
+      if (relativeY < Math.min(32, height * 0.18)) return 'before';
+      if (relativeY > Math.max(height - 32, height * 0.82)) return 'after';
+      return 'inside';
     };
 
     const handleClick = (e: React.MouseEvent) => {
       if (!isAdmin) return;
-      const half = getHalf(e);
-      setActiveCursor({ blockId: block.id, position: half });
+      e.stopPropagation();
+      const zone = getZone(e);
+      setActiveCursor({ blockId: block.id, position: zone });
     };
 
     const handleDoubleClick = (e: React.MouseEvent) => {
       if (!isAdmin) return;
       e.stopPropagation();
-      const half = getHalf(e);
-      fileInputTargetRef.current = { blockId: block.id, position: half };
+      const zone = getZone(e);
+      fileInputTargetRef.current = { blockId: block.id, position: zone };
       fileInputRef.current?.click();
     };
 
     const onMouseMove = (e: React.MouseEvent) => {
       if (!isAdmin) return;
-      const half = getHalf(e);
-      hoveredBlockRef.current = { blockId: block.id, position: half };
+      const zone = getZone(e);
+      hoveredTargetRef.current = { blockId: block.id, position: zone };
     };
 
     const onDragOver = (e: React.DragEvent) => {
       e.preventDefault();
       if (!isAdmin) return;
-      setDragOverHalf(getHalf(e));
+      setDragOverZone(getZone(e));
     };
 
     const onDragLeave = () => {
-      setDragOverHalf(null);
+      setDragOverZone(null);
     };
 
     const onDrop = (e: React.DragEvent) => {
       e.preventDefault();
       if (!isAdmin) return;
-      const half = getHalf(e);
-      setDragOverHalf(null);
+      const zone = getZone(e);
+      setDragOverZone(null);
 
       // Check if this is an existing annotation being dragged
       const existingAnnotationId = e.dataTransfer.getData("text/annotation-id");
       if (existingAnnotationId) {
-        handleDropMoveAnnotation(existingAnnotationId, block.id, half);
+        handleDropMoveAnnotation(existingAnnotationId, block.id, zone);
         return;
       }
 
       // Or a file dropped from outside
       const file = e.dataTransfer.files?.[0];
       if (file) {
-        createAnnotation(file, block.id, half);
+        createAnnotation(file, block.id, zone);
       }
     };
 
     const isCursorHere = activeCursor?.blockId === block.id;
 
-    const before = annotations.filter(a => a.blockId === block.id && a.position === 'before');
-    const after  = annotations.filter(a => a.blockId === block.id && a.position === 'after');
+    const beforeAnnotations = annotations.filter(a => a.blockId === block.id && a.position === 'before');
+    const afterAnnotations  = annotations.filter(a => a.blockId === block.id && a.position === 'after');
+    const insideAnnotations = annotations.filter(a => a.blockId === block.id && a.position.startsWith('inside'));
+
+    // Renders the annotations designated for inside the block
+    const insideElements = insideAnnotations.length > 0 ? (
+      <>
+        {insideAnnotations.map(ann => (
+          <AnnotationImage
+            key={ann.id}
+            annotation={ann}
+            isAdmin={isAdmin}
+            onUpdate={handleUpdate}
+            onDelete={handleDelete}
+            onMoveUp={handleMoveUp}
+            onMoveDown={handleMoveDown}
+            onToggleInside={handleToggleInside}
+          />
+        ))}
+      </>
+    ) : null;
 
     const blockEl = (() => {
       switch (block.type) {
-        case 'definition':   return <DefinitionBlock block={block} />;
+        case 'definition':
+          return <DefinitionBlock block={block}>{insideElements}</DefinitionBlock>;
         case 'theorem': case 'proposition': case 'lemma': case 'corollary':
-          return <TheoremBlock block={block} />;
-        case 'proof':        return <ProofBlock block={block} />;
-        case 'example': case 'application': return <ExampleBlock block={block} />;
-        case 'remark': case 'important': case 'warning': return <RemarkBlock block={block} />;
-        case 'method':       return <MethodBlock block={block} />;
-        case 'exercise':     return <ExerciseBlock block={block} />;
-        case 'common_error': return <CommonErrorBlock block={block} />;
-        case 'summary':      return <SummaryBlock block={block} />;
-        case 'self_evaluation': return <SelfAssessmentBlock block={block} />;
+          return <TheoremBlock block={block}>{insideElements}</TheoremBlock>;
+        case 'proof':
+          return <ProofBlock block={block}>{insideElements}</ProofBlock>;
+        case 'example': case 'application':
+          return <ExampleBlock block={block}>{insideElements}</ExampleBlock>;
+        case 'remark': case 'important': case 'warning':
+          return <RemarkBlock block={block}>{insideElements}</RemarkBlock>;
+        case 'exercise':
+          return <ExerciseBlock block={block}>{insideElements}</ExerciseBlock>;
         default: {
           const text = ('content' in block ? (block as any).content : null) || ('statement' in block ? (block as any).statement : null) || '';
-          return <div className="my-4 text-foreground/90 font-serif text-base md:text-lg leading-relaxed"><MarkdownRenderer content={text} /></div>;
+          return (
+            <div className="my-4 text-foreground/90 font-serif text-base md:text-lg leading-relaxed relative clearfix">
+              {insideElements}
+              <MarkdownRenderer content={text} />
+            </div>
+          );
         }
       }
     })();
@@ -351,28 +400,28 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
         onDrop={onDrop}
         style={{
           position: 'relative',
-          borderRadius: 6,
+          borderRadius: 8,
           transition: 'all 0.15s ease',
           outline: isAdmin && isCursorHere ? '2px solid #3b82f6' : 'none',
           outlineOffset: 3,
         }}
-        title={isAdmin ? "Cliquez pour placer le curseur | Double-cliquez pour ajouter une image | Collez avec Ctrl+V" : undefined}
+        title={isAdmin ? "Cliquez au milieu pour insérer DANS le texte/la boîte | Cliquez en haut/bas pour insérer en-dehors | Ctrl+V pour coller" : undefined}
       >
         {/* Drop indicator: Before */}
-        {isAdmin && dragOverHalf === 'before' && (
+        {isAdmin && dragOverZone === 'before' && (
           <div style={{ height: 4, background: '#2563eb', borderRadius: 2, marginBottom: 6, boxShadow: '0 0 8px #2563eb' }} />
         )}
 
         {/* Cursor indicator: Before */}
         {isAdmin && isCursorHere && activeCursor?.position === 'before' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 8px', background: '#eff6ff', borderRadius: 4, marginBottom: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', background: '#eff6ff', borderRadius: 4, marginBottom: 4 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb', animation: 'pulse 1.5s infinite' }} />
-            <span style={{ fontSize: 11, color: '#1d4ed8', fontWeight: 600 }}>Curseur ici (Ctrl+V ou Glisser)</span>
+            <span style={{ fontSize: 11, color: '#1d4ed8', fontWeight: 600 }}>↑ Curseur AU-DESSUS du bloc (Ctrl+V ou Glisser)</span>
           </div>
         )}
 
         {/* Annotations BEFORE */}
-        {before.map(ann => (
+        {beforeAnnotations.map(ann => (
           <AnnotationImage
             key={ann.id}
             annotation={ann}
@@ -381,14 +430,28 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
             onDelete={handleDelete}
             onMoveUp={handleMoveUp}
             onMoveDown={handleMoveDown}
+            onToggleInside={handleToggleInside}
           />
         ))}
 
-        {/* The block content itself */}
+        {/* Drop indicator: Inside */}
+        {isAdmin && dragOverZone === 'inside' && (
+          <div style={{ height: 4, background: '#16a34a', borderRadius: 2, margin: '6px 0', boxShadow: '0 0 8px #16a34a' }} />
+        )}
+
+        {/* Cursor indicator: Inside */}
+        {isAdmin && isCursorHere && activeCursor?.position === 'inside' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 4, margin: '4px 0' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', animation: 'pulse 1.5s infinite' }} />
+            <span style={{ fontSize: 11, color: '#15803d', fontWeight: 600 }}>📍 Curseur DANS LE TEXTE / LA BOÎTE (Ctrl+V ou Glisser pour insérer à l'intérieur)</span>
+          </div>
+        )}
+
+        {/* The block content itself (including inside elements) */}
         <div style={{ overflow: 'hidden' }}>{blockEl}</div>
 
         {/* Annotations AFTER */}
-        {after.map(ann => (
+        {afterAnnotations.map(ann => (
           <AnnotationImage
             key={ann.id}
             annotation={ann}
@@ -397,19 +460,20 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
             onDelete={handleDelete}
             onMoveUp={handleMoveUp}
             onMoveDown={handleMoveDown}
+            onToggleInside={handleToggleInside}
           />
         ))}
 
         {/* Cursor indicator: After */}
         {isAdmin && isCursorHere && activeCursor?.position === 'after' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 8px', background: '#eff6ff', borderRadius: 4, marginTop: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', background: '#eff6ff', borderRadius: 4, marginTop: 4 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb', animation: 'pulse 1.5s infinite' }} />
-            <span style={{ fontSize: 11, color: '#1d4ed8', fontWeight: 600 }}>Curseur ici (Ctrl+V ou Glisser)</span>
+            <span style={{ fontSize: 11, color: '#1d4ed8', fontWeight: 600 }}>↓ Curseur EN-DESSOUS du bloc (Ctrl+V ou Glisser)</span>
           </div>
         )}
 
         {/* Drop indicator: After */}
-        {isAdmin && dragOverHalf === 'after' && (
+        {isAdmin && dragOverZone === 'after' && (
           <div style={{ height: 4, background: '#2563eb', borderRadius: 2, marginTop: 6, boxShadow: '0 0 8px #2563eb' }} />
         )}
 
@@ -418,7 +482,7 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
       </div>
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [annotations, isAdmin, activeCursor, handleUpdate, handleDelete, handleMoveUp, handleMoveDown, handleDropMoveAnnotation, createAnnotation]);
+  }, [annotations, isAdmin, activeCursor, handleUpdate, handleDelete, handleMoveUp, handleMoveDown, handleToggleInside, handleDropMoveAnnotation, createAnnotation]);
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${paperMode ? 'bg-[#FAF8F5] text-[#2C2825]' : 'bg-background text-foreground'}`}>
@@ -450,14 +514,14 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
 
         {isAdmin && (
           <div
-            title="Cliquez pour placer le curseur, puis Ctrl+V ou glissez une image. Double-cliquez pour choisir un fichier."
+            title="Cliquez sur le texte pour insérer dans la boîte, ou en haut/bas pour insérer en dehors. Ctrl+V pour coller."
             className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3.5 py-1.5 text-xs font-semibold shadow-lg flex items-center gap-2 cursor-pointer transition-all"
             onClick={() => {
-              toast.info("1. Cliquez sur n'importe quel paragraphe pour placer le curseur.\n2. Faites Ctrl+V ou glissez une image.\n3. Cliquez sur l'image pour la déplacer, la redimensionner ou la styler comme dans Word.");
+              toast.info("1. Cliquez au centre d'une boîte/texte : l'indicateur vert indique une insertion DANS la boîte.\n2. Faites Ctrl+V ou glissez une image.\n3. Cliquez sur l'image pour régler l'habillage (flottant gauche/droite), le cadre, ou basculer dans/hors de la boîte.");
             }}
           >
             <ImagePlus className="w-4 h-4" />
-            <span>Mode Images Word actif (Ctrl+V / Glisser / Déplacer)</span>
+            <span>Mode Images Word Actif (Dans & Hors boîtes)</span>
           </div>
         )}
       </div>

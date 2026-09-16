@@ -7,9 +7,10 @@ import { Info, AlertTriangle, AlertCircle } from 'lucide-react';
 
 interface RemarkBlockProps {
   block: RemarkBlockType;
+  children?: React.ReactNode;
 }
 
-export function RemarkBlock({ block }: RemarkBlockProps) {
+export function RemarkBlock({ block, children }: RemarkBlockProps) {
   const isWarning = block.type === 'warning';
   const isImportant = block.type === 'important';
 
@@ -25,7 +26,8 @@ export function RemarkBlock({ block }: RemarkBlockProps) {
         <Icon className="w-4 h-4" />
         <span>{label}</span>
       </div>
-      <div className="text-foreground/90 font-serif text-sm md:text-base leading-relaxed">
+      <div className="text-foreground/90 font-serif text-sm md:text-base leading-relaxed relative clearfix">
+        {children}
         <MarkdownRenderer content={block.content} />
       </div>
     </div>

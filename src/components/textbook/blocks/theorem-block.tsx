@@ -7,9 +7,10 @@ import { Award, Layers } from 'lucide-react';
 
 interface TheoremBlockProps {
   block: MathematicalEnvironmentBlock;
+  children?: React.ReactNode;
 }
 
-export function TheoremBlock({ block }: TheoremBlockProps) {
+export function TheoremBlock({ block, children }: TheoremBlockProps) {
   const isProp = block.type === 'proposition';
   const label = block.type === 'proposition' ? 'PROPOSITION' : block.type === 'lemma' ? 'LEMME' : block.type === 'corollary' ? 'COROLLAIRE' : 'THÉORÈME';
 
@@ -28,7 +29,8 @@ export function TheoremBlock({ block }: TheoremBlockProps) {
           {block.title && <span className="font-semibold opacity-90 normal-case">— {block.title}</span>}
         </div>
       </div>
-      <div className="p-5 text-foreground/90 leading-relaxed font-serif text-base md:text-lg">
+      <div className="p-5 text-foreground/90 leading-relaxed font-serif text-base md:text-lg relative clearfix">
+        {children}
         <MarkdownRenderer content={block.statement} />
       </div>
       {block.proof && (

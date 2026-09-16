@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button';
 
 interface ExampleBlockProps {
   block: ExampleBlockType;
+  children?: React.ReactNode;
 }
 
-export function ExampleBlock({ block }: ExampleBlockProps) {
+export function ExampleBlock({ block, children }: ExampleBlockProps) {
   const [showSolution, setShowSolution] = useState(false);
 
   return (
@@ -22,7 +23,8 @@ export function ExampleBlock({ block }: ExampleBlockProps) {
           {block.title && <span className="font-semibold text-amber-800 dark:text-amber-300 normal-case">— {block.title}</span>}
         </div>
       </div>
-      <div className="p-5 text-foreground/90 leading-relaxed font-serif text-base md:text-lg">
+      <div className="p-5 text-foreground/90 leading-relaxed font-serif text-base md:text-lg relative clearfix">
+        {children}
         <MarkdownRenderer content={block.problem} />
       </div>
 

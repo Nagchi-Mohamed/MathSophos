@@ -6,15 +6,17 @@ import MarkdownRenderer from '@/components/markdown-renderer';
 
 interface ProofBlockProps {
   block: ProofBlockType;
+  children?: React.ReactNode;
 }
 
-export function ProofBlock({ block }: ProofBlockProps) {
+export function ProofBlock({ block, children }: ProofBlockProps) {
   return (
     <div className="my-5 pl-5 pr-4 py-3 border-l-2 border-slate-400 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-900/20 italic text-foreground/90 font-serif text-sm md:text-base relative break-inside-avoid">
       <span className="not-italic font-bold text-slate-700 dark:text-slate-300 text-xs tracking-wider uppercase block mb-1.5">
         Démonstration.
       </span>
-      <div className="not-italic">
+      <div className="not-italic relative clearfix">
+        {children}
         <MarkdownRenderer content={block.content} />
       </div>
       <div className="flex justify-end mt-2">

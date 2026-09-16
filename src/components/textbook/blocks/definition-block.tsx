@@ -7,9 +7,10 @@ import { BookOpen } from 'lucide-react';
 
 interface DefinitionBlockProps {
   block: MathematicalEnvironmentBlock;
+  children?: React.ReactNode;
 }
 
-export function DefinitionBlock({ block }: DefinitionBlockProps) {
+export function DefinitionBlock({ block, children }: DefinitionBlockProps) {
   return (
     <div className="my-6 rounded-xl border border-rose-300 dark:border-rose-900/60 bg-rose-50/60 dark:bg-rose-950/20 shadow-sm overflow-hidden transition-all break-inside-avoid">
       <div className="bg-rose-100/80 dark:bg-rose-900/40 px-5 py-2.5 border-b border-rose-200 dark:border-rose-900/60 flex items-center justify-between">
@@ -19,7 +20,8 @@ export function DefinitionBlock({ block }: DefinitionBlockProps) {
           {block.title && <span className="font-semibold text-rose-700 dark:text-rose-300 normal-case">— {block.title}</span>}
         </div>
       </div>
-      <div className="p-5 text-foreground/90 leading-relaxed font-serif text-base md:text-lg">
+      <div className="p-5 text-foreground/90 leading-relaxed font-serif text-base md:text-lg relative clearfix">
+        {children}
         <MarkdownRenderer content={block.statement} />
       </div>
     </div>
