@@ -23,6 +23,7 @@ import { VideoUploadManager } from "@/components/admin/video-upload-manager"
 import { AiGeneratorModal } from "@/components/admin/ai-generator-modal"
 import { getAiContexts } from "@/actions/ai-context"
 import { insertAtCursor } from "@/lib/textarea-utils"
+import { useImagePasteDrop } from "@/lib/use-image-paste-drop"
 
 export default function EditExercisePage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -44,6 +45,22 @@ export default function EditExercisePage({ params }: { params: { id: string } })
 
   const problemTextareaRef = useRef<HTMLTextAreaElement>(null)
   const solutionTextareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const problemImageHandlers = useImagePasteDrop({
+    textareaRef: problemTextareaRef,
+    content: formData.problemTextFr || "",
+    setContent: (newContent) => setFormData(prev => ({ ...prev, problemTextFr: newContent })),
+    entityType: "exercise",
+    entityId: params.id,
+  })
+
+  const solutionImageHandlers = useImagePasteDrop({
+    textareaRef: solutionTextareaRef,
+    content: formData.solutionFr || "",
+    setContent: (newContent) => setFormData(prev => ({ ...prev, solutionFr: newContent })),
+    entityType: "exercise",
+    entityId: params.id,
+  })
 
   useEffect(() => {
     const fetchData = async () => {
@@ -269,9 +286,13 @@ export default function EditExercisePage({ params }: { params: { id: string } })
           <Textarea
             ref={problemTextareaRef}
             className="min-h-[150px] font-mono text-sm"
-            placeholder="Énoncé de l'exercice..."
+            placeholder="Énoncé de l'exercice... (Astuce : Double-cliquez pour insérer une image, ou collez-la avec Ctrl+V)"
             value={formData.problemTextFr}
             onChange={(e) => setFormData({ ...formData, problemTextFr: e.target.value })}
+            onPaste={problemImageHandlers.handlePaste}
+            onDrop={problemImageHandlers.handleDrop}
+            onDragOver={problemImageHandlers.handleDragOver}
+            onDoubleClick={problemImageHandlers.handleDoubleClick}
           />
         </div>
 
@@ -310,9 +331,13 @@ export default function EditExercisePage({ params }: { params: { id: string } })
           <Textarea
             ref={solutionTextareaRef}
             className="min-h-[150px] font-mono text-sm"
-            placeholder="Solution détaillée..."
+            placeholder="Solution détaillée... (Astuce : Double-cliquez pour insérer une image, ou collez-la avec Ctrl+V)"
             value={formData.solutionFr}
             onChange={(e) => setFormData({ ...formData, solutionFr: e.target.value })}
+            onPaste={solutionImageHandlers.handlePaste}
+            onDrop={solutionImageHandlers.handleDrop}
+            onDragOver={solutionImageHandlers.handleDragOver}
+            onDoubleClick={solutionImageHandlers.handleDoubleClick}
           />
         </div>
 

@@ -10,8 +10,8 @@ import { ImageEditorOptionsModal, ImageStyleOptions } from './image-editor-optio
 import { Button } from "@/components/ui/button"
 import {
   Bold, Italic, List, ListOrdered, Heading1, Heading2, Undo, Redo,
-  Image as ImageIcon, Sigma, Table as TableIcon, CaseUpper, Layout,
-  Palette, Trash2, Upload, Clipboard, Maximize2
+  Sigma, Table as TableIcon, CaseUpper, Layout,
+  Palette, Trash2, Upload, Clipboard
 } from "lucide-react"
 import {
   Popover,
@@ -118,6 +118,38 @@ export function TiptapEditor({ content, onChange, uploaderContext }: TiptapEdito
     }
   }, [uploaderContext])
 
+  // File Picker Trigger
+  const triggerImagePicker = useCallback(() => {
+    const input = document.createElement("input")
+    input.type = "file"
+    input.accept = "image/*"
+    input.onchange = (e: any) => {
+      const file = e.target?.files?.[0]
+      if (file) uploadAndInsertFile(file)
+    }
+    input.click()
+  }, [uploadAndInsertFile])
+
+  // Clipboard Paste Trigger
+  const triggerClipboardPaste = useCallback(async () => {
+    try {
+      const items = await navigator.clipboard.read()
+      for (const item of items) {
+        for (const type of item.types) {
+          if (type.startsWith('image/')) {
+            const blob = await item.getType(type)
+            const file = new File([blob], "pasted-image.png", { type })
+            uploadAndInsertFile(file)
+            return
+          }
+        }
+      }
+      toast.info("Aucune image trouvée dans le presse-papier. Utilisez Ctrl+V.")
+    } catch {
+      toast.info("Appuyez sur Ctrl+V dans l'éditeur pour coller l'image.")
+    }
+  }, [uploadAndInsertFile])
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -152,6 +184,20 @@ export function TiptapEditor({ content, onChange, uploaderContext }: TiptapEdito
           }
         }
         return false
+      },
+      // DOUBLE CLICK TO INSERT IMAGE ON EMPTY AREA
+      handleDoubleClick: (view, pos, event) => {
+        if (event.target instanceof HTMLImageElement) {
+          // Double click on image is handled by ImageNodeView
+          return true
+        }
+        const target = event.target as HTMLElement
+        // If double clicking on editor or an empty line/paragraph, prompt for image
+        if (target && (target.classList.contains('ProseMirror') || target.tagName === 'P' || target.textContent?.trim() === '')) {
+          triggerImagePicker()
+          return true
+        }
+        return false
       }
     },
     onUpdate: ({ editor }) => {
@@ -168,6 +214,44 @@ export function TiptapEditor({ content, onChange, uploaderContext }: TiptapEdito
       }
     }
   }, [content, editor])
+
+  // Open Options Modal for Selected Image
+  const handleOpenImageOptions = useCallback((img: HTMLImageElement) => {
+    setSelectedImgElement(img)
+
+    // Parse current styles
+    const styleAttr = img.getAttribute("style") || ""
+    const widthMatch = styleAttr.match(/width:\s*([^;]+)/)
+    const floatMatch = styleAttr.match(/float:\s*([^;]+)/)
+    const displayMatch = styleAttr.match(/display:\s*([^;]+)/)
+    const opacityMatch = styleAttr.match(/opacity:\s*([\d.]+)/)
+
+    let layout: ImageStyleOptions["layout"] = "center"
+    if (floatMatch?.[1].includes("left")) layout = "float-left"
+    else if (floatMatch?.[1].includes("right")) layout = "float-right"
+    else if (displayMatch?.[1].includes("inline")) layout = "inline"
+    else if (opacityMatch && parseFloat(opacityMatch[1]) <= 0.3) layout = "background"
+
+    setSelectedImgStyles({
+      layout,
+      width: widthMatch?.[1] || "75%",
+      opacity: opacityMatch ? Math.round(parseFloat(opacityMatch[1]) * 100) : 100
+    })
+
+    setIsOptionsModalOpen(true)
+  }, [])
+
+  // Listen to custom style event from ImageNodeView
+  useEffect(() => {
+    const handleImageStyleEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ img: HTMLImageElement }>
+      if (customEvent.detail?.img) {
+        handleOpenImageOptions(customEvent.detail.img)
+      }
+    }
+    window.addEventListener("tiptap-image-style", handleImageStyleEvent)
+    return () => window.removeEventListener("tiptap-image-style", handleImageStyleEvent)
+  }, [handleOpenImageOptions])
 
   // RIGHT CLICK CONTEXT MENU HANDLER
   useEffect(() => {
@@ -215,32 +299,6 @@ export function TiptapEditor({ content, onChange, uploaderContext }: TiptapEdito
     editor.chain().focus().insertContent(code).run()
   }
 
-  // Open Options Modal for Selected Image
-  const handleOpenImageOptions = (img: HTMLImageElement) => {
-    setSelectedImgElement(img)
-
-    // Parse current styles
-    const styleAttr = img.getAttribute("style") || ""
-    const widthMatch = styleAttr.match(/width:\s*([^;]+)/)
-    const floatMatch = styleAttr.match(/float:\s*([^;]+)/)
-    const displayMatch = styleAttr.match(/display:\s*([^;]+)/)
-    const opacityMatch = styleAttr.match(/opacity:\s*([\d.]+)/)
-
-    let layout: ImageStyleOptions["layout"] = "center"
-    if (floatMatch?.[1].includes("left")) layout = "float-left"
-    else if (floatMatch?.[1].includes("right")) layout = "float-right"
-    else if (displayMatch?.[1].includes("inline")) layout = "inline"
-    else if (opacityMatch && parseFloat(opacityMatch[1]) <= 0.3) layout = "background"
-
-    setSelectedImgStyles({
-      layout,
-      width: widthMatch?.[1] || "75%",
-      opacity: opacityMatch ? Math.round(parseFloat(opacityMatch[1]) * 100) : 100
-    })
-
-    setIsOptionsModalOpen(true)
-  }
-
   // Apply Options from Modal
   const handleApplyImageOptions = (options: ImageStyleOptions, styleString: string) => {
     if (selectedImgElement) {
@@ -256,38 +314,6 @@ export function TiptapEditor({ content, onChange, uploaderContext }: TiptapEdito
     img.remove()
     onChange(editor.getHTML())
     toast.success("Image supprimée")
-  }
-
-  // File Picker Trigger
-  const triggerImagePicker = () => {
-    const input = document.createElement("input")
-    input.type = "file"
-    input.accept = "image/*"
-    input.onchange = (e: any) => {
-      const file = e.target?.files?.[0]
-      if (file) uploadAndInsertFile(file)
-    }
-    input.click()
-  }
-
-  // Clipboard Paste Trigger
-  const triggerClipboardPaste = async () => {
-    try {
-      const items = await navigator.clipboard.read()
-      for (const item of items) {
-        for (const type of item.types) {
-          if (type.startsWith('image/')) {
-            const blob = await item.getType(type)
-            const file = new File([blob], "pasted-image.png", { type })
-            uploadAndInsertFile(file)
-            return
-          }
-        }
-      }
-      toast.info("Aucune image trouvée dans le presse-papier. Utilisez Ctrl+V.")
-    } catch {
-      toast.info("Appuyez sur Ctrl+V dans l'éditeur pour coller l'image.")
-    }
   }
 
   return (
@@ -359,6 +385,10 @@ export function TiptapEditor({ content, onChange, uploaderContext }: TiptapEdito
           />
         )}
 
+        <span className="text-[10px] text-muted-foreground hidden lg:inline ml-2 italic">
+          Astuce : Double-cliquez pour insérer, cliquez sur l'image pour la redimensionner (style Word)
+        </span>
+
         <div className="ml-auto flex gap-1">
           <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().chain().focus().undo().run()}>
             <Undo className="h-4 w-4" />
@@ -384,6 +414,7 @@ export function TiptapEditor({ content, onChange, uploaderContext }: TiptapEdito
                 Options d'image
               </div>
               <button
+                type="button"
                 className="w-full px-3 py-2 text-left hover:bg-accent flex items-center gap-2 font-medium"
                 onClick={() => handleOpenImageOptions(contextMenu.targetImg!)}
               >
@@ -391,6 +422,7 @@ export function TiptapEditor({ content, onChange, uploaderContext }: TiptapEdito
                 Habillage texte & Disposition (Word)...
               </button>
               <button
+                type="button"
                 className="w-full px-3 py-2 text-left hover:bg-accent flex items-center gap-2 font-medium"
                 onClick={() => handleOpenImageOptions(contextMenu.targetImg!)}
               >
@@ -399,6 +431,7 @@ export function TiptapEditor({ content, onChange, uploaderContext }: TiptapEdito
               </button>
               <div className="my-1 border-t"></div>
               <button
+                type="button"
                 className="w-full px-3 py-2 text-left hover:bg-destructive/10 text-destructive flex items-center gap-2 font-medium"
                 onClick={() => handleDeleteImage(contextMenu.targetImg!)}
               >
@@ -409,6 +442,7 @@ export function TiptapEditor({ content, onChange, uploaderContext }: TiptapEdito
           ) : (
             <>
               <button
+                type="button"
                 className="w-full px-3 py-2 text-left hover:bg-accent flex items-center gap-2 font-medium"
                 onClick={triggerImagePicker}
               >
@@ -416,6 +450,7 @@ export function TiptapEditor({ content, onChange, uploaderContext }: TiptapEdito
                 Insérer une image...
               </button>
               <button
+                type="button"
                 className="w-full px-3 py-2 text-left hover:bg-accent flex items-center gap-2 font-medium"
                 onClick={triggerClipboardPaste}
               >

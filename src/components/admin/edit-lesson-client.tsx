@@ -36,6 +36,7 @@ import { DownloadPdfButton } from "@/components/print/download-pdf-button"
 import { CHAPTER_EXAMPLE } from "@/lib/content-examples"
 import { LessonPreview } from "@/components/admin/lesson-preview"
 import { insertAtCursor } from "@/lib/textarea-utils"
+import { useImagePasteDrop } from "@/lib/use-image-paste-drop"
 import { ReviewSessionDialog } from "@/components/admin/review-session-dialog"
 
 interface EditLessonClientProps {
@@ -80,6 +81,14 @@ export function EditLessonClient({ lessonId, initialData }: EditLessonClientProp
   })
   const [isCreatingChapter, setIsCreatingChapter] = useState(false)
   const [chapterManagerKey, setChapterManagerKey] = useState(0)
+
+  const imageHandlers = useImagePasteDrop({
+    textareaRef,
+    content: formData.content || "",
+    setContent: (newContent) => setFormData(prev => ({ ...prev, content: newContent })),
+    entityType: "lesson",
+    entityId: lessonId,
+  })
   const lessonModuleId = initialData.moduleId
   const lessonStreamId = initialData.educationalStreamId
   const lessonSlug = initialData.slug
@@ -681,10 +690,14 @@ export function EditLessonClient({ lessonId, initialData }: EditLessonClientProp
                     ref={textareaRef}
                     className="flex-1 w-full h-full p-6 resize-none border-0 focus-visible:ring-0 font-mono text-sm bg-transparent"
                     placeholder={formData.gradeLevel === "UNIVERSITY" || formData.gradeLevel === EducationalLevel.UNIVERSITY
-                      ? "# Contenu du chapitre..."
-                      : "# Contenu de la leçon..."}
+                      ? "# Contenu du chapitre...\n(Astuce : Double-cliquez pour insérer une image, ou collez-la avec Ctrl+V)"
+                      : "# Contenu de la leçon...\n(Astuce : Double-cliquez pour insérer une image, ou collez-la avec Ctrl+V)"}
                     value={formData.content || ""}
                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                    onPaste={imageHandlers.handlePaste}
+                    onDrop={imageHandlers.handleDrop}
+                    onDragOver={imageHandlers.handleDragOver}
+                    onDoubleClick={imageHandlers.handleDoubleClick}
                   />
                 </ResizablePanel>
                 {showPreview && (
