@@ -12,10 +12,9 @@ import {
   ArrowDown,
   GripVertical,
   Maximize2,
-  Square,
-  Sparkles,
   Type,
-  BoxSelect
+  BoxSelect,
+  Split
 } from "lucide-react"
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
@@ -31,7 +30,7 @@ export interface LessonAnnotation {
   filter: string       // filter + frame preset string
   opacity: number      // 0.1–1.0
   caption?: string | null
-  position: string     // 'before' | 'after' | 'inside' | 'inside-p0' | 'inside-p1' etc.
+  position: string     // 'before' | 'after' | 'inside' | 'line-0' | 'line-1' etc.
 }
 
 // ─── FILTER & FRAME PRESETS ───────────────────────────────────────────────────
@@ -104,10 +103,18 @@ export function AnnotationImage({
   const [showCaptionInput, setShowCaptionInput] = useState(false)
   const [captionText, setCaptionText] = useState(annotation.caption || "")
   const [isResizing, setIsResizing] = useState(false)
-  const [liveWidth, setLiveWidth] = useState<number | null>(null)
-  const dragState = useRef<{ handle: string; startX: number; startY: number; startW: number; startH: number } | null>(null)
 
-  const currentWidth = liveWidth ?? annotation.widthPct
+  // Local width state with mutable ref to prevent React closure stale value on mouseup
+  const [liveWidth, setLiveWidth] = useState<number>(annotation.widthPct)
+  const currentWidthRef = useRef<number>(annotation.widthPct)
+
+  // Synchronize whenever annotation prop updates externally
+  useEffect(() => {
+    if (!isResizing) {
+      setLiveWidth(annotation.widthPct)
+      currentWidthRef.current = annotation.widthPct
+    }
+  }, [annotation.widthPct, isResizing])
 
   // Parse filter & frame
   const filterParts = (annotation.filter || "none").split("|")
@@ -158,52 +165,57 @@ export function AnnotationImage({
     if (float === "right") {
       return { ...base, float: "right", margin: "8px 0 12px 18px", display: "inline-block" }
     }
-    // center / top-bottom
+    // center / between lines (clear both so text stops above and resumes below)
     return { ...base, display: "block", margin: "16px auto", clear: "both" }
   }
 
-  // ── Drag-to-resize ───────────────────────────────────────────────────────
+  // ── Drag-to-resize (Fixed: No more snap-back to original size!) ─────────────
   const startDrag = useCallback((e: React.MouseEvent, handleId: string) => {
-    e.preventDefault(); e.stopPropagation()
+    e.preventDefault()
+    e.stopPropagation()
+
     const img = imgRef.current
     if (!img) return
     const rect = img.getBoundingClientRect()
-    dragState.current = { handle: handleId, startX: e.clientX, startY: e.clientY, startW: rect.width, startH: rect.height }
+
+    const startX = e.clientX
+    const startY = e.clientY
+    const startW = rect.width
+    const startH = rect.height
+
     setIsResizing(true)
 
     const onMove = (ev: MouseEvent) => {
-      if (!dragState.current || !wrapRef.current) return
-      const { handle, startX, startY, startW, startH } = dragState.current
+      if (!wrapRef.current) return
       const dx = ev.clientX - startX
       const dy = ev.clientY - startY
       let newW = startW
-      if (handle.includes("e")) newW = startW + dx
-      if (handle.includes("w")) newW = startW - dx
-      if (handle === "n" || handle === "s") {
+      if (handleId.includes("e")) newW = startW + dx
+      if (handleId.includes("w")) newW = startW - dx
+      if (handleId === "n" || handleId === "s") {
         const ar = startW / (startH || 1)
-        newW = (handle === "n" ? startH - dy : startH + dy) * ar
+        newW = (handleId === "n" ? startH - dy : startH + dy) * ar
       }
       const parentW = wrapRef.current.parentElement?.offsetWidth || 600
-      setLiveWidth(Math.max(15, Math.min(100, Math.round((newW / parentW) * 100))))
+      const calculatedPct = Math.max(15, Math.min(100, Math.round((newW / parentW) * 100)))
+
+      currentWidthRef.current = calculatedPct
+      setLiveWidth(calculatedPct)
     }
 
     const onUp = () => {
-      if (dragState.current && liveWidth !== null) {
-        onUpdate(annotation.id, { widthPct: liveWidth })
-      } else if (dragState.current) {
-        const finalW = liveWidth ?? annotation.widthPct
-        onUpdate(annotation.id, { widthPct: finalW })
-      }
-      dragState.current = null
-      setIsResizing(false)
-      setLiveWidth(null)
       window.removeEventListener("mousemove", onMove)
       window.removeEventListener("mouseup", onUp)
+
+      const finalWidth = currentWidthRef.current
+      setIsResizing(false)
+      setLiveWidth(finalWidth)
+      onUpdate(annotation.id, { widthPct: finalWidth })
     }
 
     window.addEventListener("mousemove", onMove)
     window.addEventListener("mouseup", onUp)
-  }, [annotation.id, annotation.widthPct, liveWidth, onUpdate])
+  }, [annotation.id, onUpdate])
 
   // Close selection on outside click
   useEffect(() => {
@@ -228,7 +240,7 @@ export function AnnotationImage({
     e.dataTransfer.effectAllowed = "move"
   }
 
-  const isInside = annotation.position.startsWith("inside")
+  const isInside = annotation.position.startsWith("inside") || annotation.position.startsWith("line-")
 
   const imgStyle: React.CSSProperties = {
     width: "100%",
@@ -241,7 +253,7 @@ export function AnnotationImage({
   }
 
   const wrapStyle: React.CSSProperties = {
-    ...buildLayout(currentWidth, annotation.float),
+    ...buildLayout(liveWidth, annotation.float),
     ...getFrameCss(frameStyle),
     position: "relative",
     userSelect: "none",
@@ -249,6 +261,7 @@ export function AnnotationImage({
     outlineOffset: 2,
     boxSizing: "border-box",
     cursor: isAdmin ? "grab" : "default",
+    transition: isResizing ? "none" : "width 0.15s ease",
   }
 
   const handleSetFrame = (frameId: string) => {
@@ -294,16 +307,16 @@ export function AnnotationImage({
         </p>
       )}
 
-      {/* Live size badge */}
+      {/* Live size badge during resize */}
       {isResizing && (
         <div style={{
           position: "absolute", top: "50%", left: "50%",
           transform: "translate(-50%,-50%)",
-          background: "rgba(15,23,42,0.85)", color: "white",
-          padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: "bold",
-          pointerEvents: "none", zIndex: 60
+          background: "rgba(15,23,42,0.9)", color: "white",
+          padding: "5px 12px", borderRadius: 6, fontSize: 13, fontWeight: "bold",
+          pointerEvents: "none", zIndex: 60, boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
         }}>
-          {currentWidth}%
+          {liveWidth}%
         </div>
       )}
 
@@ -350,7 +363,7 @@ export function AnnotationImage({
           >
             {/* Drag handle */}
             <div
-              title="Glisser-déposer pour déplacer l'image"
+              title="Glisser-déposer pour déplacer l'image à travers le texte"
               style={{ display: "flex", alignItems: "center", cursor: "grab", color: "#94a3b8", paddingRight: 2 }}
             >
               <GripVertical size={13} />
@@ -361,7 +374,7 @@ export function AnnotationImage({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onToggleInside(annotation.id) }}
-                title={isInside ? "Actuellement dans la boîte du texte (Cliquer pour mettre au-dessus)" : "Actuellement en dehors (Cliquer pour intégrer dans la boîte du texte)"}
+                title={isInside ? "Dans la boîte du texte (Cliquer pour mettre au-dessus)" : "En dehors de la boîte (Cliquer pour intégrer dans la boîte du texte)"}
                 style={{
                   padding: "3px 7px", borderRadius: 4, border: "none", cursor: "pointer",
                   display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 600,
@@ -369,16 +382,16 @@ export function AnnotationImage({
                 }}
               >
                 <BoxSelect size={12} />
-                <span>{isInside ? "Dans la boîte" : "Hors boîte"}</span>
+                <span>{isInside ? "Dans le texte" : "Hors boîte"}</span>
               </button>
             )}
 
-            {/* Move Up / Down */}
+            {/* Move Up / Down between lines or blocks */}
             {onMoveUp && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onMoveUp(annotation.id) }}
-                title="Déplacer vers le haut"
+                title="Déplacer vers la ligne ou le paragraphe précédent (↑)"
                 style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: "transparent", color: "white" }}
               >
                 <ArrowUp size={13} />
@@ -388,7 +401,7 @@ export function AnnotationImage({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onMoveDown(annotation.id) }}
-                title="Déplacer vers le bas"
+                title="Déplacer vers la ligne ou le paragraphe suivant (↓)"
                 style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: "transparent", color: "white" }}
               >
                 <ArrowDown size={13} />
@@ -402,12 +415,17 @@ export function AnnotationImage({
               <button
                 key={pct}
                 type="button"
-                onClick={(e) => { e.stopPropagation(); onUpdate(annotation.id, { widthPct: pct, float: annotation.float === "full" ? "center" : annotation.float }) }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLiveWidth(pct);
+                  currentWidthRef.current = pct;
+                  onUpdate(annotation.id, { widthPct: pct, float: annotation.float === "full" ? "center" : annotation.float });
+                }}
                 style={{
                   padding: "2px 6px", borderRadius: 4, border: "none", cursor: "pointer",
                   fontSize: 11,
-                  fontWeight: Math.abs(currentWidth - pct) < 5 && annotation.float !== "full" ? 700 : 400,
-                  background: Math.abs(currentWidth - pct) < 5 && annotation.float !== "full" ? "#2563eb" : "transparent",
+                  fontWeight: Math.abs(liveWidth - pct) < 5 && annotation.float !== "full" ? 700 : 400,
+                  background: Math.abs(liveWidth - pct) < 5 && annotation.float !== "full" ? "#2563eb" : "transparent",
                   color: "white",
                 }}
               >
@@ -429,7 +447,7 @@ export function AnnotationImage({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onUpdate(annotation.id, { float: "center" }) }}
-              title="Centré / Haut et Bas (coupe la ligne de texte)"
+              title="Entre deux lignes / Centré (Haut & Bas — coupe la ligne de texte de façon réactive)"
               style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: annotation.float === "center" ? "#2563eb" : "transparent", color: "white" }}
             >
               <AlignCenter size={13} />
@@ -444,8 +462,13 @@ export function AnnotationImage({
             </button>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); onUpdate(annotation.id, { float: "full", widthPct: 100 }) }}
-              title="Pleine Largeur (100%)"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLiveWidth(100);
+                currentWidthRef.current = 100;
+                onUpdate(annotation.id, { float: "full", widthPct: 100 });
+              }}
+              title="Pleine Largeur (100% de la largeur du texte)"
               style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: annotation.float === "full" ? "#2563eb" : "transparent", color: "white" }}
             >
               <Maximize2 size={13} />
@@ -457,7 +480,7 @@ export function AnnotationImage({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setShowCaptionInput(p => !p); setShowFilterPanel(false) }}
-              title="Ajouter / Modifier la légende"
+              title="Ajouter ou modifier une légende sous l'image"
               style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: showCaptionInput || annotation.caption ? "#3b82f6" : "transparent", color: "white" }}
             >
               <Type size={13} />
@@ -467,7 +490,7 @@ export function AnnotationImage({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setShowFilterPanel(p => !p); setShowCaptionInput(false) }}
-              title="Filtres de couleur, cadres & styles"
+              title="Filtres de couleur, cadres & styles Word"
               style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: showFilterPanel ? "#7c3aed" : "transparent", color: "#60a5fa" }}
             >
               <Palette size={13} />

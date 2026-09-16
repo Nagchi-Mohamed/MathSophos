@@ -22,6 +22,43 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { LessonAnnotation, AnnotationImage } from './lesson-annotation-image';
 
+// ─── HELPER: SPLIT TEXT INTO RESPONSIVE LINES / SEGMENTS ─────────────────────
+export function splitTextIntoSegments(rawText: string): string[] {
+  if (!rawText) return [];
+  // 1. If multiple paragraphs exist (\n\n)
+  const paragraphs = rawText.split(/\n\s*\n/).filter(s => s.trim().length > 0);
+  if (paragraphs.length > 1) {
+    return paragraphs;
+  }
+  // 2. If multiple newlines exist (\n)
+  const lines = rawText.split(/\n+/).filter(s => s.trim().length > 0);
+  if (lines.length > 1) {
+    return lines;
+  }
+  // 3. Split by sentence endings (". ") outside of math ($...$)
+  const sentences: string[] = [];
+  let current = '';
+  let inMath = false;
+
+  for (let i = 0; i < rawText.length; i++) {
+    const char = rawText[i];
+    if (char === '$') {
+      inMath = !inMath;
+    }
+    current += char;
+    if (!inMath && char === '.' && rawText[i + 1] === ' ' && /[A-ZÀ-ÖØ-ß]/.test(rawText[i + 2] || '')) {
+      sentences.push(current.trim());
+      current = '';
+      i++; // skip space
+    }
+  }
+  if (current.trim()) {
+    sentences.push(current.trim());
+  }
+
+  return sentences.length > 1 ? sentences : [rawText];
+}
+
 interface TextbookReaderProps {
   lesson: TextbookLesson;
   isAdmin?: boolean;
@@ -32,19 +69,21 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
   const [annotations, setAnnotations] = useState<LessonAnnotation[]>([]);
 
   // Currently active cursor / selection spot
-  const [activeCursor, setActiveCursor] = useState<{ blockId: string; position: 'before' | 'after' | 'inside' } | null>(null);
+  const [activeCursor, setActiveCursor] = useState<{ blockId: string; position: string } | null>(null);
 
-  // Track the block and position the mouse is hovering over
-  const hoveredTargetRef = useRef<{ blockId: string; position: 'before' | 'after' | 'inside' } | null>(null);
+  // Active hover and drag-over slots
+  const [dragOverSlot, setDragOverSlot] = useState<string | null>(null);
+  const hoveredTargetRef = useRef<{ blockId: string; position: string } | null>(null);
 
   // Hidden file input for double-click to upload
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const fileInputTargetRef = useRef<{ blockId: string; position: 'before' | 'after' | 'inside' } | null>(null);
+  const fileInputTargetRef = useRef<{ blockId: string; position: string } | null>(null);
 
   // Flat list of all block IDs in order
   const orderedBlockIds = useMemo(() => {
     const list: string[] = [];
     lesson.sections.forEach(sec => {
+      list.push(`intro-${sec.id}`);
       sec.blocks.forEach(b => list.push(b.id));
     });
     return list;
@@ -69,7 +108,7 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
   const createAnnotation = useCallback(async (
     file: File,
     blockId: string,
-    position: 'before' | 'after' | 'inside'
+    position: string
   ) => {
     if (!file.type.startsWith('image/')) return;
     if (file.size > 8 * 1024 * 1024) {
@@ -103,7 +142,9 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
         });
       }
 
-      const defaultFloat = position === 'inside' ? 'right' : 'left';
+      // Default float: if inserted between lines, center it; otherwise float left
+      const isBetweenLines = position.startsWith('line-') && position !== 'line-0';
+      const defaultFloat = isBetweenLines ? 'center' : position.startsWith('inside') ? 'right' : 'left';
 
       const annRes = await fetch("/api/lesson-annotations", {
         method: "POST",
@@ -115,14 +156,14 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
           imageId,
           position,
           float: defaultFloat,
-          widthPct: position === 'inside' ? 40 : 50
+          widthPct: isBetweenLines ? 60 : 45
         }),
       });
 
       if (annRes.ok) {
         const ann = await annRes.json();
         setAnnotations(prev => [...prev, ann]);
-        toast.success(position === 'inside' ? "Image insérée dans la boîte !" : "Image insérée avec succès !", { id: toastId });
+        toast.success("Image insérée avec succès !", { id: toastId });
       } else {
         toast.error("Erreur lors de l'enregistrement", { id: toastId });
       }
@@ -161,9 +202,9 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
         });
         const fallbackId = closest ? (closest as HTMLElement).dataset.blockId! : orderedBlockIds[0];
         if (fallbackId) {
-          createAnnotation(file, fallbackId, 'inside');
+          createAnnotation(file, fallbackId, 'line-0');
         } else {
-          toast.info("Cliquez sur le texte où vous souhaitez coller l'image.");
+          toast.info("Cliquez sur le texte ou entre deux lignes où vous souhaitez coller l'image.");
         }
       }
     };
@@ -198,7 +239,16 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
     if (!ann) return;
 
     if (ann.position === 'after') {
-      handleUpdate(annotationId, { position: 'inside' });
+      handleUpdate(annotationId, { position: 'line-1' });
+      return;
+    }
+    if (ann.position.startsWith('line-')) {
+      const lineNum = parseInt(ann.position.replace('line-', '')) || 0;
+      if (lineNum > 0) {
+        handleUpdate(annotationId, { position: `line-${lineNum - 1}` });
+        return;
+      }
+      handleUpdate(annotationId, { position: 'before' });
       return;
     }
     if (ann.position.startsWith('inside')) {
@@ -220,7 +270,12 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
     if (!ann) return;
 
     if (ann.position === 'before') {
-      handleUpdate(annotationId, { position: 'inside' });
+      handleUpdate(annotationId, { position: 'line-0' });
+      return;
+    }
+    if (ann.position.startsWith('line-')) {
+      const lineNum = parseInt(ann.position.replace('line-', '')) || 0;
+      handleUpdate(annotationId, { position: `line-${lineNum + 1}` });
       return;
     }
     if (ann.position.startsWith('inside')) {
@@ -232,7 +287,7 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
     const currentIndex = orderedBlockIds.indexOf(ann.blockId);
     if (currentIndex >= 0 && currentIndex < orderedBlockIds.length - 1) {
       const nextBlockId = orderedBlockIds[currentIndex + 1];
-      handleUpdate(annotationId, { blockId: nextBlockId, position: 'inside' });
+      handleUpdate(annotationId, { blockId: nextBlockId, position: 'line-0' });
       toast.info("Image déplacée vers le bloc suivant");
     }
   }, [annotations, orderedBlockIds, handleUpdate]);
@@ -242,13 +297,14 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
     const ann = annotations.find(a => a.id === annotationId);
     if (!ann) return;
 
-    const newPos = ann.position.startsWith('inside') ? 'before' : 'inside';
+    const isInside = ann.position.startsWith('inside') || ann.position.startsWith('line-');
+    const newPos = isInside ? 'before' : 'line-0';
     handleUpdate(annotationId, { position: newPos });
-    toast.info(newPos === 'inside' ? "Image placée dans la boîte du texte !" : "Image placée en dehors de la boîte !");
+    toast.info(newPos.startsWith('line') ? "Image intégrée dans le texte !" : "Image placée au-dessus du texte !");
   }, [annotations, handleUpdate]);
 
-  // ── Move Annotation to another Block (Drag & Drop) ─────────────────────────
-  const handleDropMoveAnnotation = useCallback((annotationId: string, newBlockId: string, newPos: 'before' | 'after' | 'inside') => {
+  // ── Move Annotation to another Block or Line (Drag & Drop) ─────────────────
+  const handleDropMoveAnnotation = useCallback((annotationId: string, newBlockId: string, newPos: string) => {
     handleUpdate(annotationId, { blockId: newBlockId, position: newPos });
     toast.success("Image repositionnée !");
   }, [handleUpdate]);
@@ -269,6 +325,125 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
     e.target.value = '';
   };
 
+  // ── Render an individual AnnotationImage ───────────────────────────────────
+  const renderAnnotationItem = useCallback((ann: LessonAnnotation) => (
+    <AnnotationImage
+      key={ann.id}
+      annotation={ann}
+      isAdmin={isAdmin}
+      onUpdate={handleUpdate}
+      onDelete={handleDelete}
+      onMoveUp={handleMoveUp}
+      onMoveDown={handleMoveDown}
+      onToggleInside={handleToggleInside}
+    />
+  ), [isAdmin, handleUpdate, handleDelete, handleMoveUp, handleMoveDown, handleToggleInside]);
+
+  // ── Interactive Segmented Text Component (Enables Insertion Between Lines) ─
+  const SegmentedText = useCallback(({
+    text,
+    blockId
+  }: {
+    text: string;
+    blockId: string;
+  }) => {
+    const segments = useMemo(() => splitTextIntoSegments(text), [text]);
+
+    const handleSlotDrop = (e: React.DragEvent, slotPosition: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOverSlot(null);
+
+      const existingAnnotationId = e.dataTransfer.getData("text/annotation-id");
+      if (existingAnnotationId) {
+        handleDropMoveAnnotation(existingAnnotationId, blockId, slotPosition);
+        return;
+      }
+
+      const file = e.dataTransfer.files?.[0];
+      if (file) {
+        createAnnotation(file, blockId, slotPosition);
+      }
+    };
+
+    return (
+      <div className="relative clearfix">
+        {segments.map((segment, idx) => {
+          const slotPos = `line-${idx}`;
+          // Annotations belonging to this slot
+          const slotAnnotations = annotations.filter(
+            a => a.blockId === blockId && (a.position === slotPos || (idx === 0 && a.position === 'inside'))
+          );
+          const isCursorHere = activeCursor?.blockId === blockId && (activeCursor.position === slotPos || (idx === 0 && activeCursor.position === 'inside'));
+          const isDragOver = dragOverSlot === `${blockId}:${slotPos}`;
+
+          return (
+            <React.Fragment key={idx}>
+              {/* Slot between lines / before segment */}
+              {idx > 0 && isAdmin && (
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveCursor({ blockId, position: slotPos });
+                  }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    fileInputTargetRef.current = { blockId, position: slotPos };
+                    fileInputRef.current?.click();
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOverSlot(`${blockId}:${slotPos}`);
+                  }}
+                  onDragLeave={() => setDragOverSlot(null)}
+                  onDrop={(e) => handleSlotDrop(e, slotPos)}
+                  className="group my-2.5 py-1.5 cursor-pointer transition-all flex items-center justify-center rounded-md"
+                  style={{
+                    minHeight: isDragOver ? 28 : 10,
+                    border: isDragOver ? '2px dashed #16a34a' : isCursorHere ? '2px solid #16a34a' : '1px dashed transparent',
+                    background: isDragOver ? '#f0fdf4' : isCursorHere ? '#f0fdf4' : 'transparent',
+                  }}
+                  title="Cliquer pour placer le curseur entre ces deux lignes | Ctrl+V pour coller | Glisser une image ici"
+                >
+                  {(isDragOver || isCursorHere) ? (
+                    <span className="text-xs text-green-700 dark:text-green-300 font-semibold px-2.5 py-0.5 bg-green-100 dark:bg-green-950/60 rounded border border-green-300 dark:border-green-800">
+                      📍 {isDragOver ? "Déposer l'image entre ces deux lignes" : "Curseur entre ces deux lignes (Ctrl+V pour insérer)"}
+                    </span>
+                  ) : (
+                    <div className="h-0.5 w-full bg-slate-300 dark:bg-slate-700 opacity-0 group-hover:opacity-80 transition-opacity" />
+                  )}
+                </div>
+              )}
+
+              {/* Annotations targeting this line slot */}
+              {slotAnnotations.map(renderAnnotationItem)}
+
+              {/* Text of this line / sentence / paragraph */}
+              <div
+                onClick={(e) => {
+                  if (isAdmin) {
+                    e.stopPropagation();
+                    setActiveCursor({ blockId, position: slotPos });
+                  }
+                }}
+                onDoubleClick={(e) => {
+                  if (isAdmin) {
+                    e.stopPropagation();
+                    fileInputTargetRef.current = { blockId, position: slotPos };
+                    fileInputRef.current?.click();
+                  }
+                }}
+                className="relative my-2 leading-relaxed text-foreground/90 font-serif"
+              >
+                <MarkdownRenderer content={segment} />
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
+    );
+  }, [annotations, isAdmin, activeCursor, dragOverSlot, renderAnnotationItem, handleDropMoveAnnotation, createAnnotation]);
+
   // ── Block Zone Component ──────────────────────────────────────────────────
   const BlockZone = useCallback(({ block }: { block: ContentBlock }) => {
     const zoneRef = useRef<HTMLDivElement>(null);
@@ -281,9 +456,8 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
       const relativeY = e.clientY - rect.top;
       const height = rect.height;
 
-      // Top 18% is 'before', bottom 18% is 'after', middle 64% is 'inside' the text/box!
-      if (relativeY < Math.min(32, height * 0.18)) return 'before';
-      if (relativeY > Math.max(height - 32, height * 0.82)) return 'after';
+      if (relativeY < Math.min(32, height * 0.16)) return 'before';
+      if (relativeY > Math.max(height - 32, height * 0.84)) return 'after';
       return 'inside';
     };
 
@@ -291,21 +465,21 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
       if (!isAdmin) return;
       e.stopPropagation();
       const zone = getZone(e);
-      setActiveCursor({ blockId: block.id, position: zone });
+      setActiveCursor({ blockId: block.id, position: zone === 'inside' ? 'line-0' : zone });
     };
 
     const handleDoubleClick = (e: React.MouseEvent) => {
       if (!isAdmin) return;
       e.stopPropagation();
       const zone = getZone(e);
-      fileInputTargetRef.current = { blockId: block.id, position: zone };
+      fileInputTargetRef.current = { blockId: block.id, position: zone === 'inside' ? 'line-0' : zone };
       fileInputRef.current?.click();
     };
 
     const onMouseMove = (e: React.MouseEvent) => {
       if (!isAdmin) return;
       const zone = getZone(e);
-      hoveredTargetRef.current = { blockId: block.id, position: zone };
+      hoveredTargetRef.current = { blockId: block.id, position: zone === 'inside' ? 'line-0' : zone };
     };
 
     const onDragOver = (e: React.DragEvent) => {
@@ -323,18 +497,17 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
       if (!isAdmin) return;
       const zone = getZone(e);
       setDragOverZone(null);
+      const pos = zone === 'inside' ? 'line-0' : zone;
 
-      // Check if this is an existing annotation being dragged
       const existingAnnotationId = e.dataTransfer.getData("text/annotation-id");
       if (existingAnnotationId) {
-        handleDropMoveAnnotation(existingAnnotationId, block.id, zone);
+        handleDropMoveAnnotation(existingAnnotationId, block.id, pos);
         return;
       }
 
-      // Or a file dropped from outside
       const file = e.dataTransfer.files?.[0];
       if (file) {
-        createAnnotation(file, block.id, zone);
+        createAnnotation(file, block.id, pos);
       }
     };
 
@@ -342,51 +515,56 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
 
     const beforeAnnotations = annotations.filter(a => a.blockId === block.id && a.position === 'before');
     const afterAnnotations  = annotations.filter(a => a.blockId === block.id && a.position === 'after');
-    const insideAnnotations = annotations.filter(a => a.blockId === block.id && a.position.startsWith('inside'));
 
-    // Renders the annotations designated for inside the block
-    const insideElements = insideAnnotations.length > 0 ? (
-      <>
-        {insideAnnotations.map(ann => (
-          <AnnotationImage
-            key={ann.id}
-            annotation={ann}
-            isAdmin={isAdmin}
-            onUpdate={handleUpdate}
-            onDelete={handleDelete}
-            onMoveUp={handleMoveUp}
-            onMoveDown={handleMoveDown}
-            onToggleInside={handleToggleInside}
-          />
-        ))}
-      </>
-    ) : null;
-
-    const blockEl = (() => {
+    // Inside segmented body
+    const renderBlockContent = () => {
       switch (block.type) {
         case 'definition':
-          return <DefinitionBlock block={block}>{insideElements}</DefinitionBlock>;
+          return (
+            <DefinitionBlock block={block}>
+              <SegmentedText text={block.statement} blockId={block.id} />
+            </DefinitionBlock>
+          );
         case 'theorem': case 'proposition': case 'lemma': case 'corollary':
-          return <TheoremBlock block={block}>{insideElements}</TheoremBlock>;
+          return (
+            <TheoremBlock block={block}>
+              <SegmentedText text={block.statement} blockId={block.id} />
+            </TheoremBlock>
+          );
         case 'proof':
-          return <ProofBlock block={block}>{insideElements}</ProofBlock>;
+          return (
+            <ProofBlock block={block}>
+              <SegmentedText text={block.content} blockId={block.id} />
+            </ProofBlock>
+          );
         case 'example': case 'application':
-          return <ExampleBlock block={block}>{insideElements}</ExampleBlock>;
+          return (
+            <ExampleBlock block={block}>
+              <SegmentedText text={block.problem} blockId={block.id} />
+            </ExampleBlock>
+          );
         case 'remark': case 'important': case 'warning':
-          return <RemarkBlock block={block}>{insideElements}</RemarkBlock>;
+          return (
+            <RemarkBlock block={block}>
+              <SegmentedText text={block.content} blockId={block.id} />
+            </RemarkBlock>
+          );
         case 'exercise':
-          return <ExerciseBlock block={block}>{insideElements}</ExerciseBlock>;
+          return (
+            <ExerciseBlock block={block}>
+              <SegmentedText text={block.statement} blockId={block.id} />
+            </ExerciseBlock>
+          );
         default: {
           const text = ('content' in block ? (block as any).content : null) || ('statement' in block ? (block as any).statement : null) || '';
           return (
             <div className="my-4 text-foreground/90 font-serif text-base md:text-lg leading-relaxed relative clearfix">
-              {insideElements}
-              <MarkdownRenderer content={text} />
+              <SegmentedText text={text} blockId={block.id} />
             </div>
           );
         }
       }
-    })();
+    };
 
     return (
       <div
@@ -405,7 +583,6 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
           outline: isAdmin && isCursorHere ? '2px solid #3b82f6' : 'none',
           outlineOffset: 3,
         }}
-        title={isAdmin ? "Cliquez au milieu pour insérer DANS le texte/la boîte | Cliquez en haut/bas pour insérer en-dehors | Ctrl+V pour coller" : undefined}
       >
         {/* Drop indicator: Before */}
         {isAdmin && dragOverZone === 'before' && (
@@ -416,59 +593,24 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
         {isAdmin && isCursorHere && activeCursor?.position === 'before' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', background: '#eff6ff', borderRadius: 4, marginBottom: 4 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb', animation: 'pulse 1.5s infinite' }} />
-            <span style={{ fontSize: 11, color: '#1d4ed8', fontWeight: 600 }}>↑ Curseur AU-DESSUS du bloc (Ctrl+V ou Glisser)</span>
+            <span style={{ fontSize: 11, color: '#1d4ed8', fontWeight: 600 }}>↑ Curseur AU-DESSUS de la boîte (Ctrl+V ou Glisser)</span>
           </div>
         )}
 
         {/* Annotations BEFORE */}
-        {beforeAnnotations.map(ann => (
-          <AnnotationImage
-            key={ann.id}
-            annotation={ann}
-            isAdmin={isAdmin}
-            onUpdate={handleUpdate}
-            onDelete={handleDelete}
-            onMoveUp={handleMoveUp}
-            onMoveDown={handleMoveDown}
-            onToggleInside={handleToggleInside}
-          />
-        ))}
+        {beforeAnnotations.map(renderAnnotationItem)}
 
-        {/* Drop indicator: Inside */}
-        {isAdmin && dragOverZone === 'inside' && (
-          <div style={{ height: 4, background: '#16a34a', borderRadius: 2, margin: '6px 0', boxShadow: '0 0 8px #16a34a' }} />
-        )}
-
-        {/* Cursor indicator: Inside */}
-        {isAdmin && isCursorHere && activeCursor?.position === 'inside' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 4, margin: '4px 0' }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', animation: 'pulse 1.5s infinite' }} />
-            <span style={{ fontSize: 11, color: '#15803d', fontWeight: 600 }}>📍 Curseur DANS LE TEXTE / LA BOÎTE (Ctrl+V ou Glisser pour insérer à l'intérieur)</span>
-          </div>
-        )}
-
-        {/* The block content itself (including inside elements) */}
-        <div style={{ overflow: 'hidden' }}>{blockEl}</div>
+        {/* The block content itself */}
+        <div style={{ overflow: 'hidden' }}>{renderBlockContent()}</div>
 
         {/* Annotations AFTER */}
-        {afterAnnotations.map(ann => (
-          <AnnotationImage
-            key={ann.id}
-            annotation={ann}
-            isAdmin={isAdmin}
-            onUpdate={handleUpdate}
-            onDelete={handleDelete}
-            onMoveUp={handleMoveUp}
-            onMoveDown={handleMoveDown}
-            onToggleInside={handleToggleInside}
-          />
-        ))}
+        {afterAnnotations.map(renderAnnotationItem)}
 
         {/* Cursor indicator: After */}
         {isAdmin && isCursorHere && activeCursor?.position === 'after' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', background: '#eff6ff', borderRadius: 4, marginTop: 4 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb', animation: 'pulse 1.5s infinite' }} />
-            <span style={{ fontSize: 11, color: '#1d4ed8', fontWeight: 600 }}>↓ Curseur EN-DESSOUS du bloc (Ctrl+V ou Glisser)</span>
+            <span style={{ fontSize: 11, color: '#1d4ed8', fontWeight: 600 }}>↓ Curseur EN-DESSOUS de la boîte (Ctrl+V ou Glisser)</span>
           </div>
         )}
 
@@ -481,8 +623,7 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
         <div style={{ clear: 'both' }} />
       </div>
     );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [annotations, isAdmin, activeCursor, handleUpdate, handleDelete, handleMoveUp, handleMoveDown, handleToggleInside, handleDropMoveAnnotation, createAnnotation]);
+  }, [annotations, isAdmin, activeCursor, renderAnnotationItem, SegmentedText, handleDropMoveAnnotation, createAnnotation]);
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${paperMode ? 'bg-[#FAF8F5] text-[#2C2825]' : 'bg-background text-foreground'}`}>
@@ -514,14 +655,14 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
 
         {isAdmin && (
           <div
-            title="Cliquez sur le texte pour insérer dans la boîte, ou en haut/bas pour insérer en dehors. Ctrl+V pour coller."
+            title="Cliquez entre deux lignes ou dans une boîte pour insérer une image. Ctrl+V pour coller."
             className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3.5 py-1.5 text-xs font-semibold shadow-lg flex items-center gap-2 cursor-pointer transition-all"
             onClick={() => {
-              toast.info("1. Cliquez au centre d'une boîte/texte : l'indicateur vert indique une insertion DANS la boîte.\n2. Faites Ctrl+V ou glissez une image.\n3. Cliquez sur l'image pour régler l'habillage (flottant gauche/droite), le cadre, ou basculer dans/hors de la boîte.");
+              toast.info("1. Cliquez entre deux lignes de texte ou dans une boîte pour placer le curseur.\n2. Faites Ctrl+V ou glissez une image.\n3. Redimensionnez librement avec les poignées aux bords (la taille reste fixée).\n4. Déplacez l'image d'un paragraphe à un autre en la glissant avec la souris.");
             }}
           >
             <ImagePlus className="w-4 h-4" />
-            <span>Mode Images Word Actif (Dans & Hors boîtes)</span>
+            <span>Mode Images Word Actif (Entre les lignes & Dans les boîtes)</span>
           </div>
         )}
       </div>
@@ -574,9 +715,10 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
                     </h2>
                   </div>
 
+                  {/* Section introduction with segmented text support */}
                   {section.introduction && (
-                    <div className="mb-6 italic text-muted-foreground font-serif text-base md:text-lg pl-4 border-l-2 border-primary/40">
-                      <MarkdownRenderer content={section.introduction} />
+                    <div className="mb-6 italic text-muted-foreground font-serif text-base md:text-lg pl-4 border-l-2 border-primary/40 relative">
+                      <SegmentedText text={section.introduction} blockId={`intro-${section.id}`} />
                     </div>
                   )}
 
