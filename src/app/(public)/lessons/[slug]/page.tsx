@@ -10,7 +10,7 @@ import { LessonPdfDownloadButton } from "@/components/lessons/lesson-pdf-downloa
 import { FloatingAssistant } from "@/components/ui/floating-assistant"
 import { toTextbookLesson } from "@/lib/textbook-adapter"
 import { TextbookReader } from "@/components/textbook/textbook-reader"
-import { Download } from "lucide-react"
+import { Download, Pencil } from "lucide-react"
 
 // Enable ISR - revalidate every 60 seconds
 export const revalidate = 60
@@ -53,6 +53,23 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
 
   return (
     <div className="relative">
+      {/* Admin Quick Edit Sticky Bar */}
+      {session?.user?.role && canAccessAdmin(session.user.role) && (
+        <div className="bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between text-xs border-b border-slate-700 print:hidden sticky top-0 z-40 backdrop-blur-md shadow-md">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="font-bold text-white">Mode Consultation (Enseignant/Admin)</span>
+            <span className="text-slate-300 hidden md:inline">• Pour coller (Ctrl+V) ou insérer des images, ouvrez le mode édition :</span>
+          </div>
+          <Link href={`/admin/lessons/${lesson.id}/edit`}>
+            <Button size="sm" className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-8 gap-1.5 shadow">
+              <Pencil className="w-3.5 h-3.5" />
+              Modifier cette leçon (Éditeur & Images)
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* Textbook Reader Container */}
       <TextbookReader lesson={textbookLesson} />
 
@@ -74,6 +91,12 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
 
         {session?.user?.role && canAccessAdmin(session.user.role) && (
           <div className="flex items-center gap-2">
+            <Link href={`/admin/lessons/${lesson.id}/edit`}>
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm">
+                <Pencil className="w-3.5 h-3.5" />
+                Modifier cette leçon
+              </Button>
+            </Link>
             <LessonPdfDownloadButton
               lessonId={lesson.id}
               lessonTitle={lesson.titleFr}

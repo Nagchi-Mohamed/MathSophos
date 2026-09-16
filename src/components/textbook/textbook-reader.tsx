@@ -19,6 +19,7 @@ import { ReadingProgressBar } from '@/components/lessons/reading-progress-bar';
 import { Sun, Moon, CheckCircle, HelpCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 interface TextbookReaderProps {
   lesson: TextbookLesson;
@@ -33,6 +34,30 @@ export function TextbookReader({ lesson }: TextbookReaderProps) {
       setPaperMode(true);
     }
   }, []);
+
+  // Intercept image paste in reading mode to guide teacher to edit mode
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
+        const file = e.clipboardData.files[0];
+        if (file.type.startsWith('image/')) {
+          e.preventDefault();
+          toast.info("Image détectée ! Vous êtes actuellement en mode lecture. Cliquez ci-dessous pour ouvrir l'éditeur et coller votre image à l'endroit souhaité :", {
+            action: {
+              label: "Modifier la leçon",
+              onClick: () => {
+                window.location.href = `/admin/lessons/${lesson.id}/edit`;
+              }
+            },
+            duration: 8000
+          });
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [lesson.id]);
 
   const togglePaperMode = () => {
     const newMode = !paperMode;

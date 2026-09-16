@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Layers, Download } from "lucide-react"
+import { ArrowLeft, Layers, Download, Pencil } from "lucide-react"
 import Link from "next/link"
 import { TableOfContents } from "@/components/lessons/table-of-contents"
 import { LessonContentRenderer } from "@/components/lessons/lesson-content-renderer"
@@ -102,6 +102,18 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         {/* Main Content */}
         <div className="lg:col-span-9 space-y-8">
+          {session?.user?.role && canAccessAdmin(session.user.role) && (
+            <div className="flex items-center justify-between bg-slate-900 text-white p-3 rounded-xl shadow-sm border border-slate-800 print:hidden text-xs">
+              <span className="font-semibold text-slate-200">Mode Consultation Enseignant</span>
+              <Link href={`/admin/chapters/${chapter.id}/edit`}>
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs h-8 gap-1.5 shadow-sm">
+                  <Pencil className="w-3.5 h-3.5" />
+                  Modifier ce chapitre (Images & Contenu)
+                </Button>
+              </Link>
+            </div>
+          )}
+
           {/* Chapter Header */}
           {/* Chapter Header */}
           <ChapterHeader
