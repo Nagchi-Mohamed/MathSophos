@@ -3,11 +3,43 @@ import { auth } from "@/auth"
 import { canAccessAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 
+let tableEnsured = false
+
+async function ensureTable() {
+  if (tableEnsured) return
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "LessonAnnotation" (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        "lessonId" TEXT NOT NULL,
+        "blockId" TEXT NOT NULL,
+        "imageUrl" TEXT NOT NULL,
+        "imageId" TEXT,
+        float TEXT NOT NULL DEFAULT 'left',
+        "widthPct" INTEGER NOT NULL DEFAULT 40,
+        filter TEXT NOT NULL DEFAULT 'none',
+        opacity DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+        caption TEXT,
+        position TEXT NOT NULL DEFAULT 'before',
+        "createdById" TEXT,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+        "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS idx_lesson_annotation_lesson ON "LessonAnnotation" ("lessonId");
+    `)
+    tableEnsured = true
+  } catch (e) {
+    console.warn("[lesson-annotations] Table ensure check:", e)
+  }
+}
+
 // GET /api/lesson-annotations?lessonId=xxx
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const lessonId = searchParams.get("lessonId")
   if (!lessonId) return NextResponse.json([], { status: 200 })
+
+  await ensureTable()
 
   try {
     const rows = await prisma.$queryRawUnsafe(
@@ -15,7 +47,7 @@ export async function GET(req: NextRequest) {
       lessonId
     ) as any[]
     return NextResponse.json(rows)
-  } catch {
+  } catch (err) {
     return NextResponse.json([], { status: 200 })
   }
 }
@@ -26,6 +58,8 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.role || !canAccessAdmin(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+
+  await ensureTable()
 
   const body = await req.json()
   const { lessonId, blockId, imageUrl, imageId, position, float: floatDir, widthPct } = body
@@ -71,8 +105,10 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  await ensureTable()
+
   const body = await req.json()
-  const { id, float: floatDir, widthPct, filter, opacity, caption } = body
+  const { id, float: floatDir, widthPct, filter, opacity, caption, blockId, position } = body
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
 
   try {
@@ -85,6 +121,8 @@ export async function PATCH(req: NextRequest) {
     if (filter !== undefined)    { updates.push(`filter=$${idx++}`);     values.push(filter) }
     if (opacity !== undefined)   { updates.push(`opacity=$${idx++}`);    values.push(opacity) }
     if (caption !== undefined)   { updates.push(`caption=$${idx++}`);    values.push(caption) }
+    if (blockId !== undefined)   { updates.push(`"blockId"=$${idx++}`);  values.push(blockId) }
+    if (position !== undefined)  { updates.push(`position=$${idx++}`);   values.push(position) }
     updates.push(`"updatedAt"=now()`)
 
     if (updates.length === 1) return NextResponse.json({ ok: true })
@@ -106,6 +144,8 @@ export async function DELETE(req: NextRequest) {
   if (!session?.user?.role || !canAccessAdmin(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+
+  await ensureTable()
 
   const { searchParams } = new URL(req.url)
   const id = searchParams.get("id")

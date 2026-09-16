@@ -1,8 +1,17 @@
 "use client"
 
 import React, { useCallback, useEffect, useRef, useState } from "react"
-import { AlignLeft, AlignCenter, AlignRight, Palette, Trash2, X } from "lucide-react"
-import { toast } from "sonner"
+import {
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Palette,
+  Trash2,
+  X,
+  ArrowUp,
+  ArrowDown,
+  GripVertical
+} from "lucide-react"
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -62,14 +71,23 @@ interface AnnotationImageProps {
   isAdmin: boolean
   onUpdate: (id: string, patch: Partial<LessonAnnotation>) => void
   onDelete: (id: string) => void
+  onMoveUp?: (id: string) => void
+  onMoveDown?: (id: string) => void
 }
 
-export function AnnotationImage({ annotation, isAdmin, onUpdate, onDelete }: AnnotationImageProps) {
+export function AnnotationImage({
+  annotation,
+  isAdmin,
+  onUpdate,
+  onDelete,
+  onMoveUp,
+  onMoveDown
+}: AnnotationImageProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
   const [selected, setSelected] = useState(false)
   const [showFilterPanel, setShowFilterPanel] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
+  const [isResizing, setIsResizing] = useState(false)
   const [liveWidth, setLiveWidth] = useState<number | null>(null)
   const dragState = useRef<{ handle: string; startX: number; startY: number; startW: number; startH: number } | null>(null)
 
@@ -90,7 +108,7 @@ export function AnnotationImage({ annotation, isAdmin, onUpdate, onDelete }: Ann
     if (!img) return
     const rect = img.getBoundingClientRect()
     dragState.current = { handle: handleId, startX: e.clientX, startY: e.clientY, startW: rect.width, startH: rect.height }
-    setIsDragging(true)
+    setIsResizing(true)
 
     const onMove = (ev: MouseEvent) => {
       if (!dragState.current || !wrapRef.current) return
@@ -116,7 +134,7 @@ export function AnnotationImage({ annotation, isAdmin, onUpdate, onDelete }: Ann
         onUpdate(annotation.id, { widthPct: finalW })
       }
       dragState.current = null
-      setIsDragging(false)
+      setIsResizing(false)
       setLiveWidth(null)
       window.removeEventListener("mousemove", onMove)
       window.removeEventListener("mouseup", onUp)
@@ -126,7 +144,7 @@ export function AnnotationImage({ annotation, isAdmin, onUpdate, onDelete }: Ann
     window.addEventListener("mouseup", onUp)
   }, [annotation.id, annotation.widthPct, liveWidth, onUpdate])
 
-  // Close on outside click
+  // Close selection on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
@@ -138,14 +156,24 @@ export function AnnotationImage({ annotation, isAdmin, onUpdate, onDelete }: Ann
     return () => window.removeEventListener("mousedown", handler)
   }, [])
 
+  // Drag-and-drop to move the image
+  const handleDragStart = (e: React.DragEvent) => {
+    if (!isAdmin || isResizing) {
+      e.preventDefault()
+      return
+    }
+    e.dataTransfer.setData("text/annotation-id", annotation.id)
+    e.dataTransfer.effectAllowed = "move"
+  }
+
   const imgStyle: React.CSSProperties = {
     width: "100%",
     height: "auto",
     display: "block",
-    borderRadius: 3,
+    borderRadius: 4,
     filter: filterCss || undefined,
     opacity: annotation.opacity,
-    transition: isDragging ? "none" : "filter 0.3s ease",
+    transition: isResizing ? "none" : "filter 0.3s ease",
   }
 
   const wrapStyle: React.CSSProperties = {
@@ -153,13 +181,25 @@ export function AnnotationImage({ annotation, isAdmin, onUpdate, onDelete }: Ann
     position: "relative",
     userSelect: "none",
     outline: selected && isAdmin ? "2px solid #2563eb" : "none",
+    outlineOffset: 2,
     borderRadius: 4,
     boxSizing: "border-box",
-    cursor: isAdmin ? "pointer" : "default",
+    cursor: isAdmin ? "grab" : "default",
   }
 
   return (
-    <div ref={wrapRef} style={wrapStyle} onClick={() => isAdmin && setSelected(true)}>
+    <div
+      ref={wrapRef}
+      style={wrapStyle}
+      draggable={isAdmin && !isResizing}
+      onDragStart={handleDragStart}
+      onClick={(e) => {
+        if (isAdmin) {
+          e.stopPropagation()
+          setSelected(true)
+        }
+      }}
+    >
       <img
         ref={imgRef}
         src={annotation.imageUrl}
@@ -176,7 +216,7 @@ export function AnnotationImage({ annotation, isAdmin, onUpdate, onDelete }: Ann
       )}
 
       {/* Live size badge */}
-      {isDragging && (
+      {isResizing && (
         <div style={{
           position: "absolute", top: "50%", left: "50%",
           transform: "translate(-50%,-50%)",
@@ -214,27 +254,61 @@ export function AnnotationImage({ annotation, isAdmin, onUpdate, onDelete }: Ann
             />
           ))}
 
-          {/* Floating mini-toolbar */}
+          {/* Floating mini-toolbar (Word style) */}
           <div
             style={{
-              position: "absolute", top: -44, left: "50%",
+              position: "absolute", top: -46, left: "50%",
               transform: "translateX(-50%)",
-              display: "flex", alignItems: "center", gap: 2,
+              display: "flex", alignItems: "center", gap: 3,
               background: "#0f172a",
               border: "1px solid #334155",
-              borderRadius: 8, padding: "4px 6px",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+              borderRadius: 8, padding: "4px 8px",
+              boxShadow: "0 6px 24px rgba(0,0,0,0.45)",
               zIndex: 50, whiteSpace: "nowrap",
               color: "white", fontSize: 11, fontFamily: "sans-serif",
             }}
             onMouseDown={(e) => e.stopPropagation()}
           >
+            {/* Drag handle */}
+            <div
+              title="Glisser-déposer pour déplacer l'image"
+              style={{ display: "flex", alignItems: "center", cursor: "grab", color: "#94a3b8", paddingRight: 2 }}
+            >
+              <GripVertical size={13} />
+            </div>
+
+            {/* Move Up / Down */}
+            {onMoveUp && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onMoveUp(annotation.id) }}
+                title="Déplacer vers le haut"
+                style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: "transparent", color: "white" }}
+              >
+                <ArrowUp size={13} />
+              </button>
+            )}
+            {onMoveDown && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onMoveDown(annotation.id) }}
+                title="Déplacer vers le bas"
+                style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: "transparent", color: "white" }}
+              >
+                <ArrowDown size={13} />
+              </button>
+            )}
+
+            <div style={{ width: 1, height: 16, background: "#334155", margin: "0 2px" }} />
+
             {/* Width presets */}
             {[25, 40, 60, 80].map(pct => (
-              <button key={pct} type="button"
+              <button
+                key={pct}
+                type="button"
                 onClick={(e) => { e.stopPropagation(); onUpdate(annotation.id, { widthPct: pct }) }}
                 style={{
-                  padding: "2px 7px", borderRadius: 4, border: "none", cursor: "pointer",
+                  padding: "2px 6px", borderRadius: 4, border: "none", cursor: "pointer",
                   fontSize: 11,
                   fontWeight: Math.abs(currentWidth - pct) < 5 ? 700 : 400,
                   background: Math.abs(currentWidth - pct) < 5 ? "#2563eb" : "transparent",
@@ -245,33 +319,53 @@ export function AnnotationImage({ annotation, isAdmin, onUpdate, onDelete }: Ann
               </button>
             ))}
 
-            <div style={{ width: 1, height: 16, background: "#334155", margin: "0 3px" }} />
+            <div style={{ width: 1, height: 16, background: "#334155", margin: "0 2px" }} />
 
             {/* Float alignment */}
-            <button type="button" onClick={(e) => { e.stopPropagation(); onUpdate(annotation.id, { float: "left" }) }}
-              title="Flottant Gauche" style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: annotation.float === "left" ? "#2563eb" : "transparent", color: "white" }}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onUpdate(annotation.id, { float: "left" }) }}
+              title="Flottant Gauche (texte s'écoule à droite)"
+              style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: annotation.float === "left" ? "#2563eb" : "transparent", color: "white" }}
+            >
               <AlignLeft size={13} />
             </button>
-            <button type="button" onClick={(e) => { e.stopPropagation(); onUpdate(annotation.id, { float: "center" }) }}
-              title="Centré" style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: annotation.float === "center" ? "#2563eb" : "transparent", color: "white" }}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onUpdate(annotation.id, { float: "center" }) }}
+              title="Centré"
+              style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: annotation.float === "center" ? "#2563eb" : "transparent", color: "white" }}
+            >
               <AlignCenter size={13} />
             </button>
-            <button type="button" onClick={(e) => { e.stopPropagation(); onUpdate(annotation.id, { float: "right" }) }}
-              title="Flottant Droite" style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: annotation.float === "right" ? "#2563eb" : "transparent", color: "white" }}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onUpdate(annotation.id, { float: "right" }) }}
+              title="Flottant Droite (texte s'écoule à gauche)"
+              style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: annotation.float === "right" ? "#2563eb" : "transparent", color: "white" }}
+            >
               <AlignRight size={13} />
             </button>
 
-            <div style={{ width: 1, height: 16, background: "#334155", margin: "0 3px" }} />
+            <div style={{ width: 1, height: 16, background: "#334155", margin: "0 2px" }} />
 
             {/* Filter toggle */}
-            <button type="button" onClick={(e) => { e.stopPropagation(); setShowFilterPanel(p => !p) }}
-              title="Filtres de couleur" style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: showFilterPanel ? "#7c3aed" : "transparent", color: "#60a5fa" }}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowFilterPanel(p => !p) }}
+              title="Filtres de couleur & intégration au thème"
+              style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: showFilterPanel ? "#7c3aed" : "transparent", color: "#60a5fa" }}
+            >
               <Palette size={13} />
             </button>
 
             {/* Delete */}
-            <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(annotation.id) }}
-              title="Supprimer l'image" style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: "transparent", color: "#f87171" }}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onDelete(annotation.id) }}
+              title="Supprimer l'image"
+              style={{ padding: 4, borderRadius: 4, border: "none", cursor: "pointer", display: "flex", background: "transparent", color: "#f87171" }}
+            >
               <Trash2 size={13} />
             </button>
           </div>
@@ -280,25 +374,31 @@ export function AnnotationImage({ annotation, isAdmin, onUpdate, onDelete }: Ann
           {showFilterPanel && (
             <div
               style={{
-                position: "absolute", top: -130, left: "50%",
+                position: "absolute", top: -135, left: "50%",
                 transform: "translateX(-50%)",
                 background: "#1e293b", border: "1px solid #334155",
                 borderRadius: 10, padding: "10px 12px",
                 boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
                 zIndex: 51, color: "white", fontSize: 11,
-                minWidth: 240,
+                minWidth: 250,
               }}
               onMouseDown={(e) => e.stopPropagation()}
             >
               <div style={{ fontWeight: "bold", marginBottom: 8, fontSize: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                Intégration & Thème
-                <button type="button" onClick={() => setShowFilterPanel(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}>
+                Intégration & Couleurs
+                <button
+                  type="button"
+                  onClick={() => setShowFilterPanel(false)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}
+                >
                   <X size={12} />
                 </button>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {FILTER_LABELS.map(fl => (
-                  <button key={fl.id} type="button"
+                  <button
+                    key={fl.id}
+                    type="button"
                     onClick={(e) => { e.stopPropagation(); onUpdate(annotation.id, { filter: fl.id }); setShowFilterPanel(false) }}
                     style={{
                       padding: "4px 10px", borderRadius: 20,
@@ -327,119 +427,6 @@ export function AnnotationImage({ annotation, isAdmin, onUpdate, onDelete }: Ann
           )}
         </>
       )}
-    </div>
-  )
-}
-
-// ─── DROP ZONE (for inserting new annotation) ─────────────────────────────────
-
-interface AnnotationDropZoneProps {
-  blockId: string
-  position: "before" | "after"
-  lessonId: string
-  onAnnotationCreated: (ann: LessonAnnotation) => void
-}
-
-export function AnnotationDropZone({ blockId, position, lessonId, onAnnotationCreated }: AnnotationDropZoneProps) {
-  const [isDragOver, setIsDragOver] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
-
-  const uploadAndCreate = useCallback(async (file: File) => {
-    if (!file.type.startsWith("image/")) return
-    if (file.size > 8 * 1024 * 1024) { toast.error("Image trop volumineuse (max 8 Mo)"); return }
-    setIsUploading(true)
-    const toastId = toast.loading("Ajout de l'image...")
-    try {
-      const fd = new FormData()
-      fd.append("file", file)
-      fd.append("entityType", "lesson")
-      fd.append("entityId", lessonId)
-      const upRes = await fetch("/api/admin/images/upload", { method: "POST", body: fd })
-      let imageUrl = ""
-      let imageId: string | undefined
-      if (upRes.ok) {
-        const upData = await upRes.json()
-        if (upData.image?.id) { imageUrl = `/api/images/${upData.image.id}`; imageId = upData.image.id }
-      }
-      if (!imageUrl) {
-        // base64 fallback
-        imageUrl = await new Promise<string>((res) => {
-          const reader = new FileReader()
-          reader.onload = () => res(reader.result as string)
-          reader.readAsDataURL(file)
-        })
-      }
-
-      // Save annotation to DB
-      const annRes = await fetch("/api/lesson-annotations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lessonId, blockId, imageUrl, imageId, position, float: "left", widthPct: 40 }),
-      })
-      if (annRes.ok) {
-        const ann = await annRes.json()
-        onAnnotationCreated(ann)
-        toast.success("Image ajoutée !", { id: toastId })
-      } else {
-        toast.error("Erreur lors de l'enregistrement", { id: toastId })
-      }
-    } catch (err) {
-      console.error(err)
-      toast.error("Erreur lors de l'ajout de l'image", { id: toastId })
-    } finally {
-      setIsUploading(false)
-    }
-  }, [lessonId, blockId, position, onAnnotationCreated])
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation()
-    setIsDragOver(false)
-    const file = e.dataTransfer.files?.[0]
-    if (file) uploadAndCreate(file)
-  }
-
-  const handleClick = () => {
-    const input = document.createElement("input")
-    input.type = "file"; input.accept = "image/*"
-    input.onchange = (e: any) => { const f = e.target?.files?.[0]; if (f) uploadAndCreate(f) }
-    input.click()
-  }
-
-  return (
-    <div
-      onDrop={handleDrop}
-      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
-      onDragLeave={() => setIsDragOver(false)}
-      onClick={handleClick}
-      title={`Cliquer ou glisser une image ${position === "before" ? "avant" : "après"} ce bloc`}
-      style={{
-        width: "100%",
-        height: isDragOver ? 48 : 6,
-        border: isDragOver ? "2px dashed #2563eb" : "2px dashed transparent",
-        borderRadius: 6,
-        background: isDragOver ? "#eff6ff" : "transparent",
-        cursor: "pointer",
-        transition: "all 0.2s",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: "#2563eb", fontSize: 12, fontWeight: 600,
-        overflow: "hidden",
-        opacity: isUploading ? 0.6 : 1,
-        position: "relative",
-        zIndex: 5,
-      }}
-    >
-      {isDragOver && <span>📎 Déposer l'image ici</span>}
-      {isUploading && <span style={{ color: "#64748b", fontStyle: "italic" }}>Envoi en cours...</span>}
-      {/* Hover hint strip */}
-      <div className="annotation-drop-hint" style={{
-        position: "absolute", inset: 0,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        opacity: 0, transition: "opacity 0.2s",
-        color: "#2563eb", fontSize: 11,
-      }}>
-        + Image
-      </div>
-      <style>{`.annotation-drop-hint:hover { opacity: 1 !important; }`}</style>
     </div>
   )
 }

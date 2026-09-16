@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { TextbookLesson, ContentBlock } from '@/types/textbook';
 import { TextbookHeader } from './textbook-header';
 import { TextbookTOC } from './textbook-toc';
@@ -20,7 +20,7 @@ import { Sun, Moon, CheckCircle, HelpCircle, ArrowLeft, ArrowRight, ImagePlus } 
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { LessonAnnotation, AnnotationImage, AnnotationDropZone } from './lesson-annotation-image';
+import { LessonAnnotation, AnnotationImage } from './lesson-annotation-image';
 
 interface TextbookReaderProps {
   lesson: TextbookLesson;
@@ -30,106 +30,72 @@ interface TextbookReaderProps {
 export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps) {
   const [paperMode, setPaperMode] = useState<boolean>(false);
   const [annotations, setAnnotations] = useState<LessonAnnotation[]>([]);
-  const [pendingPaste, setPendingPaste] = useState<File | null>(null);
-  const [showPasteBlockPicker, setShowPasteBlockPicker] = useState(false);
-  const [allBlockIds, setAllBlockIds] = useState<{ id: string; label: string }[]>([]);
 
-  // Load annotations for this lesson
+  // Currently active cursor / selection spot
+  const [activeCursor, setActiveCursor] = useState<{ blockId: string; position: 'before' | 'after' } | null>(null);
+
+  // Track the block the mouse is hovering over right now
+  const hoveredBlockRef = useRef<{ blockId: string; position: 'before' | 'after' } | null>(null);
+
+  // Hidden file input for double-click to upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputTargetRef = useRef<{ blockId: string; position: 'before' | 'after' } | null>(null);
+
+  // Flat list of all block IDs in order
+  const orderedBlockIds = useMemo(() => {
+    const list: string[] = [];
+    lesson.sections.forEach(sec => {
+      sec.blocks.forEach(b => list.push(b.id));
+    });
+    return list;
+  }, [lesson.sections]);
+
+  // Load existing annotations
   useEffect(() => {
     fetch(`/api/lesson-annotations?lessonId=${lesson.id}`)
       .then(r => r.json())
       .then((data: LessonAnnotation[]) => {
-        if (Array.isArray(data)) setAnnotations(data)
+        if (Array.isArray(data)) setAnnotations(data);
       })
-      .catch(() => {})
+      .catch(() => {});
   }, [lesson.id]);
-
-  // Build list of all block ids for paste targeting
-  useEffect(() => {
-    const ids: { id: string; label: string }[] = [];
-    lesson.sections.forEach(sec => {
-      sec.blocks.forEach(block => {
-        const label = block.title || block.type + " " + (block.number || "");
-        ids.push({ id: block.id, label: `Section ${sec.number} — ${label.trim()}` });
-      });
-    });
-    setAllBlockIds(ids);
-  }, [lesson.sections]);
 
   useEffect(() => {
     const savedMode = localStorage.getItem('mathsophos_paper_mode');
     if (savedMode === 'true') setPaperMode(true);
   }, []);
 
-  // Intercept global Ctrl+V for image paste
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      if (!isAdmin) return;
-      if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
-        const file = e.clipboardData.files[0];
-        if (file.type.startsWith('image/')) {
-          e.preventDefault();
-          setPendingPaste(file);
-          setShowPasteBlockPicker(true);
-        }
-      }
-    };
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
-  }, [isAdmin]);
+  // ── Upload & Create Annotation ──────────────────────────────────────────────
+  const createAnnotation = useCallback(async (
+    file: File,
+    blockId: string,
+    position: 'before' | 'after'
+  ) => {
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Image trop volumineuse (max 8 Mo)");
+      return;
+    }
 
-  const togglePaperMode = () => {
-    const newMode = !paperMode;
-    setPaperMode(newMode);
-    localStorage.setItem('mathsophos_paper_mode', String(newMode));
-  };
-
-  // ── Annotation CRUD helpers ─────────────────────────────────────────────────
-
-  const handleAnnotationCreated = useCallback((ann: LessonAnnotation) => {
-    setAnnotations(prev => [...prev, ann]);
-  }, []);
-
-  const handleAnnotationUpdate = useCallback(async (id: string, patch: Partial<LessonAnnotation>) => {
-    setAnnotations(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
-    try {
-      await fetch("/api/lesson-annotations", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, ...patch }),
-      });
-    } catch { /* silent */ }
-  }, []);
-
-  const handleAnnotationDelete = useCallback(async (id: string) => {
-    setAnnotations(prev => prev.filter(a => a.id !== id));
-    try {
-      await fetch(`/api/lesson-annotations?id=${id}`, { method: "DELETE" });
-      toast.success("Image supprimée");
-    } catch { /* silent */ }
-  }, []);
-
-  // ── Paste into specific block ───────────────────────────────────────────────
-  const handlePasteToBlock = useCallback(async (blockId: string, position: "before" | "after") => {
-    if (!pendingPaste) return;
-    setShowPasteBlockPicker(false);
-    const file = pendingPaste;
-    setPendingPaste(null);
-
-    const toastId = toast.loading("Ajout de l'image collée...");
+    const toastId = toast.loading("Ajout de l'image...");
     try {
       const fd = new FormData();
       fd.append("file", file);
       fd.append("entityType", "lesson");
       fd.append("entityId", lesson.id);
+
       const upRes = await fetch("/api/admin/images/upload", { method: "POST", body: fd });
       let imageUrl = "";
       let imageId: string | undefined;
       if (upRes.ok) {
         const upData = await upRes.json();
-        if (upData.image?.id) { imageUrl = `/api/images/${upData.image.id}`; imageId = upData.image.id; }
+        if (upData.image?.id) {
+          imageUrl = `/api/images/${upData.image.id}`;
+          imageId = upData.image.id;
+        }
       }
       if (!imageUrl) {
+        // base64 fallback
         imageUrl = await new Promise<string>(res => {
           const reader = new FileReader();
           reader.onload = () => res(reader.result as string);
@@ -140,108 +106,334 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
       const annRes = await fetch("/api/lesson-annotations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lessonId: lesson.id, blockId, imageUrl, imageId, position, float: "left", widthPct: 40 }),
+        body: JSON.stringify({
+          lessonId: lesson.id,
+          blockId,
+          imageUrl,
+          imageId,
+          position,
+          float: "left",
+          widthPct: 40
+        }),
       });
+
       if (annRes.ok) {
         const ann = await annRes.json();
-        handleAnnotationCreated(ann);
-        toast.success("Image insérée !", { id: toastId });
+        setAnnotations(prev => [...prev, ann]);
+        toast.success("Image insérée avec succès !", { id: toastId });
       } else {
         toast.error("Erreur lors de l'enregistrement", { id: toastId });
       }
     } catch (err) {
       console.error(err);
-      toast.error("Erreur", { id: toastId });
+      toast.error("Erreur lors de l'envoi", { id: toastId });
     }
-  }, [pendingPaste, lesson.id, handleAnnotationCreated]);
+  }, [lesson.id]);
 
-  // ── Block renderer with annotation zones ────────────────────────────────────
+  // ── Global Ctrl+V (Paste) — Direct to Cursor (NO MODAL) ─────────────────────
+  useEffect(() => {
+    if (!isAdmin) return;
 
-  const renderBlock = (block: ContentBlock) => {
-    const before = annotations.filter(a => a.blockId === block.id && a.position === "before");
-    const after  = annotations.filter(a => a.blockId === block.id && a.position === "after");
+    const handlePaste = (e: ClipboardEvent) => {
+      if (!e.clipboardData?.files?.length) return;
+      const file = e.clipboardData.files[0];
+      if (!file.type.startsWith('image/')) return;
+      e.preventDefault();
+
+      // 1. Target = explicitly clicked cursor
+      // 2. Or = currently hovered block
+      // 3. Or = block closest to current scroll viewport
+      const target = activeCursor || hoveredBlockRef.current;
+      if (target) {
+        createAnnotation(file, target.blockId, target.position);
+      } else {
+        const allBlocks = document.querySelectorAll('[data-block-id]');
+        const scrollMid = window.scrollY + window.innerHeight / 3;
+        let closest: Element | null = null;
+        let closestDist = Infinity;
+        allBlocks.forEach(el => {
+          const rect = el.getBoundingClientRect();
+          const elMid = rect.top + window.scrollY + rect.height / 2;
+          const dist = Math.abs(elMid - scrollMid);
+          if (dist < closestDist) {
+            closestDist = dist;
+            closest = el;
+          }
+        });
+        const fallbackId = closest ? (closest as HTMLElement).dataset.blockId! : orderedBlockIds[0];
+        if (fallbackId) {
+          createAnnotation(file, fallbackId, 'before');
+        } else {
+          toast.info("Cliquez d'abord sur la zone où vous souhaitez coller l'image.");
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [isAdmin, activeCursor, createAnnotation, orderedBlockIds]);
+
+  // ── Annotation Update & Delete ──────────────────────────────────────────────
+  const handleUpdate = useCallback(async (id: string, patch: Partial<LessonAnnotation>) => {
+    setAnnotations(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
+    try {
+      await fetch("/api/lesson-annotations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...patch }),
+      });
+    } catch { /* silent */ }
+  }, []);
+
+  const handleDelete = useCallback(async (id: string) => {
+    setAnnotations(prev => prev.filter(a => a.id !== id));
+    try {
+      await fetch(`/api/lesson-annotations?id=${id}`, { method: "DELETE" });
+      toast.success("Image supprimée");
+    } catch { /* silent */ }
+  }, []);
+
+  // ── Move Up / Move Down ─────────────────────────────────────────────────────
+  const handleMoveUp = useCallback((annotationId: string) => {
+    const ann = annotations.find(a => a.id === annotationId);
+    if (!ann) return;
+
+    if (ann.position === 'after') {
+      handleUpdate(annotationId, { position: 'before' });
+      return;
+    }
+
+    // Move to previous block
+    const currentIndex = orderedBlockIds.indexOf(ann.blockId);
+    if (currentIndex > 0) {
+      const prevBlockId = orderedBlockIds[currentIndex - 1];
+      handleUpdate(annotationId, { blockId: prevBlockId, position: 'after' });
+      toast.info("Image déplacée vers le haut");
+    }
+  }, [annotations, orderedBlockIds, handleUpdate]);
+
+  const handleMoveDown = useCallback((annotationId: string) => {
+    const ann = annotations.find(a => a.id === annotationId);
+    if (!ann) return;
+
+    if (ann.position === 'before') {
+      handleUpdate(annotationId, { position: 'after' });
+      return;
+    }
+
+    // Move to next block
+    const currentIndex = orderedBlockIds.indexOf(ann.blockId);
+    if (currentIndex >= 0 && currentIndex < orderedBlockIds.length - 1) {
+      const nextBlockId = orderedBlockIds[currentIndex + 1];
+      handleUpdate(annotationId, { blockId: nextBlockId, position: 'before' });
+      toast.info("Image déplacée vers le bas");
+    }
+  }, [annotations, orderedBlockIds, handleUpdate]);
+
+  // ── Move Annotation to another Block (Drag & Drop) ─────────────────────────
+  const handleDropMoveAnnotation = useCallback((annotationId: string, newBlockId: string, newPos: 'before' | 'after') => {
+    handleUpdate(annotationId, { blockId: newBlockId, position: newPos });
+    toast.success("Image repositionnée !");
+  }, [handleUpdate]);
+
+  // ── Paper mode toggle ─────────────────────────────────────────────────────
+  const togglePaperMode = () => {
+    const newMode = !paperMode;
+    setPaperMode(newMode);
+    localStorage.setItem('mathsophos_paper_mode', String(newMode));
+  };
+
+  // ── File input change handler (from double click) ───────────────────────────
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && fileInputTargetRef.current) {
+      createAnnotation(file, fileInputTargetRef.current.blockId, fileInputTargetRef.current.position);
+    }
+    e.target.value = '';
+  };
+
+  // ── Block Zone Component ──────────────────────────────────────────────────
+  const BlockZone = useCallback(({ block }: { block: ContentBlock }) => {
+    const zoneRef = useRef<HTMLDivElement>(null);
+    const [dragOverHalf, setDragOverHalf] = useState<'before' | 'after' | null>(null);
+
+    const getHalf = (e: React.MouseEvent | React.DragEvent): 'before' | 'after' => {
+      const el = zoneRef.current;
+      if (!el) return 'before';
+      const rect = el.getBoundingClientRect();
+      return e.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+    };
+
+    const handleClick = (e: React.MouseEvent) => {
+      if (!isAdmin) return;
+      const half = getHalf(e);
+      setActiveCursor({ blockId: block.id, position: half });
+    };
+
+    const handleDoubleClick = (e: React.MouseEvent) => {
+      if (!isAdmin) return;
+      e.stopPropagation();
+      const half = getHalf(e);
+      fileInputTargetRef.current = { blockId: block.id, position: half };
+      fileInputRef.current?.click();
+    };
+
+    const onMouseMove = (e: React.MouseEvent) => {
+      if (!isAdmin) return;
+      const half = getHalf(e);
+      hoveredBlockRef.current = { blockId: block.id, position: half };
+    };
+
+    const onDragOver = (e: React.DragEvent) => {
+      e.preventDefault();
+      if (!isAdmin) return;
+      setDragOverHalf(getHalf(e));
+    };
+
+    const onDragLeave = () => {
+      setDragOverHalf(null);
+    };
+
+    const onDrop = (e: React.DragEvent) => {
+      e.preventDefault();
+      if (!isAdmin) return;
+      const half = getHalf(e);
+      setDragOverHalf(null);
+
+      // Check if this is an existing annotation being dragged
+      const existingAnnotationId = e.dataTransfer.getData("text/annotation-id");
+      if (existingAnnotationId) {
+        handleDropMoveAnnotation(existingAnnotationId, block.id, half);
+        return;
+      }
+
+      // Or a file dropped from outside
+      const file = e.dataTransfer.files?.[0];
+      if (file) {
+        createAnnotation(file, block.id, half);
+      }
+    };
+
+    const isCursorHere = activeCursor?.blockId === block.id;
+
+    const before = annotations.filter(a => a.blockId === block.id && a.position === 'before');
+    const after  = annotations.filter(a => a.blockId === block.id && a.position === 'after');
 
     const blockEl = (() => {
       switch (block.type) {
-        case 'definition':   return <DefinitionBlock key={block.id} block={block} />;
+        case 'definition':   return <DefinitionBlock block={block} />;
         case 'theorem': case 'proposition': case 'lemma': case 'corollary':
-          return <TheoremBlock key={block.id} block={block} />;
-        case 'proof':        return <ProofBlock key={block.id} block={block} />;
-        case 'example': case 'application':
-          return <ExampleBlock key={block.id} block={block} />;
-        case 'remark': case 'important': case 'warning':
-          return <RemarkBlock key={block.id} block={block} />;
-        case 'method':       return <MethodBlock key={block.id} block={block} />;
-        case 'exercise':     return <ExerciseBlock key={block.id} block={block} />;
-        case 'common_error': return <CommonErrorBlock key={block.id} block={block} />;
-        case 'summary':      return <SummaryBlock key={block.id} block={block} />;
-        case 'self_evaluation': return <SelfAssessmentBlock key={block.id} block={block} />;
+          return <TheoremBlock block={block} />;
+        case 'proof':        return <ProofBlock block={block} />;
+        case 'example': case 'application': return <ExampleBlock block={block} />;
+        case 'remark': case 'important': case 'warning': return <RemarkBlock block={block} />;
+        case 'method':       return <MethodBlock block={block} />;
+        case 'exercise':     return <ExerciseBlock block={block} />;
+        case 'common_error': return <CommonErrorBlock block={block} />;
+        case 'summary':      return <SummaryBlock block={block} />;
+        case 'self_evaluation': return <SelfAssessmentBlock block={block} />;
         default: {
-          const textContent = 'content' in block ? (block as any).content : 'statement' in block ? (block as any).statement : '';
-          return (
-            <div key={block.id} className="my-4 text-foreground/90 font-serif text-base md:text-lg leading-relaxed">
-              <MarkdownRenderer content={textContent || ''} />
-            </div>
-          );
+          const text = ('content' in block ? (block as any).content : null) || ('statement' in block ? (block as any).statement : null) || '';
+          return <div className="my-4 text-foreground/90 font-serif text-base md:text-lg leading-relaxed"><MarkdownRenderer content={text} /></div>;
         }
       }
     })();
 
     return (
-      <div key={block.id} style={{ position: "relative" }}>
-        {/* Drop zone + annotations BEFORE the block */}
+      <div
+        ref={zoneRef}
+        data-block-id={block.id}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onMouseMove={onMouseMove}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        style={{
+          position: 'relative',
+          borderRadius: 6,
+          transition: 'all 0.15s ease',
+          outline: isAdmin && isCursorHere ? '2px solid #3b82f6' : 'none',
+          outlineOffset: 3,
+        }}
+        title={isAdmin ? "Cliquez pour placer le curseur | Double-cliquez pour ajouter une image | Collez avec Ctrl+V" : undefined}
+      >
+        {/* Drop indicator: Before */}
+        {isAdmin && dragOverHalf === 'before' && (
+          <div style={{ height: 4, background: '#2563eb', borderRadius: 2, marginBottom: 6, boxShadow: '0 0 8px #2563eb' }} />
+        )}
+
+        {/* Cursor indicator: Before */}
+        {isAdmin && isCursorHere && activeCursor?.position === 'before' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 8px', background: '#eff6ff', borderRadius: 4, marginBottom: 4 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb', animation: 'pulse 1.5s infinite' }} />
+            <span style={{ fontSize: 11, color: '#1d4ed8', fontWeight: 600 }}>Curseur ici (Ctrl+V ou Glisser)</span>
+          </div>
+        )}
+
+        {/* Annotations BEFORE */}
         {before.map(ann => (
           <AnnotationImage
             key={ann.id}
             annotation={ann}
             isAdmin={isAdmin}
-            onUpdate={handleAnnotationUpdate}
-            onDelete={handleAnnotationDelete}
+            onUpdate={handleUpdate}
+            onDelete={handleDelete}
+            onMoveUp={handleMoveUp}
+            onMoveDown={handleMoveDown}
           />
         ))}
-        {isAdmin && (
-          <AnnotationDropZone
-            blockId={block.id}
-            position="before"
-            lessonId={lesson.id}
-            onAnnotationCreated={handleAnnotationCreated}
-          />
-        )}
 
         {/* The block content itself */}
-        <div style={{ overflow: "hidden" }}>
-          {blockEl}
-        </div>
+        <div style={{ overflow: 'hidden' }}>{blockEl}</div>
 
-        {/* Drop zone + annotations AFTER the block */}
-        {isAdmin && (
-          <AnnotationDropZone
-            blockId={block.id}
-            position="after"
-            lessonId={lesson.id}
-            onAnnotationCreated={handleAnnotationCreated}
-          />
-        )}
+        {/* Annotations AFTER */}
         {after.map(ann => (
           <AnnotationImage
             key={ann.id}
             annotation={ann}
             isAdmin={isAdmin}
-            onUpdate={handleAnnotationUpdate}
-            onDelete={handleAnnotationDelete}
+            onUpdate={handleUpdate}
+            onDelete={handleDelete}
+            onMoveUp={handleMoveUp}
+            onMoveDown={handleMoveDown}
           />
         ))}
-        {/* Clearfix so floated images don't overflow */}
-        <div style={{ clear: "both" }} />
+
+        {/* Cursor indicator: After */}
+        {isAdmin && isCursorHere && activeCursor?.position === 'after' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 8px', background: '#eff6ff', borderRadius: 4, marginTop: 4 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb', animation: 'pulse 1.5s infinite' }} />
+            <span style={{ fontSize: 11, color: '#1d4ed8', fontWeight: 600 }}>Curseur ici (Ctrl+V ou Glisser)</span>
+          </div>
+        )}
+
+        {/* Drop indicator: After */}
+        {isAdmin && dragOverHalf === 'after' && (
+          <div style={{ height: 4, background: '#2563eb', borderRadius: 2, marginTop: 6, boxShadow: '0 0 8px #2563eb' }} />
+        )}
+
+        {/* Clearfix */}
+        <div style={{ clear: 'both' }} />
       </div>
     );
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [annotations, isAdmin, activeCursor, handleUpdate, handleDelete, handleMoveUp, handleMoveDown, handleDropMoveAnnotation, createAnnotation]);
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${paperMode ? 'bg-[#FAF8F5] text-[#2C2825]' : 'bg-background text-foreground'}`}>
       <ReadingProgressBar />
 
-      {/* Mode Switcher */}
+      {/* Hidden file input for double-click uploads */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleFileInputChange}
+      />
+
+      {/* Floating Action Controls */}
       <div className="fixed bottom-6 right-6 z-50 print:hidden flex flex-col items-end gap-2">
         <Button
           onClick={togglePaperMode}
@@ -256,82 +448,27 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
           )}
         </Button>
 
-        {/* Admin paste hint */}
         {isAdmin && (
-          <div className="bg-blue-600 text-white rounded-full px-3 py-1.5 text-xs font-semibold shadow-lg flex items-center gap-1.5">
-            <ImagePlus className="w-3.5 h-3.5" />
-            Ctrl+V ou Glisser pour ajouter des images
+          <div
+            title="Cliquez pour placer le curseur, puis Ctrl+V ou glissez une image. Double-cliquez pour choisir un fichier."
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3.5 py-1.5 text-xs font-semibold shadow-lg flex items-center gap-2 cursor-pointer transition-all"
+            onClick={() => {
+              toast.info("1. Cliquez sur n'importe quel paragraphe pour placer le curseur.\n2. Faites Ctrl+V ou glissez une image.\n3. Cliquez sur l'image pour la déplacer, la redimensionner ou la styler comme dans Word.");
+            }}
+          >
+            <ImagePlus className="w-4 h-4" />
+            <span>Mode Images Word actif (Ctrl+V / Glisser / Déplacer)</span>
           </div>
         )}
       </div>
 
-      {/* Paste Block Picker Modal */}
-      {showPasteBlockPicker && pendingPaste && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
-          zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center"
-        }}>
-          <div style={{
-            background: "white", borderRadius: 12, padding: 24,
-            maxWidth: 480, width: "90%", maxHeight: "80vh",
-            overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.4)"
-          }}>
-            <h3 style={{ fontWeight: "bold", fontSize: 16, marginBottom: 4 }}>📎 Où insérer l'image ?</h3>
-            <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
-              Choisissez le bloc de contenu où placer l'image collée :
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {allBlockIds.slice(0, 30).map(b => (
-                <div key={b.id} style={{ display: "flex", gap: 6 }}>
-                  <button
-                    type="button"
-                    onClick={() => handlePasteToBlock(b.id, "before")}
-                    style={{
-                      flex: 1, padding: "8px 10px", textAlign: "left", borderRadius: 6,
-                      border: "1px solid #e2e8f0", cursor: "pointer", fontSize: 12,
-                      background: "#f8fafc", color: "#1e293b"
-                    }}
-                  >
-                    ↑ Avant : {b.label}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handlePasteToBlock(b.id, "after")}
-                    style={{
-                      flex: 1, padding: "8px 10px", textAlign: "left", borderRadius: 6,
-                      border: "1px solid #e2e8f0", cursor: "pointer", fontSize: 12,
-                      background: "#f8fafc", color: "#1e293b"
-                    }}
-                  >
-                    ↓ Après : {b.label}
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => { setShowPasteBlockPicker(false); setPendingPaste(null); }}
-              style={{
-                marginTop: 16, width: "100%", padding: "8px 0",
-                background: "#f1f5f9", border: "none", borderRadius: 6,
-                cursor: "pointer", fontSize: 13, color: "#64748b"
-              }}
-            >
-              Annuler
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="container mx-auto px-4 py-8 md:py-12 max-w-7xl">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Main Reading Column */}
           <main className="lg:col-span-9 max-w-4xl mx-auto w-full">
             <TextbookHeader lesson={lesson} />
 
             {/* Objectives & Prerequisites Banner */}
-            {((lesson.metadata.objectives && lesson.metadata.objectives.length > 0) ||
-              (lesson.metadata.prerequisites && lesson.metadata.prerequisites.length > 0)) && (
+            {((lesson.metadata.objectives?.length ?? 0) > 0 || (lesson.metadata.prerequisites?.length ?? 0) > 0) && (
               <div className="my-8 rounded-2xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 p-6 shadow-xs break-inside-avoid">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {lesson.metadata.objectives && lesson.metadata.objectives.length > 0 && (
@@ -341,7 +478,7 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
                         Objectifs d'apprentissage
                       </h3>
                       <ul className="space-y-1.5 text-sm text-foreground/90 font-serif list-disc pl-5">
-                        {lesson.metadata.objectives.map((obj, idx) => <li key={idx}>{obj}</li>)}
+                        {lesson.metadata.objectives.map((obj, i) => <li key={i}>{obj}</li>)}
                       </ul>
                     </div>
                   )}
@@ -352,7 +489,7 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
                         Prérequis recommandés
                       </h3>
                       <ul className="space-y-1.5 text-sm text-foreground/90 font-serif list-disc pl-5">
-                        {lesson.metadata.prerequisites.map((pre, idx) => <li key={idx}>{pre}</li>)}
+                        {lesson.metadata.prerequisites.map((p, i) => <li key={i}>{p}</li>)}
                       </ul>
                     </div>
                   )}
@@ -380,7 +517,9 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
                   )}
 
                   <div className="space-y-4">
-                    {section.blocks.map((block) => renderBlock(block))}
+                    {section.blocks.map((block) => (
+                      <BlockZone key={block.id} block={block} />
+                    ))}
                   </div>
                 </section>
               ))}
@@ -413,24 +552,21 @@ export function TextbookReader({ lesson, isAdmin = false }: TextbookReaderProps)
               </section>
             )}
 
-            {/* Bottom navigation */}
+            {/* Navigation */}
             <div className="mt-14 pt-8 border-t border-border flex flex-wrap items-center justify-between gap-4 print:hidden">
               <Link href="/lessons">
                 <Button variant="outline" className="flex items-center gap-2">
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Tous les cours</span>
+                  <ArrowLeft className="w-4 h-4" /><span>Tous les cours</span>
                 </Button>
               </Link>
               <Link href="/exercises">
                 <Button className="flex items-center gap-2 bg-primary text-primary-foreground">
-                  <span>Voir les séries d'exercices corrigés</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span>Voir les séries d'exercices corrigés</span><ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
             </div>
           </main>
 
-          {/* TOC Sidebar */}
           <aside className="lg:col-span-3">
             <TextbookTOC
               sections={lesson.sections}
