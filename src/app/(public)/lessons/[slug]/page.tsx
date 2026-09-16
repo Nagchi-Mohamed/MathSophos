@@ -51,27 +51,12 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
   // Convert raw DB lesson to structured TextbookLesson via read-only runtime adapter
   const textbookLesson = toTextbookLesson(lesson)
 
+  const isAdmin = !!(session?.user?.role && canAccessAdmin(session.user.role))
+
   return (
     <div className="relative">
-      {/* Admin Quick Edit Sticky Bar */}
-      {session?.user?.role && canAccessAdmin(session.user.role) && (
-        <div className="bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between text-xs border-b border-slate-700 print:hidden sticky top-0 z-40 backdrop-blur-md shadow-md">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="font-bold text-white">Mode Consultation (Enseignant/Admin)</span>
-            <span className="text-slate-300 hidden md:inline">• Pour coller (Ctrl+V) ou insérer des images, ouvrez le mode édition :</span>
-          </div>
-          <Link href={`/admin/lessons/${lesson.id}/edit`}>
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-8 gap-1.5 shadow">
-              <Pencil className="w-3.5 h-3.5" />
-              Modifier cette leçon (Éditeur & Images)
-            </Button>
-          </Link>
-        </div>
-      )}
-
-      {/* Textbook Reader Container */}
-      <TextbookReader lesson={textbookLesson} />
+      {/* Textbook Reader with inline annotation support for admin/teachers */}
+      <TextbookReader lesson={textbookLesson} isAdmin={isAdmin} />
 
       {/* Admin Floating Downloads / Controls */}
       <div className="container max-w-7xl mx-auto px-4 pb-8 flex flex-wrap gap-4 justify-end items-center print:hidden">
